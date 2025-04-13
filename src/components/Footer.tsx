@@ -3,8 +3,11 @@ import React from 'react';
 import { Mail, Phone, Headphones, MessageSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { useLanguage } from '@/context/LanguageContext';
 
 const Footer = () => {
+  const { t } = useLanguage();
+  
   return (
     <footer className="w-full bg-casino py-4 px-4 border-t border-gray-800">
       <div className="container mx-auto">
@@ -12,11 +15,11 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 mb-4 md:mb-0">
             <div className="flex items-center space-x-2">
               <Phone className="h-4 w-4 text-casino-accent" />
-              <span className="text-gray-300">Support: +1-888-CK444-HELP</span>
+              <span className="text-gray-300">{t('supportPhone')}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Mail className="h-4 w-4 text-casino-accent" />
-              <span className="text-gray-300">Email: support@ck444.com</span>
+              <span className="text-gray-300">{t('supportEmail')}</span>
             </div>
           </div>
           
@@ -25,12 +28,12 @@ const Footer = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="bg-casino-dark border-casino-accent text-casino-accent flex items-center space-x-2">
                   <Headphones className="h-4 w-4" />
-                  <span>Customer Support</span>
+                  <span>{t('customerSupport')}</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80 bg-casino border border-casino-accent">
                 <div className="space-y-4">
-                  <h4 className="font-medium text-white">How can we help you?</h4>
+                  <h4 className="font-medium text-white">{t('customerSupport')}</h4>
                   <div className="space-y-2">
                     <div className="flex items-start space-x-2">
                       <MessageSquare className="h-4 w-4 text-casino-accent mt-1" />

@@ -7,6 +7,7 @@ import GameSection from '@/components/GameSection';
 import Footer from '@/components/Footer';
 import { WelcomePopup } from '@/components/WelcomePopup';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useLanguage } from '@/context/LanguageContext';
 
 // Game data
 const popularGames = [
@@ -14,7 +15,7 @@ const popularGames = [
     id: '1',
     title: 'Super Ace',
     image: 'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=300&h=400',
-    multiplier: '2000x',
+    multiplier: '2000',
   },
   {
     id: '2',
@@ -32,6 +33,18 @@ const popularGames = [
     title: 'Wild Showdown',
     image: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=300&h=400',
   },
+  // More games for better grid
+  {
+    id: '5',
+    title: 'Tiger Rush',
+    image: 'https://images.unsplash.com/photo-1444492417251-9c84a5fa18e0?auto=format&fit=crop&w=300&h=400',
+    multiplier: '3000',
+  },
+  {
+    id: '6',
+    title: 'Dragon Power',
+    image: 'https://images.unsplash.com/photo-1533107862482-0e6974b06ec4?auto=format&fit=crop&w=300&h=400',
+  },
 ];
 
 const slotGames = [
@@ -44,12 +57,18 @@ const slotGames = [
     id: '7',
     title: 'Lucky Heroes',
     image: 'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=300&h=400',
-    multiplier: '2600x',
+    multiplier: '2600',
   },
   {
     id: '8',
     title: 'Golden Wheel',
     image: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?auto=format&fit=crop&w=300&h=400',
+  },
+  {
+    id: '9',
+    title: 'Diamond Rush',
+    image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=300&h=400',
+    multiplier: '1800',
   },
 ];
 
@@ -77,7 +96,7 @@ const casinoGames = [
     id: '16',
     title: 'Royal Poker',
     image: 'https://images.unsplash.com/photo-1528812969535-4999fa0d1cf3?auto=format&fit=crop&w=300&h=400',
-    multiplier: '5000x',
+    multiplier: '5000',
   },
   {
     id: '17',
@@ -94,6 +113,7 @@ const casinoGames = [
 
 const Index = () => {
   const isMobile = useIsMobile();
+  const { t } = useLanguage();
   
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
@@ -102,11 +122,11 @@ const Index = () => {
         {!isMobile && <CategorySidebar />}
         <main className={`flex-1 p-2 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
           <Banner />
-          <div className="mt-4 md:mt-6 space-y-6 md:space-y-8">
-            <GameSection title="Popular Games" games={popularGames} />
-            <GameSection title="Slots" games={slotGames} />
-            <GameSection title="Live Casino" games={liveGames} />
-            <GameSection title="Table Games" games={casinoGames} />
+          <div className="mt-4 md:mt-6 space-y-4 md:space-y-6">
+            <GameSection title="popularGames" games={popularGames} />
+            <GameSection title="slots" games={slotGames} />
+            <GameSection title="liveGames" games={liveGames} />
+            <GameSection title="tableGames" games={casinoGames} />
           </div>
         </main>
       </div>

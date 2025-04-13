@@ -10,10 +10,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 export function WelcomePopup() {
   const [open, setOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   
   useEffect(() => {
     // Only show welcome popup when a user first logs in
@@ -28,7 +30,7 @@ export function WelcomePopup() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[500px] bg-gradient-to-br from-[#0e363d] to-[#0a2328] border-casino-accent">
         <DialogHeader>
-          <DialogTitle className="text-white text-2xl">Welcome to CK444!</DialogTitle>
+          <DialogTitle className="text-white text-2xl">{t('welcome')}</DialogTitle>
           <DialogDescription className="text-gray-300">
             We're thrilled to have you join our casino community!
           </DialogDescription>
@@ -48,7 +50,7 @@ export function WelcomePopup() {
         </div>
         
         <p className="text-gray-300 mb-4">
-          Enjoy our selection of exciting games and try your luck! Your initial balance is <span className="text-casino-accent font-bold">${user?.balance}</span>.
+          Enjoy our selection of exciting games and try your luck! Your initial balance is <span className="text-casino-accent font-bold">{t('currency')}{user?.balance}</span>.
         </p>
         
         <DialogFooter>
@@ -56,7 +58,7 @@ export function WelcomePopup() {
             onClick={() => setOpen(false)} 
             className="w-full bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
           >
-            Start Playing Now!
+            {t('startPlaying')}
           </Button>
         </DialogFooter>
       </DialogContent>

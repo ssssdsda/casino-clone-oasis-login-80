@@ -4,6 +4,7 @@ import {
   Flame, Gift, Gamepad2, Joystick, Heart, Trophy, 
   Dice5, Download, Coins, DollarSign, CircleDollarSign 
 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface CategoryProps {
   icon: React.ReactNode;
@@ -16,7 +17,7 @@ const Category: React.FC<CategoryProps> = ({ icon, label, isActive = false, onCl
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center w-full p-4 rounded-md transition-colors ${
+      className={`flex flex-col items-center justify-center w-full p-3 rounded-md transition-colors ${
         isActive ? 'bg-casino text-casino-accent' : 'text-gray-300 hover:bg-casino hover:bg-opacity-50'
       }`}
     >
@@ -28,23 +29,24 @@ const Category: React.FC<CategoryProps> = ({ icon, label, isActive = false, onCl
 
 const CategorySidebar: React.FC = () => {
   const [activeCategory, setActiveCategory] = React.useState('popular');
+  const { t } = useLanguage();
 
   const categories = [
-    { id: 'popular', icon: <Flame size={24} />, label: 'Popular' },
-    { id: 'slots', icon: <Coins size={24} />, label: 'Slots' },
-    { id: 'live', icon: <Heart size={24} />, label: 'Live Casino' },
-    { id: 'sports', icon: <Trophy size={24} />, label: 'Sports' },
-    { id: 'card', icon: <Dice5 size={24} />, label: 'Card Games' },
-    { id: 'arcade', icon: <Gamepad2 size={24} />, label: 'Arcade' },
-    { id: 'fish', icon: <Joystick size={24} />, label: 'Fishing' },
-    { id: 'bonus', icon: <Gift size={24} />, label: 'Bonus' },
-    { id: 'vip', icon: <DollarSign size={24} />, label: 'VIP' },
-    { id: 'download', icon: <Download size={24} />, label: 'Download' },
+    { id: 'popular', icon: <Flame size={22} />, label: t('popularGames') },
+    { id: 'slots', icon: <Coins size={22} />, label: t('slots') },
+    { id: 'live', icon: <Heart size={22} />, label: t('liveGames') },
+    { id: 'sports', icon: <Trophy size={22} />, label: t('sportsGames') },
+    { id: 'card', icon: <Dice5 size={22} />, label: t('tableGames') },
+    { id: 'arcade', icon: <Gamepad2 size={22} />, label: t('arcadeGames') },
+    { id: 'fish', icon: <Joystick size={22} />, label: t('fishingGames') },
+    { id: 'bonus', icon: <Gift size={22} />, label: 'Bonus' },
+    { id: 'vip', icon: <DollarSign size={22} />, label: 'VIP' },
+    { id: 'download', icon: <Download size={22} />, label: 'Download' },
   ];
 
   return (
     <div className="hidden sm:block w-24 bg-casino-dark border-r border-gray-800">
-      <div className="grid grid-cols-1 gap-2 p-2">
+      <div className="grid grid-cols-1 gap-1 p-2">
         {categories.map((category) => (
           <Category
             key={category.id}

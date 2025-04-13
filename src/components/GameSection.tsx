@@ -1,6 +1,7 @@
 
 import React from 'react';
 import GameCard from './GameCard';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Game {
   id: string;
@@ -16,16 +17,18 @@ interface GameSectionProps {
 }
 
 const GameSection = ({ title, games }: GameSectionProps) => {
+  const { t } = useLanguage();
+  
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg md:text-xl font-bold text-white">{title}</h2>
+        <h2 className="text-lg md:text-xl font-bold text-white">{t(title)}</h2>
         <button className="text-xs text-casino-accent font-semibold">
           View All
         </button>
       </div>
       
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
         {games.map((game) => (
           <GameCard 
             key={game.id}
