@@ -20,6 +20,14 @@ const featuredGames = [
     isNew: true,
     path: '/game/spin'
   },
+  {
+    id: 'mega-spin',
+    title: 'Mega Spin',
+    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=300&h=400',
+    multiplier: '50000',
+    isNew: true,
+    path: '/game/megaspin'
+  }
 ];
 
 const popularGames = [

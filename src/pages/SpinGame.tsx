@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Headphones, Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw } from 'lucide-react';
@@ -49,16 +48,6 @@ const SpinGame = () => {
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   
   useEffect(() => {
-    if (!isAuthenticated) {
-      toast({
-        title: t('loginRequired'),
-        description: t('pleaseLoginToPlay'),
-        variant: "destructive",
-      });
-      navigate('/');
-      return;
-    }
-    
     // Show loading for 3 seconds, then display continue button
     const timer = setTimeout(() => {
       setLoading(false);
@@ -74,7 +63,7 @@ const SpinGame = () => {
     winAudioRef.current = new Audio('/public/placeholder.svg'); // Replace with actual win sound
     
     return () => clearTimeout(timer);
-  }, [isAuthenticated, user, navigate, toast, t]);
+  }, [user]);
   
   const handleContinue = () => {
     setShowContinue(false);
@@ -222,7 +211,7 @@ const SpinGame = () => {
             transition={{ duration: 0.5 }}
           >
             <motion.h1 
-              className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500"
+              className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-yellow-500"
               animate={{ 
                 y: [0, -5, 0],
                 scale: [1, 1.02, 1],

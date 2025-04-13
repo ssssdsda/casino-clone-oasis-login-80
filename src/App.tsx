@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import ImagesChanger from "./pages/ImagesChanger";
 import SpinGame from "./pages/SpinGame";
 import SpinControl from "./pages/SpinControl";
+import MegaSpin from "./pages/MegaSpin";
+import MegaSpinControl from "./pages/MegaSpinControl";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "./context/LanguageContext";
 
@@ -27,6 +29,8 @@ const App = () => (
               <Route path="/admin/images" element={<ImagesChanger />} />
               <Route path="/game/spin" element={<SpinGame />} />
               <Route path="/admin/spin-control" element={<SpinControl />} />
+              <Route path="/game/megaspin" element={<MegaSpin />} />
+              <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
