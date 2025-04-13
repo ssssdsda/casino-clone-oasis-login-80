@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Index from "./pages/Index";
 import ImagesChanger from "./pages/ImagesChanger";
+import SpinGame from "./pages/SpinGame";
+import GameOddsAdmin from "./pages/GameOddsAdmin";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "./context/LanguageContext";
 
@@ -23,6 +25,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/admin/images" element={<ImagesChanger />} />
+              <Route path="/game/spin" element={<SpinGame />} />
+              <Route path="/admin/game-odds" element={<GameOddsAdmin />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
