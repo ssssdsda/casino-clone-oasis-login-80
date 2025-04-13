@@ -6,6 +6,7 @@ import {
   signInWithPhoneNumber,
   PhoneAuthProvider,
   RecaptchaVerifier,
+  signInWithCredential,
   signOut,
   onAuthStateChanged, 
   User as FirebaseUser 
@@ -194,7 +195,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     try {
       const credential = PhoneAuthProvider.credential(verificationId, code);
-      await auth.signInWithCredential(credential);
+      await signInWithCredential(auth, credential);
       
       // If this is a new registration, update with username
       const pendingUsername = localStorage.getItem('pendingUsername');
