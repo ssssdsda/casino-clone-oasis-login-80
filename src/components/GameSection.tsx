@@ -20,15 +20,15 @@ const GameSection = ({ title, games }: GameSectionProps) => {
   const { t } = useLanguage();
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 mb-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg md:text-xl font-bold text-white">{t(title)}</h2>
+        <h2 className="text-md md:text-lg font-bold text-white">{t(title)}</h2>
         <button className="text-xs text-casino-accent font-semibold">
           View All
         </button>
       </div>
       
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1.5">
         {games.map((game) => (
           <GameCard 
             key={game.id}

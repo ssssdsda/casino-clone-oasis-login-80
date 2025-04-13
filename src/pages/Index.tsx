@@ -3,6 +3,8 @@ import React from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
 import Banner from '@/components/Banner';
+import PromoBanner from '@/components/PromoBanner';
+import GameCategories from '@/components/GameCategories';
 import GameSection from '@/components/GameSection';
 import Footer from '@/components/Footer';
 import { WelcomePopup } from '@/components/WelcomePopup';
@@ -118,11 +120,12 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
       <Header />
+      <PromoBanner />
       <div className="flex flex-1">
         {!isMobile && <CategorySidebar />}
-        <main className={`flex-1 p-2 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
-          <Banner />
-          <div className="mt-4 md:mt-6 space-y-4 md:space-y-6">
+        <main className={`flex-1 p-1 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
+          <GameCategories />
+          <div className="mt-2 md:mt-4 space-y-2 md:space-y-4">
             <GameSection title="popularGames" games={popularGames} />
             <GameSection title="slots" games={slotGames} />
             <GameSection title="liveGames" games={liveGames} />

@@ -19,7 +19,7 @@ const GameCard = ({ title, image, multiplier, isNew, onClick }: GameCardProps) =
     <div 
       className="relative rounded-lg overflow-hidden cursor-pointer game-card transition-transform hover:scale-105"
       onClick={onClick}
-      style={{ maxWidth: '130px' }}
+      style={{ maxWidth: '100px' }}
     >
       {/* Game image */}
       <div className="aspect-[3/4] relative">
@@ -34,9 +34,9 @@ const GameCard = ({ title, image, multiplier, isNew, onClick }: GameCardProps) =
         
         {/* Game title and info */}
         <div className="absolute bottom-0 left-0 right-0 p-1">
-          <h3 className="text-xs font-medium text-white truncate">{title}</h3>
+          <h3 className="text-[10px] font-medium text-white truncate">{title}</h3>
           {multiplier && (
-            <div className="text-xs text-casino-accent font-bold">
+            <div className="text-[8px] text-casino-accent font-bold">
               {t('currency')}{multiplier}
             </div>
           )}
@@ -44,12 +44,12 @@ const GameCard = ({ title, image, multiplier, isNew, onClick }: GameCardProps) =
         
         {/* Favorite button */}
         <button className="absolute top-1 right-1 text-white opacity-0 transition-opacity favorite-icon">
-          <Heart className="h-3 w-3" />
+          <Heart className="h-2 w-2" />
         </button>
         
         {/* New tag */}
         {isNew && (
-          <div className="absolute top-1 left-1 bg-casino-accent text-xs font-bold text-black px-1 rounded">
+          <div className="absolute top-1 left-1 bg-casino-accent text-[8px] font-bold text-black px-0.5 rounded">
             NEW
           </div>
         )}
