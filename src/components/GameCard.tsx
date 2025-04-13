@@ -12,8 +12,8 @@ interface GameCardProps {
 
 const GameCard: React.FC<GameCardProps> = ({ id, title, image, isNew, multiplier }) => {
   return (
-    <div className="game-card relative rounded-lg overflow-hidden group">
-      <div className="relative aspect-[3/4] overflow-hidden">
+    <div className="game-card relative rounded-lg overflow-hidden group cursor-pointer">
+      <div className="relative aspect-[3/4] max-w-[200px] mx-auto overflow-hidden">
         <img 
           src={image} 
           alt={title} 
@@ -22,7 +22,7 @@ const GameCard: React.FC<GameCardProps> = ({ id, title, image, isNew, multiplier
         <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-50" />
         
         {/* Favorite button */}
-        <button className="favorite-icon absolute top-2 right-2 w-8 h-8 rounded-full bg-black bg-opacity-40 flex items-center justify-center opacity-0 transition-opacity">
+        <button className="favorite-icon absolute top-2 right-2 w-8 h-8 rounded-full bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <Heart className="h-4 w-4 text-white" />
         </button>
         
@@ -40,7 +40,7 @@ const GameCard: React.FC<GameCardProps> = ({ id, title, image, isNew, multiplier
         
         {/* Multiplier */}
         {multiplier && (
-          <div className="absolute top-2 left-2 bg-casino-accent text-black font-bold text-sm py-1 px-2 rounded">
+          <div className="absolute top-2 left-2 bg-casino-accent text-black font-bold text-xs py-1 px-2 rounded">
             {multiplier}
           </div>
         )}

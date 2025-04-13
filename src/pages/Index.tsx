@@ -28,12 +28,6 @@ const popularGames = [
     title: 'Wild Showdown',
     image: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=300&h=400',
   },
-  {
-    id: '5',
-    title: 'Super Elements',
-    image: 'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=300&h=400',
-    multiplier: '2000x',
-  },
 ];
 
 const slotGames = [
@@ -53,16 +47,43 @@ const slotGames = [
     title: 'Golden Wheel',
     image: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?auto=format&fit=crop&w=300&h=400',
   },
+];
+
+const liveGames = [
   {
-    id: '9',
-    title: 'Red Dragon',
-    image: 'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?auto=format&fit=crop&w=300&h=400',
-    multiplier: '2600x',
+    id: '11',
+    title: 'Live Blackjack',
+    image: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&w=300&h=400',
+    isNew: true,
   },
   {
-    id: '10',
-    title: 'Retro Arcade',
-    image: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=300&h=400',
+    id: '12',
+    title: 'Live Roulette',
+    image: 'https://images.unsplash.com/photo-1606167668584-78701c57f90d?auto=format&fit=crop&w=300&h=400',
+  },
+  {
+    id: '13',
+    title: 'Live Baccarat',
+    image: 'https://images.unsplash.com/photo-1494797262163-102fae527c62?auto=format&fit=crop&w=300&h=400',
+  },
+];
+
+const casinoGames = [
+  {
+    id: '16',
+    title: 'Royal Poker',
+    image: 'https://images.unsplash.com/photo-1528812969535-4999fa0d1cf3?auto=format&fit=crop&w=300&h=400',
+    multiplier: '5000x',
+  },
+  {
+    id: '17',
+    title: 'Blackjack Pro',
+    image: 'https://images.unsplash.com/photo-1606167668584-78701c57f90d?auto=format&fit=crop&w=300&h=400',
+  },
+  {
+    id: '18',
+    title: 'Roulette Master',
+    image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=300&h=400',
     isNew: true,
   },
 ];
@@ -73,11 +94,13 @@ const Index = () => {
       <Header />
       <div className="flex flex-1">
         <CategorySidebar />
-        <main className="flex-1 p-4">
+        <main className="flex-1 p-4 overflow-y-auto">
           <Banner />
-          <div className="mt-6">
+          <div className="mt-6 space-y-8">
             <GameSection title="Popular Games" games={popularGames} />
             <GameSection title="Slots" games={slotGames} />
+            <GameSection title="Live Casino" games={liveGames} />
+            <GameSection title="Table Games" games={casinoGames} />
           </div>
         </main>
       </div>
