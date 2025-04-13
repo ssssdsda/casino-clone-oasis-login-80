@@ -4,7 +4,11 @@ import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
 import Banner from '@/components/Banner';
 import GameSection from '@/components/GameSection';
+import Footer from '@/components/Footer';
+import { WelcomePopup } from '@/components/WelcomePopup';
+import { useIsMobile } from '@/hooks/use-mobile';
 
+// Game data
 const popularGames = [
   {
     id: '1',
@@ -89,14 +93,16 @@ const casinoGames = [
 ];
 
 const Index = () => {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
       <Header />
       <div className="flex flex-1">
-        <CategorySidebar />
-        <main className="flex-1 p-4 overflow-y-auto">
+        {!isMobile && <CategorySidebar />}
+        <main className={`flex-1 p-2 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
           <Banner />
-          <div className="mt-6 space-y-8">
+          <div className="mt-4 md:mt-6 space-y-6 md:space-y-8">
             <GameSection title="Popular Games" games={popularGames} />
             <GameSection title="Slots" games={slotGames} />
             <GameSection title="Live Casino" games={liveGames} />
@@ -104,6 +110,8 @@ const Index = () => {
           </div>
         </main>
       </div>
+      <Footer />
+      <WelcomePopup />
     </div>
   );
 };

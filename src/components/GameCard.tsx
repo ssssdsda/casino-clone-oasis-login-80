@@ -6,42 +6,48 @@ interface GameCardProps {
   id: string;
   title: string;
   image: string;
-  isNew?: boolean;
   multiplier?: string;
+  isNew?: boolean;
+  onClick?: () => void;
 }
 
-const GameCard: React.FC<GameCardProps> = ({ id, title, image, isNew, multiplier }) => {
+const GameCard = ({ title, image, multiplier, isNew, onClick }: GameCardProps) => {
   return (
-    <div className="game-card relative rounded-lg overflow-hidden group cursor-pointer">
-      <div className="relative aspect-[3/4] max-w-[200px] mx-auto overflow-hidden">
+    <div 
+      className="relative rounded-lg overflow-hidden cursor-pointer game-card transition-transform hover:scale-105"
+      onClick={onClick}
+      style={{ maxWidth: '160px' }}
+    >
+      {/* Game image */}
+      <div className="aspect-[3/4] relative">
         <img 
           src={image} 
           alt={title} 
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-50" />
         
-        {/* Favorite button */}
-        <button className="favorite-icon absolute top-2 right-2 w-8 h-8 rounded-full bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <Heart className="h-4 w-4 text-white" />
-        </button>
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
         
-        {/* Title */}
-        <div className="absolute bottom-0 left-0 right-0 p-3">
-          <h3 className="text-sm font-medium text-white truncate">{title}</h3>
+        {/* Game title and info */}
+        <div className="absolute bottom-0 left-0 right-0 p-2">
+          <h3 className="text-sm font-medium text-white">{title}</h3>
+          {multiplier && (
+            <div className="text-xs text-casino-accent font-bold mt-1">
+              Win up to {multiplier}
+            </div>
+          )}
         </div>
         
-        {/* New badge */}
-        {isNew && (
-          <div className="absolute top-2 left-2 bg-green-600 text-white text-xs py-1 px-2 rounded">
-            NEW
-          </div>
-        )}
+        {/* Favorite button */}
+        <button className="absolute top-2 right-2 text-white opacity-0 transition-opacity favorite-icon">
+          <Heart className="h-4 w-4" />
+        </button>
         
-        {/* Multiplier */}
-        {multiplier && (
-          <div className="absolute top-2 left-2 bg-casino-accent text-black font-bold text-xs py-1 px-2 rounded">
-            {multiplier}
+        {/* New tag */}
+        {isNew && (
+          <div className="absolute top-2 left-2 bg-casino-accent text-xs font-bold text-black px-2 py-0.5 rounded">
+            NEW
           </div>
         )}
       </div>

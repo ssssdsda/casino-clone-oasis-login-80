@@ -15,10 +15,11 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mail, Phone, User } from 'lucide-react';
 
 export function LoginDialog() {
   const [open, setOpen] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(true);
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   
   // Email login state
@@ -38,7 +39,7 @@ export function LoginDialog() {
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isLoggingIn) {
+    if (activeTab === 'login') {
       if (!email || !password) {
         toast({
           title: "Error",
@@ -51,6 +52,10 @@ export function LoginDialog() {
       try {
         await login(email, password);
         setOpen(false);
+        toast({
+          title: "Success",
+          description: "You've successfully logged in!",
+        });
       } catch (error) {
         // Error handled in login function
       }
@@ -80,7 +85,7 @@ export function LoginDialog() {
       if (phoneNumber.length < 10) {
         toast({
           title: "Error",
-          description: "Please enter a valid phone number",
+          description: "Please enter a valid phone number with country code (e.g. +1234567890)",
           variant: "destructive"
         });
         return;
@@ -89,7 +94,7 @@ export function LoginDialog() {
       try {
         const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
         
-        if (isLoggingIn) {
+        if (activeTab === 'login') {
           const verId = await loginWithPhone(formattedPhone);
           setVerificationId(verId);
         } else {
@@ -130,11 +135,6 @@ export function LoginDialog() {
     }
   };
 
-  const handleToggleMode = () => {
-    setIsLoggingIn(!isLoggingIn);
-    setShowVerification(false);
-  };
-
   const resetForm = () => {
     setEmail('');
     setPassword('');
@@ -142,149 +142,187 @@ export function LoginDialog() {
     setPhoneNumber('');
     setVerificationCode('');
     setShowVerification(false);
-    setIsLoggingIn(true);
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      setOpen(isOpen);
-      if (!isOpen) resetForm();
-    }}>
-      <DialogTrigger asChild>
-        <Button className="bg-casino-accent hover:bg-casino-accent-hover text-black font-bold">
+    <>
+      <div className="flex space-x-2">
+        <Button 
+          onClick={() => {
+            setActiveTab('login');
+            setOpen(true);
+          }}
+          className="bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
+        >
           Login
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-casino border-casino-accent">
-        <DialogHeader>
-          <DialogTitle className="text-white">{isLoggingIn ? 'Login' : 'Register'}</DialogTitle>
-          <DialogDescription className="text-gray-300">
-            {isLoggingIn 
-              ? 'Enter your credentials to access your account.'
-              : 'Create a new account to start playing.'}
-          </DialogDescription>
-        </DialogHeader>
-        
-        <Tabs defaultValue="email" value={loginMethod} onValueChange={(v) => setLoginMethod(v as 'email' | 'phone')}>
-          <TabsList className="grid grid-cols-2">
-            <TabsTrigger value="email">Email</TabsTrigger>
-            <TabsTrigger value="phone">Phone</TabsTrigger>
-          </TabsList>
+        <Button 
+          onClick={() => {
+            setActiveTab('register');
+            setOpen(true);
+          }}
+          className="bg-green-600 hover:bg-green-700 text-white font-bold"
+        >
+          Register
+        </Button>
+      </div>
+
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) resetForm();
+      }}>
+        <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-[#0e363d] to-[#0a2328] border-casino-accent">
+          <DialogHeader>
+            <DialogTitle className="text-white text-xl">{activeTab === 'login' ? 'Login to Your Account' : 'Create New Account'}</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              {activeTab === 'login' 
+                ? 'Enter your credentials to access your account.'
+                : 'Create a new account to start playing.'}
+            </DialogDescription>
+          </DialogHeader>
           
-          <TabsContent value="email">
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
-              {!isLoggingIn && (
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-white">Username</Label>
-                  <Input 
-                    id="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="bg-casino-dark border-gray-700 text-white"
-                  />
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-white">Email</Label>
-                <Input 
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-casino-dark border-gray-700 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-white">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-casino-dark border-gray-700 text-white"
-                />
-              </div>
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="text-gray-300 border-gray-700 hover:bg-casino-dark hover:text-white"
-                  onClick={handleToggleMode}
-                >
-                  {isLoggingIn ? 'Need an account?' : 'Already have an account?'}
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Processing...' : isLoggingIn ? 'Login' : 'Register'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </TabsContent>
-          
-          <TabsContent value="phone">
-            <form onSubmit={handlePhoneSubmit} className="space-y-4">
-              {!showVerification ? (
-                <>
-                  {!isLoggingIn && (
+          <Tabs 
+            defaultValue={activeTab} 
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as 'login' | 'register')}
+            className="mb-4"
+          >
+            <TabsList className="grid grid-cols-2 mb-4">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
+            
+            <Tabs defaultValue="email" value={loginMethod} onValueChange={(v) => setLoginMethod(v as 'email' | 'phone')}>
+              <TabsList className="grid grid-cols-2 mb-4">
+                <TabsTrigger value="email" className="flex items-center gap-1">
+                  <Mail className="h-4 w-4" />
+                  Email
+                </TabsTrigger>
+                <TabsTrigger value="phone" className="flex items-center gap-1">
+                  <Phone className="h-4 w-4" />
+                  Phone
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="email">
+                <form onSubmit={handleEmailSubmit} className="space-y-4">
+                  {activeTab === 'register' && (
                     <div className="space-y-2">
-                      <Label htmlFor="phone-username" className="text-white">Username</Label>
+                      <Label htmlFor="username" className="text-white flex items-center gap-2">
+                        <User className="h-4 w-4" /> Username
+                      </Label>
                       <Input 
-                        id="phone-username"
+                        id="username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         className="bg-casino-dark border-gray-700 text-white"
+                        placeholder="Enter your username"
                       />
                     </div>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-white">Phone Number</Label>
+                    <Label htmlFor="email" className="text-white flex items-center gap-2">
+                      <Mail className="h-4 w-4" /> Email
+                    </Label>
                     <Input 
-                      id="phone"
-                      placeholder="+1234567890"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="bg-casino-dark border-gray-700 text-white"
+                      placeholder="Your email address"
                     />
                   </div>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="verification-code" className="text-white">Verification Code</Label>
-                  <Input 
-                    id="verification-code"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                    className="bg-casino-dark border-gray-700 text-white"
-                  />
-                </div>
-              )}
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-white flex items-center gap-2">
+                      <User className="h-4 w-4" /> Password
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-casino-dark border-gray-700 text-white"
+                      placeholder="Your password"
+                    />
+                  </div>
+                  <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
+                    <Button 
+                      type="submit" 
+                      className={activeTab === 'login' ? 
+                        "bg-casino-accent hover:bg-casino-accent-hover text-black font-bold w-full" : 
+                        "bg-green-600 hover:bg-green-700 text-white font-bold w-full"
+                      }
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Processing...' : activeTab === 'login' ? 'Login' : 'Register'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </TabsContent>
               
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
-                {!showVerification && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="text-gray-300 border-gray-700 hover:bg-casino-dark hover:text-white"
-                    onClick={handleToggleMode}
-                  >
-                    {isLoggingIn ? 'Need an account?' : 'Already have an account?'}
-                  </Button>
-                )}
-                <Button 
-                  type="submit" 
-                  className="bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Processing...' : showVerification ? 'Verify Code' : isLoggingIn ? 'Get Code' : 'Register'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+              <TabsContent value="phone">
+                <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                  {!showVerification ? (
+                    <>
+                      {activeTab === 'register' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="phone-username" className="text-white flex items-center gap-2">
+                            <User className="h-4 w-4" /> Username
+                          </Label>
+                          <Input 
+                            id="phone-username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="bg-casino-dark border-gray-700 text-white"
+                            placeholder="Enter your username"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-white flex items-center gap-2">
+                          <Phone className="h-4 w-4" /> Phone Number
+                        </Label>
+                        <Input 
+                          id="phone"
+                          placeholder="+1234567890"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          className="bg-casino-dark border-gray-700 text-white"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="verification-code" className="text-white">Verification Code</Label>
+                      <Input 
+                        id="verification-code"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                        className="bg-casino-dark border-gray-700 text-white"
+                        placeholder="Enter the 6-digit code"
+                      />
+                    </div>
+                  )}
+                  
+                  <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
+                    <Button 
+                      type="submit" 
+                      className={activeTab === 'login' ? 
+                        "bg-casino-accent hover:bg-casino-accent-hover text-black font-bold w-full" : 
+                        "bg-green-600 hover:bg-green-700 text-white font-bold w-full"
+                      }
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Processing...' : showVerification ? 'Verify Code' : activeTab === 'login' ? 'Get Code' : 'Register'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
