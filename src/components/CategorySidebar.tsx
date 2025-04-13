@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { 
-  Flame, Gift, Gamepad2, Joystick, Poker, Trophy, 
-  Dice5, Download, Casino, Coins, DollarSign 
+  Flame, Gift, Gamepad2, Joystick, Hearts, Trophy, 
+  Dice5, Download, Coins, DollarSign, CircleDollarSign 
 } from 'lucide-react';
 
 interface CategoryProps {
@@ -31,8 +31,8 @@ const CategorySidebar: React.FC = () => {
 
   const categories = [
     { id: 'popular', icon: <Flame size={24} />, label: 'Popular' },
-    { id: 'slots', icon: <Casino size={24} />, label: 'Slots' },
-    { id: 'live', icon: <Poker size={24} />, label: 'Live Casino' },
+    { id: 'slots', icon: <Coins size={24} />, label: 'Slots' },
+    { id: 'live', icon: <Hearts size={24} />, label: 'Live Casino' },
     { id: 'sports', icon: <Trophy size={24} />, label: 'Sports' },
     { id: 'card', icon: <Dice5 size={24} />, label: 'Card Games' },
     { id: 'arcade', icon: <Gamepad2 size={24} />, label: 'Arcade' },
