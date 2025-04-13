@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Headphones, Volume2, VolumeX, RotateCcw, Play, Star } from 'lucide-react';
@@ -10,7 +9,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 
-// Slot machine symbols
 const symbols = [
   { id: 'seven', image: '/public/lovable-uploads/5115335b-c53e-4e42-b15c-54c2578c7414.png', value: 10 },
   { id: 'bell', image: '/placeholder.svg', value: 5 },
@@ -29,7 +27,6 @@ const SpinGame = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Game state
   const [reels, setReels] = useState<number[][]>([
     [0, 1, 2, 3, 4], 
     [1, 2, 3, 4, 0], 
@@ -44,10 +41,8 @@ const SpinGame = () => {
   const [muted, setMuted] = useState(true);
   const [loading, setLoading] = useState(true);
   
-  // References for animations
   const reelRefs = useRef<HTMLDivElement[]>([]);
   
-  // Initialize game
   useEffect(() => {
     if (!isAuthenticated) {
       toast({
@@ -59,12 +54,10 @@ const SpinGame = () => {
       return;
     }
     
-    // Simulate loading
     const timer = setTimeout(() => {
       setLoading(false);
     }, 2000);
     
-    // Set user balance
     if (user) {
       setBalance(user.balance);
     }
@@ -72,11 +65,9 @@ const SpinGame = () => {
     return () => clearTimeout(timer);
   }, [isAuthenticated, user, navigate, toast, t]);
   
-  // Handle spin
   const handleSpin = () => {
     if (spinning) return;
     
-    // Check balance
     if (balance < bet) {
       toast({
         title: t('insufficientFunds'),
@@ -86,35 +77,27 @@ const SpinGame = () => {
       return;
     }
     
-    // Deduct bet
     setBalance(prev => prev - bet);
     setSpinning(true);
     setWin(0);
     
-    // Spin animation
-    const spinDurations = [1500, 1700, 1900, 2100, 2300]; // Different durations for each reel
+    const spinDurations = [1500, 1700, 1900, 2100, 2300];
     
-    // Generate random results for each reel
     const newReels = reels.map(reel => {
       return reel.map(() => Math.floor(Math.random() * symbols.length));
     });
     
-    // Update reels with animation delay
     setReels(newReels);
     
-    // Calculate win after spinning
     setTimeout(() => {
-      // Check winning combinations (middle row)
       const middleRow = newReels.map(reel => reel[2]);
       let winAmount = 0;
       
-      // Simple win calculation: 3 or more matching symbols
       const counts: {[key: number]: number} = {};
       middleRow.forEach(symbolIndex => {
         counts[symbolIndex] = (counts[symbolIndex] || 0) + 1;
       });
       
-      // Find the highest count
       let maxCount = 0;
       let maxValue = 0;
       Object.entries(counts).forEach(([symbolIndex, count]) => {
@@ -124,12 +107,10 @@ const SpinGame = () => {
         }
       });
       
-      // Calculate win based on matches and bet
       if (maxCount >= 3) {
         winAmount = bet * maxValue * (maxCount - 2);
         setBalance(prev => prev + winAmount);
         
-        // Show win animation and sound
         setWin(winAmount);
         
         if (winAmount > bet * 10) {
@@ -151,7 +132,6 @@ const SpinGame = () => {
     }, Math.max(...spinDurations) + 200);
   };
   
-  // Change bet amount
   const changeBet = (amount: number) => {
     const newBet = Math.max(1, Math.min(100, bet + amount));
     setBet(newBet);
@@ -181,7 +161,6 @@ const SpinGame = () => {
     <div className="min-h-screen bg-casino-dark flex flex-col">
       <Header />
       <main className="flex-1 p-4 max-w-4xl mx-auto">
-        {/* Game Title */}
         <div className="relative mb-6">
           <div className="bg-gradient-to-r from-indigo-900 via-purple-800 to-indigo-900 p-1 rounded-lg">
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded border-2 border-red-500 p-2 relative">
@@ -211,9 +190,7 @@ const SpinGame = () => {
           </div>
         </div>
         
-        {/* Slot Machine */}
         <div className="relative bg-gradient-to-b from-purple-900 to-indigo-900 p-6 rounded-3xl border-4 border-pink-700 shadow-2xl mb-6">
-          {/* Reels Container */}
           <div className="flex justify-center space-x-1 bg-gray-200 bg-opacity-20 rounded-2xl p-2 mb-4">
             {[0, 1, 2, 3, 4].map((reelIndex) => (
               <motion.div
@@ -236,9 +213,9 @@ const SpinGame = () => {
                 }
               >
                 <div className="absolute inset-0 flex flex-col items-center">
-                  {reels[reelIndex].map((symbolIndex, idx) => (
+                  {reels[reelIndex].map((symbolIndex, symbolIdx) => (
                     <div
-                      key={`${reelIndex}-${idx}`}
+                      key={`${reelIndex}-${symbolIdx}`}
                       className="w-full h-[55px] flex items-center justify-center p-1"
                     >
                       <img
@@ -250,15 +227,13 @@ const SpinGame = () => {
                   ))}
                 </div>
                 
-                {/* Highlight for winning line */}
-                {idx === 2 && win > 0 && (
+                {reelIndex === 2 && win > 0 && (
                   <div className="absolute top-[105px] left-0 right-0 h-[50px] bg-yellow-400 bg-opacity-30 border-t-2 border-b-2 border-yellow-500"></div>
                 )}
               </motion.div>
             ))}
           </div>
           
-          {/* Win Display */}
           {win > 0 && (
             <motion.div
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-70 rounded-xl p-4 text-center"
@@ -272,7 +247,6 @@ const SpinGame = () => {
           )}
         </div>
         
-        {/* Controls */}
         <div className="bg-gray-900 p-4 rounded-xl border border-gray-700 shadow-inner">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-3 mb-4 md:mb-0">
