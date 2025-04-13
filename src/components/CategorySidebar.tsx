@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { 
-  Flame, Gift, Gamepad2, Joystick, Hearts, Trophy, 
+  Flame, Gift, Gamepad2, Joystick, Heart, Trophy, 
   Dice5, Download, Coins, DollarSign, CircleDollarSign 
 } from 'lucide-react';
 
@@ -32,7 +32,7 @@ const CategorySidebar: React.FC = () => {
   const categories = [
     { id: 'popular', icon: <Flame size={24} />, label: 'Popular' },
     { id: 'slots', icon: <Coins size={24} />, label: 'Slots' },
-    { id: 'live', icon: <Hearts size={24} />, label: 'Live Casino' },
+    { id: 'live', icon: <Heart size={24} />, label: 'Live Casino' },
     { id: 'sports', icon: <Trophy size={24} />, label: 'Sports' },
     { id: 'card', icon: <Dice5 size={24} />, label: 'Card Games' },
     { id: 'arcade', icon: <Gamepad2 size={24} />, label: 'Arcade' },
