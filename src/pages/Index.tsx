@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -12,6 +11,17 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
 
 // Game data
+const featuredGames = [
+  {
+    id: 'spin-win',
+    title: 'Casino Win Spin',
+    image: '/lovable-uploads/0589ec98-6814-4024-b231-39c6e8aceab7.png',
+    multiplier: '10000',
+    isNew: true,
+    path: '/game/spin'
+  },
+];
+
 const popularGames = [
   {
     id: '1',
@@ -35,7 +45,6 @@ const popularGames = [
     title: 'Wild Showdown',
     image: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=300&h=400',
   },
-  // More games for better grid
   {
     id: '5',
     title: 'Tiger Rush',
@@ -126,6 +135,7 @@ const Index = () => {
         <main className={`flex-1 p-1 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
           <GameCategories />
           <div className="mt-2 md:mt-4 space-y-2 md:space-y-4">
+            <GameSection title="featuredGames" games={featuredGames} />
             <GameSection title="popularGames" games={popularGames} />
             <GameSection title="slots" games={slotGames} />
             <GameSection title="liveGames" games={liveGames} />
