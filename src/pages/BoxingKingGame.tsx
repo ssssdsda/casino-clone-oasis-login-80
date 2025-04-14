@@ -443,7 +443,7 @@ const BoxingKingGame = () => {
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         @keyframes slide-reel {
           0% { transform: translateY(0); }
           25% { transform: translateY(-10px); }
