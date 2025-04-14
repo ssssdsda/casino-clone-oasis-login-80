@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -29,7 +30,7 @@ const featuredGames = [
   {
     id: 'casino-win-spin',
     title: 'Casino Win Spin',
-    image: '/lovable-uploads/92fab6e1-76fd-48ee-b9ea-819c8f10fef0.png',
+    image: '/lovable-uploads/b09d12e1-cf60-415e-8731-e1f41e3d8568.png',
     isNew: true,
     path: '/game/spin'
   },

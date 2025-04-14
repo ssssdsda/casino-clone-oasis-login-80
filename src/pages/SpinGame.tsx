@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw, Info, Plus, Minus, ArrowUp, ArrowDown } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -9,8 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-// Define symbol types with the new images
 const symbols = [
   { id: 'cherry', image: '/lovable-uploads/d63bf1f6-ac8d-40d6-a419-67c3915f5333.png', value: 5 },
   { id: 'lemon', image: '/lovable-uploads/20b5cda9-f61f-4024-bbb6-1cfee6353614.png', value: 3 },
@@ -23,7 +22,8 @@ const symbols = [
   { id: 'wild', image: '/lovable-uploads/6fc263a6-a7b2-4cf2-afe5-9fb0b99fdd91.png', value: 15 },
 ];
 
-// Load images before game starts to prevent lag
+const bettingOptions = [1, 2, 5, 10, 20, 50, 100];
+
 const preloadImages = () => {
   symbols.forEach(symbol => {
     const img = new Image();
@@ -51,25 +51,34 @@ const SpinGame = () => {
   const [loading, setLoading] = useState(true);
   const [showContinue, setShowContinue] = useState(false);
   const [preloaded, setPreloaded] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+  const [lastWins, setLastWins] = useState<number[]>([]);
+  const [reelSpeeds, setReelSpeeds] = useState<number[]>([]);
+  const [betMultiplier, setBetMultiplier] = useState(1);
   
   const reelRefs = useRef<HTMLDivElement[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   
   useEffect(() => {
-    // Preload images to prevent rendering lag
     if (!preloaded) {
       preloadImages();
       setPreloaded(true);
     }
     
-    // Show loading for 2 seconds, then display continue button
+    setReelSpeeds([
+      800 + Math.random() * 200,
+      850 + Math.random() * 200,
+      900 + Math.random() * 200,
+      950 + Math.random() * 200,
+      1000 + Math.random() * 200
+    ]);
+    
     const timer = setTimeout(() => {
       setLoading(false);
       setShowContinue(true);
     }, 2000);
     
-    // Create audio elements
     audioRef.current = new Audio('/sounds/spin.mp3'); 
     winAudioRef.current = new Audio('/sounds/win.mp3'); 
     
@@ -92,7 +101,9 @@ const SpinGame = () => {
       return;
     }
     
-    if (user.balance < bet) {
+    const totalBet = bet * betMultiplier;
+    
+    if (user.balance < totalBet) {
       toast({
         title: t('insufficientFunds'),
         description: t('pleaseDepositMore'),
@@ -101,8 +112,7 @@ const SpinGame = () => {
       return;
     }
     
-    // Deduct bet from balance
-    updateUserBalance(user.balance - bet);
+    updateUserBalance(user.balance - totalBet);
     setSpinning(true);
     setWin(0);
     
@@ -110,29 +120,23 @@ const SpinGame = () => {
       audioRef.current.play().catch(err => console.error("Audio play error:", err));
     }
     
-    // Create staggered spin durations for each reel for realistic effect
-    const spinDurations = [1500, 1700, 1900, 2100, 2300];
+    const baseSpeeds = [1500, 1700, 1900, 2100, 2300];
     
-    // Generate new random symbols for each position
-    const newReels = reels.map(reel => {
+    const newReels = reels.map((reel, reelIndex) => {
       return reel.map(() => Math.floor(Math.random() * symbols.length));
     });
     
     setReels(newReels);
     
-    // Calculate win after all reels have stopped
     setTimeout(() => {
-      // Check middle row for matches
       const middleRow = newReels.map(reel => reel[2]);
       let winAmount = 0;
       
-      // Count occurrences of each symbol
       const counts: {[key: number]: number} = {};
       middleRow.forEach(symbolIndex => {
         counts[symbolIndex] = (counts[symbolIndex] || 0) + 1;
       });
       
-      // Find max matching symbols and determine win
       let maxCount = 0;
       let maxValue = 0;
       Object.entries(counts).forEach(([symbolIndex, count]) => {
@@ -143,20 +147,20 @@ const SpinGame = () => {
       });
       
       if (maxCount >= 3) {
-        winAmount = bet * maxValue * (maxCount - 2);
+        winAmount = totalBet * maxValue * (maxCount - 2);
         
-        // Add winnings to balance
         if (user) {
-          updateUserBalance(user.balance - bet + winAmount);
+          updateUserBalance(user.balance - totalBet + winAmount);
         }
         
         setWin(winAmount);
+        setLastWins(prev => [winAmount, ...prev.slice(0, 4)]);
         
         if (!muted && winAudioRef.current) {
           winAudioRef.current.play().catch(err => console.error("Win audio play error:", err));
         }
         
-        if (winAmount > bet * 10) {
+        if (winAmount > totalBet * 10) {
           toast({
             title: "WOOOOOOO!",
             description: t('bigWin'),
@@ -169,15 +173,25 @@ const SpinGame = () => {
             description: `${winAmount}৳`,
           });
         }
+      } else {
+        setLastWins(prev => [0, ...prev.slice(0, 4)]);
       }
       
       setSpinning(false);
-    }, Math.max(...spinDurations) + 200);
+    }, Math.max(...baseSpeeds) + 200);
   };
   
   const changeBet = (amount: number) => {
     const newBet = Math.max(1, Math.min(100, bet + amount));
     setBet(newBet);
+  };
+  
+  const handleBetMultiplierChange = (multiplier: number) => {
+    setBetMultiplier(multiplier);
+  };
+  
+  const selectBettingOption = (option: number) => {
+    setBet(option);
   };
   
   if (loading) {
@@ -433,16 +447,22 @@ const SpinGame = () => {
         </div>
         
         <div className="relative bg-gradient-to-b from-purple-900 to-indigo-900 p-6 rounded-3xl border-4 border-pink-700 shadow-2xl mb-6">
-          {/* 3D effect for the slot machine */}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black opacity-30 rounded-3xl pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black opacity-20 rounded-3xl pointer-events-none" />
           
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute top-2 right-2 bg-gray-800/50 text-white border-gray-600 z-10"
+            onClick={() => setShowRules(true)}
+          >
+            <Info className="h-4 w-4" />
+          </Button>
+          
           <div className="flex justify-center space-x-1 bg-gray-200 bg-opacity-20 p-2 rounded-2xl mb-4 relative overflow-hidden">
-            {/* Slot machine backdrop with neon glow */}
             <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 to-purple-500/10" />
             <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]" />
             
-            {/* Chrome-style frame for the slot machine */}
             <div className="absolute inset-0 border-8 border-gray-300/30 rounded-xl pointer-events-none" />
             
             {[0, 1, 2, 3, 4].map((reelIndex) => (
@@ -456,7 +476,6 @@ const SpinGame = () => {
                   backgroundImage: "linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.05))"
                 }}
               >
-                {/* Reel shadow effects */}
                 <div className="absolute inset-0 shadow-[inset_0_0_10px_rgba(0,0,0,0.7)]" />
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black opacity-20" />
                 
@@ -470,9 +489,9 @@ const SpinGame = () => {
                           y: [0, -500, 0],
                           transition: {
                             y: {
-                              duration: 1 + (reelIndex * 0.2),
-                              ease: [0.25, 0.1, 0.25, 1],
-                              repeat: 6 - reelIndex,
+                              duration: reelSpeeds[reelIndex] / 1000,
+                              ease: "easeInOut",
+                              repeat: 5 + Math.floor(Math.random() * 3),
                               repeatType: "loop",
                             }
                           }
@@ -480,14 +499,25 @@ const SpinGame = () => {
                       }
                     >
                       <div className="relative w-full h-full flex items-center justify-center">
-                        {/* Symbol Glow Effect */}
                         <div className="absolute inset-0 rounded-full bg-white opacity-20 blur-md" />
                         
-                        <img
+                        <motion.img
                           src={symbols[symbolIndex].image}
                           alt={symbols[symbolIndex].id}
                           className="max-w-full max-h-full object-contain z-10 drop-shadow-lg"
                           style={{ width: "40px", height: "40px" }}
+                          animate={
+                            !spinning ? {
+                              rotate: [0, symbolIndex % 2 === 0 ? 5 : -5, 0],
+                              scale: [1, 1.05, 1],
+                              transition: {
+                                duration: 2 + (symbolIndex * 0.5),
+                                repeat: Infinity,
+                                repeatType: "reverse",
+                                delay: (reelIndex * 0.2) + (symbolPosition * 0.1)
+                              }
+                            } : {}
+                          }
                         />
                       </div>
                     </motion.div>
@@ -514,6 +544,26 @@ const SpinGame = () => {
                 )}
               </motion.div>
             ))}
+          </div>
+          
+          <div className="flex justify-center space-x-2 mb-4">
+            <div className="bg-gray-800/70 rounded-lg p-2 flex items-center space-x-2">
+              <span className="text-xs text-gray-300">Last wins:</span>
+              {lastWins.length > 0 ? 
+                lastWins.map((winAmount, i) => (
+                  <motion.span 
+                    key={i}
+                    className={`text-xs font-mono px-2 py-1 rounded ${winAmount > 0 ? 'bg-green-900 text-green-300' : 'bg-red-900/50 text-red-300'}`}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring" }}
+                  >
+                    {winAmount > 0 ? `+${winAmount}` : '0'}
+                  </motion.span>
+                )) : 
+                <span className="text-xs text-gray-400">No history</span>
+              }
+            </div>
           </div>
           
           {win > 0 && (
@@ -575,7 +625,42 @@ const SpinGame = () => {
           )}
         </div>
         
-        <div className="bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700 shadow-inner backdrop-blur-sm">
+        <div className="bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700 shadow-inner backdrop-blur-sm mb-4">
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            {bettingOptions.map(option => (
+              <motion.button
+                key={option}
+                className={`px-3 py-1.5 rounded-lg font-medium text-sm ${bet === option ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => selectBettingOption(option)}
+              >
+                {option}৳
+              </motion.button>
+            ))}
+          </div>
+          
+          <div className="flex justify-center mb-4">
+            <div className="bg-gray-800 rounded-lg p-2">
+              <p className="text-xs text-center text-gray-400 mb-1">Bet Multiplier</p>
+              <div className="flex space-x-1">
+                {[1, 2, 3, 5, 10].map((mult) => (
+                  <motion.button
+                    key={mult}
+                    className={`w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold ${
+                      betMultiplier === mult ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleBetMultiplierChange(mult)}
+                  >
+                    x{mult}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          </div>
+          
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-3 mb-4 md:mb-0">
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
@@ -661,6 +746,10 @@ const SpinGame = () => {
                     </Button>
                   </motion.div>
                 </div>
+                
+                <div className="text-center text-xs text-emerald-400 mt-1">
+                  Total: {(bet * betMultiplier).toFixed(2)}৳
+                </div>
               </div>
               
               <motion.div
@@ -669,7 +758,7 @@ const SpinGame = () => {
               >
                 <Button
                   className={`bg-gradient-to-r ${spinning ? 'from-gray-600 to-gray-700' : 'from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'} text-white font-bold rounded-full h-14 w-14 shadow-lg`}
-                  disabled={spinning || !user || (user && user.balance < bet)}
+                  disabled={spinning || !user || (user && user.balance < (bet * betMultiplier))}
                   onClick={handleSpin}
                 >
                   {spinning ? (
@@ -706,8 +795,62 @@ const SpinGame = () => {
             </div>
           </div>
         </div>
+        
+        <motion.div 
+          className="bg-gray-800/80 rounded-lg p-3 border border-purple-700/50"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <h3 className="text-sm font-bold text-purple-300 mb-1 flex items-center">
+            <Star className="h-3 w-3 mr-1 text-yellow-400" />
+            Win Patterns
+          </h3>
+          <p className="text-xs text-gray-300">Match 3 or more symbols on the middle row to win! Higher value symbols pay more.</p>
+        </motion.div>
       </main>
       <Footer />
+      
+      <Dialog open={showRules} onOpenChange={setShowRules}>
+        <DialogContent className="bg-gray-900 text-white border-gray-700 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-yellow-500">
+              Casino Win Spin Rules
+            </DialogTitle>
+          </DialogHeader>
+          <DialogDescription className="text-gray-300">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-white font-bold mb-1">How to Play</h3>
+                <p className="text-sm">Select your bet amount and click SPIN. Match 3 or more identical symbols on the middle row to win!</p>
+              </div>
+              
+              <div>
+                <h3 className="text-white font-bold mb-1">Betting</h3>
+                <p className="text-sm">Choose your bet amount and multiplier. Higher bets mean bigger potential wins!</p>
+              </div>
+              
+              <div>
+                <h3 className="text-white font-bold mb-1">Symbol Values</h3>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {symbols.map(symbol => (
+                    <div key={symbol.id} className="bg-gray-800 p-2 rounded flex items-center">
+                      <img src={symbol.image} alt={symbol.id} className="w-8 h-8 mr-2" />
+                      <span className="text-yellow-400 font-mono">{symbol.value}x</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-white font-bold mb-1">Winnings</h3>
+                <p className="text-sm">Your win is calculated as: Bet × Symbol Value × (Number of Matching Symbols - 2)</p>
+                <p className="text-xs text-gray-400 mt-1">Example: Bet 10 × Wild Value 15 × (3 matching - 2) = 150</p>
+              </div>
+            </div>
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
