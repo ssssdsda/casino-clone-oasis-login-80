@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw, 
-  Info, Plus, Minus, Cherry, Lemon, Apple, Gift, Sparkles
+  Info, Plus, Minus, Cherry, Apple, Gift, Sparkles
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -21,13 +22,13 @@ const fruitSymbols = [
     value: 5 
   },
   { 
-    id: 'lemon', 
-    icon: (props) => <Lemon {...props} className="w-full h-full text-yellow-400" />,
+    id: 'apple', 
+    icon: (props) => <Apple {...props} className="w-full h-full text-yellow-400" />,
     value: 3 
   },
   { 
     id: 'orange', 
-    icon: (props) => <Apple {...props} className="w-full h-full text-orange-500" />,
+    icon: (props) => <Gift {...props} className="w-full h-full text-orange-500" />,
     value: 4 
   },
   { 
@@ -81,7 +82,7 @@ const SpinGame = () => {
   
   useEffect(() => {
     if (!preloaded) {
-      preloadImages();
+      // Initialize the preloaded state without an actual preloadImages function
       setPreloaded(true);
     }
     
@@ -347,11 +348,9 @@ const SpinGame = () => {
             
             <div className="flex justify-center space-x-4 mb-6">
               {fruitSymbols.slice(0, 3).map((symbol, index) => (
-                <motion.img
+                <motion.div
                   key={index}
-                  src={symbol.image}
-                  alt={symbol.id}
-                  className="w-16 h-16 object-contain"
+                  className="w-16 h-16 flex items-center justify-center"
                   animate={{ 
                     y: [0, -10, 0],
                     rotate: [0, index % 2 ? 10 : -10, 0]
@@ -362,7 +361,9 @@ const SpinGame = () => {
                     repeatType: "reverse",
                     delay: index * 0.2
                   }}
-                />
+                >
+                  {symbol.icon({ size: 48 })}
+                </motion.div>
               ))}
             </div>
             
@@ -756,7 +757,9 @@ const SpinGame = () => {
                     <div className="grid grid-cols-2 gap-2">
                       {fruitSymbols.map(symbol => (
                         <div key={symbol.id} className="flex items-center gap-2 bg-gray-800 rounded p-2">
-                          <img src={symbol.image} alt={symbol.id} className="w-8 h-8 object-contain" />
+                          <div className="w-8 h-8">
+                            {symbol.icon({ size: 24 })}
+                          </div>
                           <div>
                             <div className="capitalize font-medium">{symbol.id}</div>
                             <div className="text-sm text-green-400">x{symbol.value}</div>

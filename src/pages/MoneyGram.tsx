@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -332,7 +333,7 @@ const MoneyGram = () => {
                         : { duration: 2, repeat: Infinity, repeatType: "reverse" }
                     }
                   >
-                    {moneySymbols[symbolIndex].icon()}
+                    {moneySymbols[symbolIndex].icon({})}
                   </motion.div>
                   
                   {winResult.isWin && 
@@ -482,7 +483,7 @@ const MoneyGram = () => {
                 {moneySymbols.map((symbol, index) => (
                   <div key={index} className="flex items-center bg-emerald-800/50 p-2 rounded">
                     <div className="w-12 h-12">
-                      {symbol.icon()}
+                      {symbol.icon({})}
                     </div>
                     <div className="ml-4">
                       <p className="font-bold">{symbol.value}৳ Note</p>
