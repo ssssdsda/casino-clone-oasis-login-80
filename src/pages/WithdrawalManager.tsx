@@ -136,13 +136,17 @@ const WithdrawalManager = () => {
       // Update withdrawal status
       await updateDoc(withdrawalRef, {
         status: newStatus,
-        completedAt: newStatus === 'pending' ? null : new Date()
+        completedAt: newStatus === 'completed' || newStatus === 'rejected' ? new Date() : null
       });
 
       // Update local state
       setWithdrawalRequests(prev => 
         prev.map(req => req.id === requestId 
-          ? { ...req, status: newStatus, completedAt: newStatus === 'pending' ? undefined : new Date() } 
+          ? { 
+              ...req, 
+              status: newStatus, 
+              completedAt: newStatus === 'completed' || newStatus === 'rejected' ? new Date() : undefined 
+            } 
           : req
         )
       );
