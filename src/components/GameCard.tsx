@@ -19,8 +19,8 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
   const isMobile = useIsMobile();
   const [imageError, setImageError] = useState(false);
   
-  // Use the image path directly without adding random parameter
-  const imageUrl = image;
+  // Add a random query parameter to force the browser to reload the image
+  const imageUrl = `${image}?v=${new Date().getTime()}`;
   
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent clicking the card if the edit button is clicked

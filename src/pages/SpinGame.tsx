@@ -1,286 +1,670 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Minus, Plus, ChevronDown } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Headphones, Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw } from 'lucide-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { useNavigate } from 'react-router-dom';
+
+// Define symbol types with better graphics
+const symbols = [
+  { id: 'cherry', image: '/lovable-uploads/7ee869ea-c4ce-4db7-9031-a09bbd8ad5fd.png', value: 3 },
+  { id: 'lemon', image: '/lovable-uploads/0fe41380-0ce3-42f3-a0f4-491bb537c704.png', value: 2 },
+  { id: 'orange', image: '/lovable-uploads/2c773f0b-62a0-42ff-92e3-93c14f438654.png', value: 2 },
+  { id: 'plum', image: '/lovable-uploads/adbc8de0-0c80-42d3-a1f0-e39550742fc6.png', value: 2 },
+  { id: 'coin', image: '/lovable-uploads/672f03a3-2462-487d-a60a-df1660da9fb7.png', value: 15 },
+  { id: 'heart', image: '/public/lovable-uploads/a023c13d-3432-4f56-abd9-5bcdbbd30602.png', value: 1 },
+  { id: 'club', image: '/public/lovable-uploads/d10fd039-e61a-4e50-8145-a1efe284ada2.png', value: 1 },
+  { id: 'spade', image: '/public/lovable-uploads/7e03f44f-1482-4424-8f8c-40ab158dba36.png', value: 1 },
+  { id: 'wild', image: '/public/lovable-uploads/6fc263a6-a7b2-4cf2-afe5-9fb0b99fdd91.png', value: 15 },
+];
 
 const SpinGame = () => {
-  const { user, updateUserBalance } = useAuth();
-  const [betAmount, setBetAmount] = useState(10);
-  const [multiplier, setMultiplier] = useState(1.0);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [gameOver, setGameOver] = useState(false);
-  const [autoCashout, setAutoCashout] = useState(false);
-  const [autoCashoutMultiplier, setAutoCashoutMultiplier] = useState(1.5);
-  const [currentWin, setCurrentWin] = useState(0);
-  const [hasPlacedBet, setHasPlacedBet] = useState(false);
+  const { t } = useLanguage();
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const animationRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Use the uploaded casino win spin image
-  const spinMachineImage = '/lovable-uploads/da68ee0a-2bd5-45b4-9054-079d162553d5.png';
-
-  // Preload the image
+  
+  const [reels, setReels] = useState<number[][]>([
+    [0, 1, 2, 3, 4], 
+    [1, 2, 3, 4, 0], 
+    [2, 3, 4, 0, 1],
+    [3, 4, 0, 1, 2],
+    [4, 0, 1, 2, 3]
+  ]);
+  const [spinning, setSpinning] = useState(false);
+  const [bet, setBet] = useState(2);
+  const [win, setWin] = useState(0);
+  const [balance, setBalance] = useState(user?.balance || 1000);
+  const [muted, setMuted] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [showContinue, setShowContinue] = useState(false);
+  
+  const reelRefs = useRef<HTMLDivElement[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const winAudioRef = useRef<HTMLAudioElement | null>(null);
+  
   useEffect(() => {
-    const preloadImage = document.createElement('img');
-    preloadImage.src = spinMachineImage;
+    // Show loading for 3 seconds, then display continue button
+    const timer = setTimeout(() => {
+      setLoading(false);
+      setShowContinue(true);
+    }, 3000);
     
-    return () => {
-      if (animationRef.current) {
-        clearInterval(animationRef.current);
-      }
-    };
-  }, []);
-
-  const startGame = () => {
-    if (!user) {
+    if (user) {
+      setBalance(user.balance);
+    }
+    
+    // Create audio elements
+    audioRef.current = new Audio('/public/placeholder.svg'); // Replace with actual spin sound
+    winAudioRef.current = new Audio('/public/placeholder.svg'); // Replace with actual win sound
+    
+    return () => clearTimeout(timer);
+  }, [user]);
+  
+  const handleContinue = () => {
+    setShowContinue(false);
+  };
+  
+  const handleSpin = () => {
+    if (spinning) return;
+    
+    if (balance < bet) {
       toast({
-        title: "Error",
-        description: "Please login to play",
-        variant: "destructive"
+        title: t('insufficientFunds'),
+        description: t('pleaseDepositMore'),
+        variant: "destructive",
       });
       return;
     }
-
-    if (user.balance < betAmount) {
-      toast({
-        title: "Insufficient Balance",
-        description: "Please deposit funds to continue",
-        variant: "destructive"
-      });
-      return;
+    
+    setBalance(prev => prev - bet);
+    setSpinning(true);
+    setWin(0);
+    
+    if (!muted && audioRef.current) {
+      audioRef.current.play();
     }
-
-    setIsSpinning(true);
-    setGameOver(false);
-    setHasPlacedBet(true);
-
-    if (user && updateUserBalance) {
-      updateUserBalance(user.balance - betAmount);
-    }
-
-    setMultiplier(1.0);
-    setCurrentWin(0);
-
-    const maxMultiplier = Math.random() < 0.1 ? 5 + Math.random() * 5 : 1 + Math.random() * 2;
-
-    animationRef.current = setInterval(() => {
-      setMultiplier(prev => {
-        const increment = prev < 1.5 ? 0.01 : (prev < 3 ? 0.02 : 0.05);
-        const newMultiplier = +(prev + increment).toFixed(2);
-
-        setCurrentWin(betAmount * newMultiplier);
-
-        if (autoCashout && newMultiplier >= autoCashoutMultiplier) {
-          cashOut();
-        }
-
-        if (newMultiplier >= maxMultiplier) {
-          gameCrash();
-          return maxMultiplier;
-        }
-
-        return newMultiplier;
-      });
-    }, 50);
-  };
-
-  const cashOut = () => {
-    if (!isSpinning || gameOver || !hasPlacedBet) return;
-
-    if (animationRef.current) {
-      clearInterval(animationRef.current);
-      animationRef.current = null;
-    }
-
-    const winnings = betAmount * multiplier;
-    if (user && updateUserBalance) {
-      updateUserBalance(user.balance + winnings);
-    }
-
-    toast({
-      title: "Win!",
-      description: `You cashed out at ${multiplier}x and won ${winnings.toFixed(2)}!`,
+    
+    const spinDurations = [1500, 1700, 1900, 2100, 2300];
+    
+    const newReels = reels.map(reel => {
+      return reel.map(() => Math.floor(Math.random() * symbols.length));
     });
-
-    setIsSpinning(false);
-    setHasPlacedBet(false);
-  };
-
-  const gameCrash = () => {
-    if (animationRef.current) {
-      clearInterval(animationRef.current);
-      animationRef.current = null;
-    }
-
-    toast({
-      title: "Crashed!",
-      description: `The game crashed at ${multiplier}x!`,
-      variant: "destructive"
-    });
-
-    setGameOver(true);
-    setIsSpinning(false);
-    setHasPlacedBet(false);
-  };
-
-  const increaseBet = () => {
-    if (hasPlacedBet) return;
-    if (betAmount < 100) {
-      setBetAmount(prev => prev + 10);
-    } else if (betAmount < 1000) {
-      setBetAmount(prev => prev + 100);
-    } else {
-      setBetAmount(prev => prev + 1000);
-    }
-  };
-
-  const decreaseBet = () => {
-    if (hasPlacedBet) return;
-    if (betAmount > 1000) {
-      setBetAmount(prev => prev - 1000);
-    } else if (betAmount > 100) {
-      setBetAmount(prev => prev - 100);
-    } else if (betAmount > 10) {
-      setBetAmount(prev => prev - 10);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-800 to-purple-950 flex flex-col">
-      <div className="bg-purple-900 text-white p-4 flex justify-between items-center">
-        <button onClick={() => navigate('/')} className="text-white">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-        </button>
-        <div className="text-xl font-bold">Casino Win Spin</div>
-        <div className="w-6"></div>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center p-4 relative">
-        {currentWin > 0 && (
-          <motion.div 
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="absolute top-10 text-white text-4xl font-bold bg-green-600 px-4 py-2 rounded-lg z-10"
-          >
-            Win: {currentWin.toFixed(2)}!
-          </motion.div>
-        )}
+    
+    setReels(newReels);
+    
+    setTimeout(() => {
+      const middleRow = newReels.map(reel => reel[2]);
+      let winAmount = 0;
+      
+      const counts: {[key: number]: number} = {};
+      middleRow.forEach(symbolIndex => {
+        counts[symbolIndex] = (counts[symbolIndex] || 0) + 1;
+      });
+      
+      let maxCount = 0;
+      let maxValue = 0;
+      Object.entries(counts).forEach(([symbolIndex, count]) => {
+        if (count >= 3 && count > maxCount) {
+          maxCount = count;
+          maxValue = symbols[Number(symbolIndex)].value;
+        }
+      });
+      
+      if (maxCount >= 3) {
+        winAmount = bet * maxValue * (maxCount - 2);
+        setBalance(prev => prev + winAmount);
         
-        <div className="relative w-64 h-80 mb-8">
-          <img 
-            src={spinMachineImage} 
-            alt="Casino Win Spin" 
-            className="w-full h-full object-contain"
-            onError={(e) => {
-              console.error("Failed to load spin machine image");
-              (e.target as HTMLImageElement).src = 'https://placehold.co/300x400/purple/white?text=CASINO+WIN+SPIN';
-            }}
-          />
-          
-          <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
-                         text-white text-xl font-bold bg-purple-800/80 px-3 py-1 rounded-md">
-            {multiplier.toFixed(2)}x
-          </div>
+        setWin(winAmount);
+        
+        if (!muted && winAudioRef.current) {
+          winAudioRef.current.play();
+        }
+        
+        if (winAmount > bet * 10) {
+          toast({
+            title: "WOOOOOOO!",
+            description: t('bigWin'),
+            variant: "default",
+            className: "bg-yellow-500 text-black font-bold"
+          });
+        } else {
+          toast({
+            title: t('youWon'),
+            description: `${winAmount}৳`,
+          });
+        }
+      }
+      
+      setSpinning(false);
+    }, Math.max(...spinDurations) + 200);
+  };
+  
+  const changeBet = (amount: number) => {
+    const newBet = Math.max(1, Math.min(100, bet + amount));
+    setBet(newBet);
+  };
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-950 to-indigo-950 flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <motion.div
+            className="text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.h1 
+              className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 mb-4"
+              animate={{ 
+                scale: [1, 1.05, 1],
+                textShadow: ["0 0 4px #fff", "0 0 8px #fff", "0 0 4px #fff"],
+              }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity,
+                repeatType: "reverse" 
+              }}
+            >
+              Casino Win Spin
+            </motion.h1>
+            <motion.div 
+              className="w-24 h-24 border-8 border-yellow-500 border-t-transparent rounded-full mx-auto mb-6"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.p 
+              className="text-white text-lg"
+              animate={{ 
+                opacity: [1, 0.5, 1] 
+              }}
+              transition={{ 
+                duration: 1.5, 
+                repeat: Infinity,
+                repeatType: "reverse" 
+              }}
+            >
+              {t('loading')}...
+            </motion.p>
+          </motion.div>
         </div>
-
-        <div className="w-full max-w-md bg-purple-900 p-4 rounded-lg">
-          <div className="flex justify-between mb-4">
-            <button 
-              className="bg-purple-800 px-4 py-2 rounded-lg"
-              disabled={hasPlacedBet}
+        <Footer />
+      </div>
+    );
+  }
+  
+  if (showContinue) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-950 to-indigo-950 flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <motion.div 
+            className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.h1 
+              className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-yellow-500"
+              animate={{ 
+                y: [0, -5, 0],
+                scale: [1, 1.02, 1],
+              }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity,
+                repeatType: "reverse" 
+              }}
             >
-              Bet
-            </button>
-            <button 
-              className="bg-purple-800 px-4 py-2 rounded-lg"
-              onClick={() => setAutoCashout(!autoCashout)}
-            >
-              {autoCashout ? 'Manual' : 'Auto'}
-            </button>
-          </div>
-          
-          <div className="flex items-center mb-4">
-            <button 
-              onClick={decreaseBet}
-              className="bg-purple-700 p-2 rounded-full"
-              disabled={hasPlacedBet}
-            >
-              <Minus size={18} />
-            </button>
-            <div className="mx-4 text-center">
-              <div className="text-2xl">{betAmount.toFixed(2)}</div>
-              
-              <div className="grid grid-cols-4 gap-1 mt-2">
-                <button 
-                  onClick={() => !hasPlacedBet && setBetAmount(10)}
-                  className="bg-purple-800 py-1 px-2 text-xs rounded"
-                >
-                  10.00
-                </button>
-                <button 
-                  onClick={() => !hasPlacedBet && setBetAmount(50)}
-                  className="bg-purple-800 py-1 px-2 text-xs rounded"
-                >
-                  50.00
-                </button>
-                <button 
-                  onClick={() => !hasPlacedBet && setBetAmount(100)}
-                  className="bg-purple-800 py-1 px-2 text-xs rounded"
-                >
-                  100.00
-                </button>
-                <button 
-                  onClick={() => !hasPlacedBet && setBetAmount(1000)}
-                  className="bg-purple-800 py-1 px-2 text-xs rounded"
-                >
-                  1,000.00
-                </button>
+              Casino Win Spin
+            </motion.h1>
+            
+            <div className="flex justify-center mt-3 mb-8">
+              <div className="flex space-x-1">
+                {['W','I','N','S','P','I','N'].map((letter, index) => (
+                  <motion.span
+                    key={index}
+                    className={`bg-${index % 2 ? 'yellow' : 'pink'}-500 text-black w-8 h-8 rounded-full flex items-center justify-center font-bold text-xl`}
+                    animate={{ 
+                      y: [0, -8, 0],
+                    }}
+                    transition={{ 
+                      duration: 0.6, 
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      delay: index * 0.1
+                    }}
+                  >
+                    {letter}
+                  </motion.span>
+                ))}
               </div>
             </div>
-            <button 
-              onClick={increaseBet}
-              className="bg-purple-700 p-2 rounded-full"
-              disabled={hasPlacedBet}
+            
+            <p className="text-white mb-6 text-lg">Experience the thrill of our high-stakes slot machine with stunning 3D graphics and incredible win potential!</p>
+            
+            <motion.button 
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-8 rounded-full text-xl flex items-center justify-center mx-auto shadow-lg"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleContinue}
             >
-              <Plus size={18} />
-            </button>
+              {t('continue')} <ArrowRight className="ml-2 h-6 w-6" />
+            </motion.button>
+          </motion.div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-950 to-indigo-950 flex flex-col">
+      <Header />
+      <main className="flex-1 p-4 max-w-5xl mx-auto">
+        <div className="relative mb-6">
+          <div className="bg-gradient-to-r from-indigo-900 via-purple-800 to-indigo-900 p-1 rounded-lg">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded border-2 border-red-500 p-2 relative">
+              <motion.div 
+                className="absolute -top-1 left-0 right-0 flex justify-around"
+                animate={{ 
+                  filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] 
+                }}
+                transition={{ 
+                  duration: 1.5, 
+                  repeat: Infinity,
+                  repeatType: "reverse" 
+                }}
+              >
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <motion.div 
+                    key={i} 
+                    className="w-2 h-2 bg-yellow-400 rounded-full"
+                    animate={{ 
+                      opacity: [0.4, 1, 0.4],
+                      scale: [1, 1.2, 1]
+                    }}
+                    transition={{ 
+                      duration: 0.8, 
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      delay: i * 0.05 % 0.5
+                    }}
+                  />
+                ))}
+              </motion.div>
+              
+              <motion.h1 
+                className="text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-yellow-500 drop-shadow-lg py-2"
+                animate={{ 
+                  textShadow: ["0 0 4px rgba(255,255,255,0.5)", "0 0 8px rgba(255,255,255,0.8)", "0 0 4px rgba(255,255,255,0.5)"]
+                }}
+                transition={{ 
+                  duration: 2, 
+                  repeat: Infinity,
+                  repeatType: "reverse" 
+                }}
+              >
+                Casino Win Spin
+              </motion.h1>
+              
+              <div className="flex justify-center space-x-2 mt-1">
+                {['W','I','N','$','P','I','N'].map((letter, index) => (
+                  <motion.span 
+                    key={index}
+                    className={`${
+                      index === 0 ? "bg-blue-500" : 
+                      index === 1 ? "bg-purple-500" : 
+                      index === 2 ? "bg-green-500" : 
+                      index === 3 ? "bg-yellow-500" : 
+                      index === 4 ? "bg-orange-500" : 
+                      index === 5 ? "bg-red-500" : 
+                      "bg-pink-500"
+                    } ${
+                      index === 3 ? "text-black" : "text-white"
+                    } w-8 h-8 rounded-full flex items-center justify-center font-bold text-xl`}
+                    animate={{ 
+                      y: [0, -5, 0],
+                      scale: [1, 1.1, 1]
+                    }}
+                    transition={{ 
+                      duration: 1, 
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      delay: index * 0.1
+                    }}
+                  >
+                    {letter}
+                  </motion.span>
+                ))}
+              </div>
+              
+              <motion.div 
+                className="absolute -bottom-1 left-0 right-0 flex justify-around"
+                animate={{ 
+                  filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] 
+                }}
+                transition={{ 
+                  duration: 1.5, 
+                  repeat: Infinity,
+                  repeatType: "reverse" 
+                }}
+              >
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <motion.div 
+                    key={i} 
+                    className="w-2 h-2 bg-yellow-400 rounded-full"
+                    animate={{ 
+                      opacity: [0.4, 1, 0.4],
+                      scale: [1, 1.2, 1]
+                    }}
+                    transition={{ 
+                      duration: 0.8, 
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      delay: i * 0.05 % 0.5
+                    }}
+                  />
+                ))}
+              </motion.div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="relative bg-gradient-to-b from-purple-900 to-indigo-900 p-6 rounded-3xl border-4 border-pink-700 shadow-2xl mb-6">
+          {/* 3D effect for the slot machine */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black opacity-30 rounded-3xl pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black opacity-20 rounded-3xl pointer-events-none" />
+          
+          <div className="flex justify-center space-x-1 bg-gray-200 bg-opacity-20 p-2 rounded-2xl mb-4 relative overflow-hidden">
+            {/* Slot machine backdrop with neon glow */}
+            <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 to-purple-500/10" />
+            <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]" />
+            
+            {/* Chrome-style frame for the slot machine */}
+            <div className="absolute inset-0 border-8 border-gray-300/30 rounded-xl pointer-events-none" />
+            
+            {[0, 1, 2, 3, 4].map((reelIndex) => (
+              <motion.div
+                key={reelIndex}
+                ref={(el) => el && (reelRefs.current[reelIndex] = el)}
+                className="flex-1 relative bg-gray-300 rounded-lg overflow-hidden"
+                style={{
+                  height: "260px",
+                  perspective: "1000px",
+                  backgroundImage: "linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.05))"
+                }}
+                animate={
+                  spinning ? {
+                    rotateX: [0, 1800, 3600],
+                    transition: {
+                      rotateX: {
+                        duration: 2 + reelIndex * 0.2,
+                        ease: "easeInOut",
+                      }
+                    }
+                  } : {}
+                }
+              >
+                {/* Reel shadow effects */}
+                <div className="absolute inset-0 shadow-[inset_0_0_10px_rgba(0,0,0,0.7)]" />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black opacity-20" />
+                
+                <div className="absolute inset-0 flex flex-col items-center transform-style-3d">
+                  {reels[reelIndex].map((symbolIndex, symbolPosition) => (
+                    <motion.div
+                      key={`${reelIndex}-${symbolPosition}`}
+                      className="w-full h-[55px] flex items-center justify-center p-1"
+                      initial={{ rotateX: 0 }}
+                      animate={
+                        spinning ? { 
+                          rotateX: [0, -360],
+                          z: [0, -100, 0],
+                        } : {}
+                      }
+                      transition={{ 
+                        duration: 2 + reelIndex * 0.2, 
+                        ease: "easeInOut",
+                        delay: symbolPosition * 0.05
+                      }}
+                      style={{
+                        transformStyle: "preserve-3d",
+                        backfaceVisibility: "hidden"
+                      }}
+                    >
+                      <div className="relative w-full h-full flex items-center justify-center">
+                        {/* Symbol Glow Effect */}
+                        <div className="absolute inset-0 rounded-full bg-white opacity-20 blur-md" />
+                        
+                        <img
+                          src={symbols[symbolIndex].image}
+                          alt={symbols[symbolIndex].id}
+                          className="max-w-full max-h-full object-contain z-10 drop-shadow-lg"
+                        />
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                {reelIndex === 2 && win > 0 && (
+                  <motion.div 
+                    className="absolute top-[105px] left-0 right-0 h-[50px] bg-yellow-400 bg-opacity-30 border-t-2 border-b-2 border-yellow-500"
+                    animate={{ 
+                      opacity: [0.3, 0.6, 0.3],
+                      boxShadow: [
+                        "0 0 5px rgba(255, 215, 0, 0.5)", 
+                        "0 0 20px rgba(255, 215, 0, 0.8)", 
+                        "0 0 5px rgba(255, 215, 0, 0.5)"
+                      ]
+                    }}
+                    transition={{ 
+                      duration: 1.5, 
+                      repeat: Infinity,
+                      repeatType: "reverse" 
+                    }}
+                  />
+                )}
+              </motion.div>
+            ))}
           </div>
           
-          {autoCashout && (
-            <div className="mb-4">
-              <label className="block mb-2">Auto Cashout Multiplier</label>
-              <input
-                type="number"
-                step="0.1"
-                min="1.1"
-                max="100"
-                value={autoCashoutMultiplier}
-                onChange={(e) => setAutoCashoutMultiplier(Number(e.target.value))}
-                className="w-full bg-purple-800 p-2 rounded"
-              />
-            </div>
+          {win > 0 && (
+            <motion.div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-70 rounded-xl p-4 text-center z-20"
+              initial={{ scale: 0, rotate: -10 }}
+              animate={{ 
+                scale: [0, 1.2, 1],
+                rotate: [-10, 5, 0],
+                boxShadow: [
+                  "0 0 0px rgba(255, 215, 0, 0)", 
+                  "0 0 30px rgba(255, 215, 0, 0.8)", 
+                  "0 0 10px rgba(255, 215, 0, 0.5)"
+                ]
+              }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 200, 
+                damping: 15
+              }}
+            >
+              <motion.div 
+                className="text-yellow-400 font-bold text-xl md:text-3xl mb-1"
+                animate={{ 
+                  scale: [1, 1.1, 1],
+                  textShadow: [
+                    "0 0 5px rgba(255, 215, 0, 0.5)", 
+                    "0 0 20px rgba(255, 215, 0, 0.8)", 
+                    "0 0 5px rgba(255, 215, 0, 0.5)"
+                  ]
+                }}
+                transition={{ 
+                  duration: 0.8, 
+                  repeat: Infinity,
+                  repeatType: "reverse" 
+                }}
+              >
+                WOOOOOOO!
+              </motion.div>
+              <motion.div 
+                className="text-green-400 font-bold text-3xl md:text-5xl"
+                animate={{ 
+                  scale: [1, 1.05, 1],
+                  textShadow: [
+                    "0 0 5px rgba(0, 255, 0, 0.5)", 
+                    "0 0 20px rgba(0, 255, 0, 0.8)", 
+                    "0 0 5px rgba(0, 255, 0, 0.5)"
+                  ]
+                }}
+                transition={{ 
+                  duration: 0.5, 
+                  repeat: Infinity,
+                  repeatType: "reverse" 
+                }}
+              >
+                {win.toFixed(2)}৳
+              </motion.div>
+            </motion.div>
           )}
-          
-          <button
-            onClick={hasPlacedBet ? cashOut : startGame}
-            className={`w-full py-3 rounded-lg text-xl ${
-              hasPlacedBet 
-                ? 'bg-green-500 hover:bg-green-600' 
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            {hasPlacedBet ? (
-              <span>Cash Out {currentWin.toFixed(2)}</span>
-            ) : (
-              <span>Start Game</span>
-            )}
-          </button>
         </div>
-      </div>
+        
+        <div className="bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700 shadow-inner backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center space-x-3 mb-4 md:mb-0">
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="bg-gray-800 h-12 w-12 rounded-full border-gray-600"
+                  onClick={() => setMuted(!muted)}
+                >
+                  {muted ? <VolumeX className="h-5 w-5 text-gray-400" /> : <Volume2 className="h-5 w-5 text-white" />}
+                </Button>
+              </motion.div>
+              
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="bg-gray-800 h-12 w-12 rounded-full border-gray-600"
+                  onClick={() => navigate('/admin/spin-control')}
+                >
+                  <Star className="h-5 w-5 text-yellow-400" />
+                </Button>
+              </motion.div>
+              
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="bg-gray-800 h-12 w-12 rounded-full border-gray-600"
+                  onClick={() => window.location.reload()}
+                >
+                  <RotateCcw className="h-5 w-5 text-gray-400" />
+                </Button>
+              </motion.div>
+            </div>
+            
+            <div className="flex items-center space-x-5 mb-4 md:mb-0">
+              <div className="text-white">
+                <div className="text-xs text-gray-400">{t('bet')}</div>
+                <div className="flex items-center">
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="px-1 text-gray-400" 
+                      onClick={() => changeBet(-1)}
+                      disabled={bet <= 1 || spinning}
+                    >
+                      -
+                    </Button>
+                  </motion.div>
+                  <motion.span 
+                    className="text-yellow-400 font-bold w-16 text-center"
+                    animate={
+                      spinning ? {} : { 
+                        scale: [1, 1.05, 1],
+                        textShadow: [
+                          "0 0 1px rgba(255, 215, 0, 0.5)", 
+                          "0 0 4px rgba(255, 215, 0, 0.8)", 
+                          "0 0 1px rgba(255, 215, 0, 0.5)"
+                        ]
+                      }
+                    }
+                    transition={{ 
+                      duration: 2, 
+                      repeat: Infinity,
+                      repeatType: "reverse" 
+                    }}
+                  >
+                    {t('currency')}{bet.toFixed(2)}
+                  </motion.span>
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="px-1 text-gray-400" 
+                      onClick={() => changeBet(1)}
+                      disabled={bet >= 100 || spinning}
+                    >
+                      +
+                    </Button>
+                  </motion.div>
+                </div>
+              </div>
+              
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Button
+                  className={`bg-gradient-to-r ${spinning ? 'from-gray-600 to-gray-700' : 'from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'} text-white font-bold rounded-full h-14 w-14 shadow-lg`}
+                  disabled={spinning || balance < bet}
+                  onClick={handleSpin}
+                >
+                  {spinning ? (
+                    <RefreshCw className="h-6 w-6 animate-spin" />
+                  ) : (
+                    <Play className="h-6 w-6 ml-1" />
+                  )}
+                </Button>
+              </motion.div>
+              
+              <div className="text-white">
+                <div className="text-xs text-gray-400">{t('balance')}</div>
+                <motion.div 
+                  className="text-yellow-400 font-bold"
+                  animate={
+                    spinning ? {} : { 
+                      scale: [1, 1.02, 1],
+                      textShadow: [
+                        "0 0 1px rgba(255, 215, 0, 0.5)", 
+                        "0 0 4px rgba(255, 215, 0, 0.8)", 
+                        "0 0 1px rgba(255, 215, 0, 0.5)"
+                      ]
+                    }
+                  }
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }}
+                >
+                  {t('currency')}{balance.toFixed(2)}
+                </motion.div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
     </div>
   );
 };
