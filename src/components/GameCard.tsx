@@ -20,6 +20,12 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   
+  // Reset states when image changes
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [image]);
+  
   // Handle image load error
   const handleImageError = () => {
     console.error(`Failed to load image: ${image}`);
@@ -39,18 +45,11 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
     if (onClick) onClick();
   };
   
-  // Preload image to prevent rendering delay
-  useEffect(() => {
-    if (image) {
-      const img = new Image();
-      img.src = image;
-      img.onload = () => {
-        setImageError(false);
-        setImageLoaded(true);
-      };
-      img.onerror = handleImageError;
-    }
-  }, [image]);
+  // Default image path if image is missing or fails to load
+  const fallbackImage = "/placeholder.svg";
+  
+  // Determine the image source based on error state
+  const imageSrc = imageError ? fallbackImage : image;
   
   return (
     <div 
@@ -85,7 +84,7 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
           </div>
         ) : (
           <img 
-            src={image} 
+            src={imageSrc} 
             alt={title} 
             className={`w-full h-full object-cover ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading="lazy"

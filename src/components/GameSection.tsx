@@ -4,6 +4,7 @@ import GameCard from './GameCard';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 
 interface Game {
   id: string;
@@ -28,79 +29,48 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
   const [games, setGames] = useState<Game[]>(propGames);
   const [visibleGames, setVisibleGames] = useState<Game[]>([]);
   const [showAll, setShowAll] = useState(false);
-  const [imagesPreloaded, setImagesPreloaded] = useState(false);
-  
-  // Preload all game images to improve performance
-  const preloadImages = useCallback(() => {
-    if (imagesPreloaded || !games.length) return;
-    
-    const imagePromises = games.map(game => {
-      return new Promise((resolve, reject) => {
-        if (!game.image) {
-          resolve(null);
-          return;
-        }
-        
-        const img = new Image();
-        img.src = game.image;
-        img.onload = () => resolve(img);
-        img.onerror = () => {
-          console.error(`Failed to preload image: ${game.image}`);
-          resolve(null);
-        };
-      });
-    });
-    
-    Promise.all(imagePromises).then(() => {
-      setImagesPreloaded(true);
-    });
-  }, [games, imagesPreloaded]);
   
   // Update games when propGames changes
   useEffect(() => {
-    setGames(propGames);
+    if (!propGames || propGames.length === 0) {
+      setGames([]);
+      setVisibleGames([]);
+      return;
+    }
+    
+    // Validate each game to ensure it has required properties
+    const validGames = propGames.map(game => {
+      // Ensure each game has an ID
+      const gameId = game.id || `game-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Use a placeholder for missing images
+      const gameImage = game.image || '/placeholder.svg';
+      
+      return {
+        ...game,
+        id: gameId,
+        image: gameImage
+      };
+    });
+    
+    setGames(validGames);
     
     // Only show first few games initially for better performance
     const initialGameCount = isMobile ? 6 : 8;
-    setVisibleGames(propGames.slice(0, initialGameCount));
-    setShowAll(propGames.length <= initialGameCount);
+    setVisibleGames(validGames.slice(0, initialGameCount));
+    setShowAll(validGames.length <= initialGameCount);
     
-    // Reset preloaded state when games change
-    setImagesPreloaded(false);
-    
-    // Start preloading images using Intersection Observer API
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          preloadImages();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    
-    // Create a dummy element to observe
-    const dummyEl = document.createElement('div');
-    if (document.body) {
-      document.body.appendChild(dummyEl);
-      observer.observe(dummyEl);
-      
-      return () => {
-        observer.disconnect();
-        if (document.body.contains(dummyEl)) {
-          document.body.removeChild(dummyEl);
-        }
-      };
-    }
-    
-    return () => {};
-  }, [propGames, isMobile, preloadImages]);
+  }, [propGames, isMobile]);
   
   const handleGameClick = (game: Game) => {
     if (game.path) {
       navigate(game.path);
     } else {
       console.log(`Clicked game: ${game.title}`);
+      toast(`${game.title} clicked`, {
+        description: "Game coming soon",
+        position: "bottom-center"
+      });
     }
   };
   
