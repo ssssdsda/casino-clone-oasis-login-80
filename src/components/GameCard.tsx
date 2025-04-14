@@ -61,7 +61,7 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
         </div>
         
         {/* Favorite button */}
-        <button className="absolute top-1 right-1 text-white opacity-0 transition-opacity favorite-icon">
+        <button className="absolute top-1 right-1 text-white opacity-0 transition-opacity hover:opacity-100 focus:opacity-100 favorite-icon">
           <Heart className="h-3 w-3 md:h-4 md:w-4" />
         </button>
         
@@ -90,11 +90,13 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
         )}
       </div>
 
-      <style jsx>{`
-        .game-card:hover .edit-button {
-          opacity: 1;
-        }
-      `}</style>
+      <style>
+        {`
+          .game-card:hover .edit-button {
+            opacity: 1;
+          }
+        `}
+      </style>
     </div>
   );
 };
