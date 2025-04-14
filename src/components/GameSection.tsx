@@ -68,10 +68,31 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
     // Reset preloaded state when games change
     setImagesPreloaded(false);
     
-    // Start preloading images
-    requestIdleCallback(() => preloadImages());
+    // Start preloading images using Intersection Observer API
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          preloadImages();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
     
-    // Fallback for browsers that don't support requestIdleCallback
+    // Create a dummy element to observe
+    const dummyEl = document.createElement('div');
+    if (document.body) {
+      document.body.appendChild(dummyEl);
+      observer.observe(dummyEl);
+      
+      return () => {
+        observer.disconnect();
+        if (document.body.contains(dummyEl)) {
+          document.body.removeChild(dummyEl);
+        }
+      };
+    }
+    
     return () => {};
   }, [propGames, isMobile, preloadImages]);
   

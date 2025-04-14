@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -39,8 +38,8 @@ const featuredGames = [
   },
   {
     id: 'mega-spin',
-    title: 'Mega Spin',
-    image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
+    title: 'Mega Tilt Spin',
+    image: '/lovable-uploads/60a4d162-c8e1-4253-bd9c-50266479e10f.png',
     multiplier: '40000',
     isNew: true,
     path: '/game/megaspin'
@@ -131,8 +130,8 @@ const popularGames = [
   },
   {
     id: 'mega-spin-pop',
-    title: 'Mega Spin',
-    image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
+    title: 'Mega Tilt Spin',
+    image: '/lovable-uploads/60a4d162-c8e1-4253-bd9c-50266479e10f.png',
     multiplier: '4000',
     path: '/game/megaspin'
   },
@@ -141,8 +140,8 @@ const popularGames = [
 const slotGames = [
   {
     id: 'mega-spin-slot',
-    title: 'Mega Spin',
-    image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
+    title: 'Mega Tilt Spin',
+    image: '/lovable-uploads/60a4d162-c8e1-4253-bd9c-50266479e10f.png',
     path: '/game/megaspin'
   },
   {
@@ -244,7 +243,7 @@ const gameCategories: Record<string, any[]> = {
   slots: slotGames,
   liveGames,
   tableGames: casinoGames,
-  sports: [],  // Empty array for now but can be populated later
+  sports: [],
   fishing: [],
   arcade: []
 };
