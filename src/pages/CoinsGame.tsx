@@ -18,10 +18,10 @@ const Coin: React.FC<CoinProps> = ({ value, isSpinning, isSelected }) => {
   // Function to choose coin color based on value
   const getCoinColor = (value: number) => {
     switch (value) {
-      case 1: return { bg: 'bg-bronze', text: 'text-amber-900' };
-      case 3: return { bg: 'bg-silver', text: 'text-gray-700' };
+      case 1: return { bg: 'bg-bronze', text: 'text-white' }; // Changed to white
+      case 3: return { bg: 'bg-silver', text: 'text-white' }; // Changed to white
       case 5: return { bg: 'bg-gold', text: 'text-yellow-800' };
-      case 7: return { bg: 'bg-purple-500', text: 'text-white' };
+      case 6: return { bg: 'bg-purple-500', text: 'text-white' }; // Changed to white
       case 10: return { bg: 'bg-blue-500', text: 'text-white' };
       case 20: return { bg: 'bg-green-500', text: 'text-white' };
       case 77: return { bg: 'bg-gradient-to-br from-red-500 to-yellow-500', text: 'text-white' };

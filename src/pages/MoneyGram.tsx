@@ -1,7 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Volume2, VolumeX, RefreshCw, Info, Plus, Minus } from 'lucide-react';
+import { 
+  ArrowLeft, Volume2, VolumeX, RefreshCw, Info, Plus, Minus,
+  Banknote, CircleDollarSign, Coins
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -16,11 +18,34 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Define the money symbols
 const moneySymbols = [
-  { value: '100', image: '/lovable-uploads/d10fd039-e61a-4e50-8145-a1efe284ada2.png' },
-  { value: '500', image: '/lovable-uploads/69f38369-5885-4865-bc46-719ce5687af3.png' },
-  { value: '1000', image: '/lovable-uploads/a023c13d-3432-4f56-abd9-5bcdbbd30602.png' },
+  { 
+    value: '100', 
+    icon: (props) => (
+      <div className="rounded-lg bg-gradient-to-r from-green-600 to-green-700 p-1 w-full h-full flex items-center justify-center">
+        <Banknote size={32} className="text-white" />
+        <span className="ml-1 font-bold text-white">100</span>
+      </div>
+    )
+  },
+  { 
+    value: '500', 
+    icon: (props) => (
+      <div className="rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 p-1 w-full h-full flex items-center justify-center">
+        <CircleDollarSign size={32} className="text-white" />
+        <span className="ml-1 font-bold text-white">500</span>
+      </div>
+    )
+  },
+  { 
+    value: '1000', 
+    icon: (props) => (
+      <div className="rounded-lg bg-gradient-to-r from-purple-600 to-purple-700 p-1 w-full h-full flex items-center justify-center">
+        <Coins size={32} className="text-yellow-300" />
+        <span className="ml-1 font-bold text-white">1K</span>
+      </div>
+    )
+  },
 ];
 
 const MoneyGram = () => {
@@ -28,7 +53,6 @@ const MoneyGram = () => {
   const { user, updateUserBalance, isAuthenticated } = useAuth();
   const { toast } = useToast();
   
-  // Game state
   const [bet, setBet] = useState(5);
   const [spinning, setSpinning] = useState(false);
   const [symbols, setSymbols] = useState<number[][]>(Array(3).fill(Array(3).fill(0)));
@@ -38,11 +62,9 @@ const MoneyGram = () => {
   const [winAmount, setWinAmount] = useState(0);
   const [lastResults, setLastResults] = useState<number[]>([]);
   
-  // Audio refs
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const winSound = useRef<HTMLAudioElement | null>(null);
   
-  // Check if user is logged in at the start
   useEffect(() => {
     if (!isAuthenticated) {
       toast({
@@ -52,23 +74,19 @@ const MoneyGram = () => {
       });
     }
     
-    // Initialize audio
     spinSound.current = new Audio('/sounds/spin.mp3');
     winSound.current = new Audio('/sounds/win.mp3');
     
-    // Simulate loading
     setTimeout(() => {
       setLoading(false);
     }, 1500);
     
-    // Initialize random symbols
     const initialSymbols = Array(3).fill(null).map(() => 
       Array(3).fill(null).map(() => Math.floor(Math.random() * moneySymbols.length))
     );
     setSymbols(initialSymbols);
   }, [isAuthenticated, toast]);
   
-  // Handle bet amount change
   const changeBet = (amount: number) => {
     if (!spinning) {
       const newBet = Math.max(1, Math.min(100, bet + amount));
@@ -76,9 +94,7 @@ const MoneyGram = () => {
     }
   };
   
-  // Handle spin
   const handleSpin = () => {
-    // Require login
     if (!isAuthenticated) {
       toast({
         title: "Login Required",
@@ -88,7 +104,6 @@ const MoneyGram = () => {
       return;
     }
     
-    // Check balance
     if (user && user.balance < bet) {
       toast({
         title: "Insufficient Balance",
@@ -108,16 +123,13 @@ const MoneyGram = () => {
       spinSound.current.play().catch(err => console.error("Error playing sound:", err));
     }
     
-    // Deduct bet
     if (user) {
       updateUserBalance(user.balance - bet);
     }
     
-    // Generate new random symbols during spin animation
     const animationDuration = 2000;
     let spinInterval: NodeJS.Timeout;
     
-    // Rapidly change symbols during animation
     spinInterval = setInterval(() => {
       const randomSymbols = Array(3).fill(null).map(() => 
         Array(3).fill(null).map(() => Math.floor(Math.random() * moneySymbols.length))
@@ -125,56 +137,45 @@ const MoneyGram = () => {
       setSymbols(randomSymbols);
     }, 100);
     
-    // Final result after animation completes
     setTimeout(() => {
       clearInterval(spinInterval);
       
-      // Generate final result with special rule for center point win
-      // About 20% chance to win
       const willWin = Math.random() < 0.2;
       
       let finalSymbols;
       
       if (willWin) {
-        // Create a winning position with center matching symbols
         const winSymbol = Math.floor(Math.random() * moneySymbols.length);
         
         finalSymbols = Array(3).fill(null).map(() => 
           Array(3).fill(null).map(() => Math.floor(Math.random() * moneySymbols.length))
         );
         
-        // Set the center row or column to all be the same symbol
         const isRow = Math.random() > 0.5;
         
         if (isRow) {
-          // Make center row all the same
           finalSymbols[1][0] = winSymbol;
           finalSymbols[1][1] = winSymbol;
           finalSymbols[1][2] = winSymbol;
         } else {
-          // Make center column all the same
           finalSymbols[0][1] = winSymbol;
           finalSymbols[1][1] = winSymbol;
           finalSymbols[2][1] = winSymbol;
         }
         
-        // Calculate win amount based on symbol
         const symbolValue = parseInt(moneySymbols[winSymbol].value);
         const win = bet * (symbolValue / 100);
         setWinAmount(win);
         
-        // Update balance
         if (user) {
           updateUserBalance(user.balance - bet + win);
         }
         
-        // Play win sound
         if (!muted && winSound.current) {
           winSound.current.currentTime = 0;
           winSound.current.play().catch(err => console.error("Error playing sound:", err));
         }
         
-        // Show win notification
         toast({
           title: "Winner!",
           description: `You won ${win.toFixed(2)}৳`,
@@ -182,46 +183,35 @@ const MoneyGram = () => {
           className: "bg-green-600 text-white"
         });
         
-        // Update last results
         setLastResults(prev => [win, ...prev].slice(0, 5));
       } else {
-        // Create a non-winning result (no centered matches)
         finalSymbols = Array(3).fill(null).map(() => 
           Array(3).fill(null).map(() => Math.floor(Math.random() * moneySymbols.length))
         );
         
-        // Ensure we don't accidentally create a winning combination
-        // Check center row
         if (
           finalSymbols[1][0] === finalSymbols[1][1] && 
           finalSymbols[1][1] === finalSymbols[1][2]
         ) {
-          // Break the match
           finalSymbols[1][2] = (finalSymbols[1][2] + 1) % moneySymbols.length;
         }
         
-        // Check center column
         if (
           finalSymbols[0][1] === finalSymbols[1][1] && 
           finalSymbols[1][1] === finalSymbols[2][1]
         ) {
-          // Break the match
           finalSymbols[2][1] = (finalSymbols[2][1] + 1) % moneySymbols.length;
         }
         
-        // Update last results with 0 win
         setLastResults(prev => [0, ...prev].slice(0, 5));
       }
       
-      // Set final symbols
       setSymbols(finalSymbols);
       setSpinning(false);
     }, animationDuration);
   };
   
-  // Check if we have a winning combination
   const checkWinningCombination = () => {
-    // Check center row
     if (
       symbols[1][0] === symbols[1][1] && 
       symbols[1][1] === symbols[1][2]
@@ -233,7 +223,6 @@ const MoneyGram = () => {
       };
     }
     
-    // Check center column
     if (
       symbols[0][1] === symbols[1][1] && 
       symbols[1][1] === symbols[2][1]
@@ -250,7 +239,6 @@ const MoneyGram = () => {
   
   const winResult = checkWinningCombination();
   
-  // Loading screen
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-900 to-emerald-950 flex flex-col">
@@ -281,7 +269,6 @@ const MoneyGram = () => {
     <div className="min-h-screen bg-gradient-to-b from-green-900 to-emerald-950 flex flex-col">
       <Header />
       
-      {/* Game header */}
       <div className="p-4 flex justify-between items-center">
         <button 
           className="text-white bg-green-800 p-2 rounded-full"
@@ -307,11 +294,9 @@ const MoneyGram = () => {
       </div>
       
       <main className="flex-1 flex flex-col items-center justify-center p-4">
-        {/* Game board */}
         <div className="w-full max-w-md aspect-square bg-emerald-800 rounded-xl border-4 border-green-700 shadow-2xl p-4 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-emerald-900/20" />
           
-          {/* Game grid */}
           <div className="grid grid-cols-3 grid-rows-3 gap-2 h-full w-full relative z-10">
             {symbols.map((row, rowIndex) => (
               row.map((symbolIndex, colIndex) => (
@@ -319,20 +304,17 @@ const MoneyGram = () => {
                   key={`${rowIndex}-${colIndex}`} 
                   className={`bg-gradient-to-b from-emerald-700 to-emerald-800 rounded-lg shadow-inner flex items-center justify-center relative overflow-hidden
                     ${
-                      // Highlight winning positions
                       winResult.isWin && winResult.positions.some(([r, c]) => r === rowIndex && c === colIndex)
                         ? 'ring-4 ring-yellow-400'
                         : ''
                     }
                     ${
-                      // Highlight the center position
                       rowIndex === 1 && colIndex === 1 
                         ? 'border-2 border-dashed border-white/30' 
                         : ''
                     }
                   `}
                 >
-                  {/* Symbol */}
                   <motion.div
                     className="w-full h-full flex items-center justify-center p-2"
                     animate={
@@ -350,14 +332,9 @@ const MoneyGram = () => {
                         : { duration: 2, repeat: Infinity, repeatType: "reverse" }
                     }
                   >
-                    <img 
-                      src={moneySymbols[symbolIndex].image} 
-                      alt={`Money ${moneySymbols[symbolIndex].value}`}
-                      className="w-full h-full object-contain"
-                    />
+                    {moneySymbols[symbolIndex].icon()}
                   </motion.div>
                   
-                  {/* Highlight effect for winning positions */}
                   {winResult.isWin && 
                    winResult.positions.some(([r, c]) => r === rowIndex && c === colIndex) && 
                    !spinning && (
@@ -372,7 +349,6 @@ const MoneyGram = () => {
             ))}
           </div>
           
-          {/* Win overlay */}
           <AnimatePresence>
             {winAmount > 0 && !spinning && (
               <motion.div
@@ -412,8 +388,7 @@ const MoneyGram = () => {
           </AnimatePresence>
         </div>
         
-        {/* Last results */}
-        <div className="mt-4 flex justify-center">
+        <div className="mt-4 flex justify-center overflow-x-auto w-full">
           <div className="bg-emerald-800/50 px-4 py-2 rounded-lg">
             <p className="text-xs text-emerald-300 mb-1">Last Results:</p>
             <div className="flex space-x-2">
@@ -432,9 +407,8 @@ const MoneyGram = () => {
           </div>
         </div>
         
-        {/* Game controls */}
-        <div className="w-full max-w-md mt-6 bg-emerald-900/70 rounded-xl p-4 border border-emerald-700">
-          <div className="flex justify-between items-center mb-4">
+        <div className="w-full max-w-md mt-4 bg-emerald-900/70 rounded-xl p-3 border border-emerald-700">
+          <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
             <div>
               <p className="text-xs text-emerald-300">Balance</p>
               <p className="text-white font-bold">{user?.balance?.toFixed(2) || '0.00'}৳</p>
@@ -473,15 +447,17 @@ const MoneyGram = () => {
             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 h-auto"
           >
             {spinning ? (
-              <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+              <div className="flex items-center justify-center gap-2">
+                <RefreshCw className="h-6 w-6 animate-spin" />
+                <span>Spinning...</span>
+              </div>
             ) : (
-              <span>SPIN</span>
+              <span className="text-lg">SPIN</span>
             )}
           </Button>
         </div>
       </main>
       
-      {/* Rules Dialog */}
       <Dialog open={showRules} onOpenChange={setShowRules}>
         <DialogContent className="bg-emerald-900 border-green-600 text-white">
           <DialogHeader>
@@ -505,7 +481,9 @@ const MoneyGram = () => {
               <div className="space-y-2">
                 {moneySymbols.map((symbol, index) => (
                   <div key={index} className="flex items-center bg-emerald-800/50 p-2 rounded">
-                    <img src={symbol.image} alt={`Money ${symbol.value}`} className="w-12 h-12 object-contain" />
+                    <div className="w-12 h-12">
+                      {symbol.icon()}
+                    </div>
                     <div className="ml-4">
                       <p className="font-bold">{symbol.value}৳ Note</p>
                       <p className="text-sm text-emerald-300">Win {(bet * parseInt(symbol.value) / 100).toFixed(1)}৳ on your {bet}৳ bet</p>

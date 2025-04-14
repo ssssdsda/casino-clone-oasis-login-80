@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw, Info, Plus, Minus } from 'lucide-react';
+import { 
+  Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw, 
+  Info, Plus, Minus, Cherry, Lemon, Apple, Gift, Sparkles
+} from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -12,23 +15,40 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
 
 const fruitSymbols = [
-  { id: 'cherry', image: '/lovable-uploads/d63bf1f6-ac8d-40d6-a419-67c3915f5333.png', value: 5 },
-  { id: 'lemon', image: '/lovable-uploads/20b5cda9-f61f-4024-bbb6-1cfee6353614.png', value: 3 },
-  { id: 'orange', image: '/lovable-uploads/dec17aad-46e5-47a3-a4b1-7f0b72c530f0.png', value: 4 },
-  { id: 'coin', image: '/lovable-uploads/672f03a3-2462-487d-a60a-df1660da9fb7.png', value: 15 },
-  { id: 'wild', image: '/lovable-uploads/6fc263a6-a7b2-4cf2-afe5-9fb0b99fdd91.png', value: 10 },
+  { 
+    id: 'cherry', 
+    icon: (props) => <Cherry {...props} className="w-full h-full text-red-600" />,
+    value: 5 
+  },
+  { 
+    id: 'lemon', 
+    icon: (props) => <Lemon {...props} className="w-full h-full text-yellow-400" />,
+    value: 3 
+  },
+  { 
+    id: 'orange', 
+    icon: (props) => <Apple {...props} className="w-full h-full text-orange-500" />,
+    value: 4 
+  },
+  { 
+    id: 'coin', 
+    icon: (props) => (
+      <div className="w-full h-full rounded-full bg-yellow-500 flex items-center justify-center">
+        <span className="text-yellow-900 font-bold text-lg">$</span>
+      </div>
+    ),
+    value: 15 
+  },
+  { 
+    id: 'wild', 
+    icon: (props) => <Sparkles {...props} className="w-full h-full text-purple-500" />,
+    value: 10 
+  },
 ];
 
 const bettingOptions = [1, 2, 5, 10, 20, 50, 100];
 const REEL_COUNT = 4;
 const VISIBLE_SYMBOLS = 3;
-
-const preloadImages = () => {
-  fruitSymbols.forEach(symbol => {
-    const img = new Image();
-    img.src = symbol.image;
-  });
-};
 
 const SpinGame = () => {
   const { t } = useLanguage();
@@ -367,8 +387,7 @@ const SpinGame = () => {
     <div className="min-h-screen bg-gradient-to-b from-blue-950 to-indigo-950 flex flex-col">
       <Header />
       <main className="flex-1 p-4 max-w-5xl mx-auto">
-        {/* Title section */}
-        <div className="relative mb-6">
+        <div className="relative mb-4">
           <div className="bg-gradient-to-r from-indigo-900 via-purple-800 to-indigo-900 p-1 rounded-lg">
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded border-2 border-red-500 p-2 relative">
               <motion.div 
@@ -477,8 +496,7 @@ const SpinGame = () => {
           </div>
         </div>
         
-        {/* Slot machine display */}
-        <div className="relative bg-gradient-to-b from-purple-900 to-indigo-900 p-6 rounded-3xl border-4 border-pink-700 shadow-2xl mb-6">
+        <div className="relative bg-gradient-to-b from-purple-900 to-indigo-900 p-4 rounded-2xl border-4 border-pink-700 shadow-2xl mb-4">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black opacity-30 rounded-3xl pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black opacity-20 rounded-3xl pointer-events-none" />
           
@@ -491,24 +509,20 @@ const SpinGame = () => {
             <Info className="h-4 w-4" />
           </Button>
           
-          {/* Slot Machine Display */}
-          <div className="flex justify-center bg-gray-800 bg-opacity-70 p-4 rounded-2xl mb-4 relative overflow-hidden">
+          <div className="flex justify-center bg-gray-800 bg-opacity-70 p-2 md:p-4 rounded-xl mb-4 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 to-purple-500/10" />
             <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]" />
             
-            {/* Slot machine frame */}
-            <div className="relative bg-gray-900 border-8 border-yellow-800 rounded-lg p-4">
+            <div className="relative bg-gray-900 border-4 md:border-8 border-yellow-800 rounded-lg p-2 md:p-4">
               <div className="absolute inset-0 bg-gradient-to-b from-yellow-600/20 to-yellow-800/20 rounded-lg" />
               
-              {/* Reels container */}
-              <div className="flex space-x-2 relative">
+              <div className="flex space-x-1 md:space-x-2 relative">
                 {[0, 1, 2, 3].map((reelIndex) => (
                   <div 
                     key={reelIndex}
-                    className="relative w-24 h-72 bg-white rounded-md overflow-hidden border-4 border-gray-700 shadow-inner"
+                    className="relative w-16 h-48 md:w-24 md:h-72 bg-white rounded-md overflow-hidden border-2 md:border-4 border-gray-700 shadow-inner"
                     ref={(el) => el && (reelRefs.current[reelIndex] = el)}
                   >
-                    {/* Reel strip */}
                     <motion.div
                       className="absolute inset-0"
                       animate={spinning ? {
@@ -525,12 +539,10 @@ const SpinGame = () => {
                         {reels[reelIndex].map((symbolIndex, idx) => (
                           <div 
                             key={`${reelIndex}-${idx}`} 
-                            className="w-16 h-16 my-6 flex items-center justify-center"
+                            className="w-12 h-12 md:w-16 md:h-16 my-3 md:my-6 flex items-center justify-center"
                           >
-                            <motion.img
-                              src={fruitSymbols[symbolIndex].image}
-                              alt={fruitSymbols[symbolIndex].id}
-                              className="w-full h-full object-contain"
+                            <motion.div
+                              className="w-full h-full flex items-center justify-center"
                               animate={!spinning ? {
                                 scale: [1, 1.05, 1],
                                 rotate: [0, idx % 2 ? 3 : -3, 0],
@@ -540,13 +552,14 @@ const SpinGame = () => {
                                 repeat: Infinity,
                                 repeatType: "reverse"
                               }}
-                            />
+                            >
+                              {fruitSymbols[symbolIndex].icon({ size: '100%' })}
+                            </motion.div>
                           </div>
                         ))}
                       </div>
                     </motion.div>
                     
-                    {/* Win highlight overlay */}
                     {!spinning && winningSymbols.includes(reelIndex) && (
                       <motion.div 
                         className="absolute inset-0 bg-yellow-500 bg-opacity-30 pointer-events-none"
@@ -563,81 +576,19 @@ const SpinGame = () => {
                   </div>
                 ))}
                 
-                {/* Win line */}
                 <div className="absolute left-0 right-0 h-0.5 bg-yellow-500 top-1/2 transform -translate-y-1/2 z-10 pointer-events-none" />
               </div>
               
-              {/* Pay line indicators */}
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-6">
-                <div className="w-4 h-4 bg-red-500 rounded-full" />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-3 md:-ml-6">
+                <div className="w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full" />
               </div>
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 -mr-6">
-                <div className="w-4 h-4 bg-red-500 rounded-full" />
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 -mr-3 md:-mr-6">
+                <div className="w-3 h-3 md:w-4 md:h-4 bg-red-500 rounded-full" />
               </div>
             </div>
           </div>
           
-          {/* Win display */}
-          {win > 0 && !spinning && (
-            <motion.div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-70 rounded-xl p-4 text-center z-20"
-              initial={{ scale: 0, rotate: -10 }}
-              animate={{ 
-                scale: [0, 1.2, 1],
-                rotate: [-10, 5, 0],
-                boxShadow: [
-                  "0 0 0px rgba(255, 215, 0, 0)", 
-                  "0 0 30px rgba(255, 215, 0, 0.8)", 
-                  "0 0 10px rgba(255, 215, 0, 0.5)"
-                ]
-              }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 200, 
-                damping: 15
-              }}
-            >
-              <motion.div 
-                className="text-yellow-400 font-bold text-xl md:text-3xl mb-1"
-                animate={{ 
-                  scale: [1, 1.1, 1],
-                  textShadow: [
-                    "0 0 5px rgba(255, 215, 0, 0.5)", 
-                    "0 0 20px rgba(255, 215, 0, 0.8)", 
-                    "0 0 5px rgba(255, 215, 0, 0.5)"
-                  ]
-                }}
-                transition={{ 
-                  duration: 0.8, 
-                  repeat: Infinity,
-                  repeatType: "reverse" 
-                }}
-              >
-                WIN!
-              </motion.div>
-              <motion.div 
-                className="text-green-400 font-bold text-3xl md:text-5xl"
-                animate={{ 
-                  scale: [1, 1.05, 1],
-                  textShadow: [
-                    "0 0 5px rgba(0, 255, 0, 0.5)", 
-                    "0 0 20px rgba(0, 255, 0, 0.8)", 
-                    "0 0 5px rgba(0, 255, 0, 0.5)"
-                  ]
-                }}
-                transition={{ 
-                  duration: 0.5, 
-                  repeat: Infinity,
-                  repeatType: "reverse" 
-                }}
-              >
-                {win.toFixed(2)}৳
-              </motion.div>
-            </motion.div>
-          )}
-          
-          {/* Win history */}
-          <div className="flex justify-center space-x-2 mt-3">
+          <div className="flex justify-center space-x-2 mt-3 overflow-x-auto pb-2">
             <div className="bg-gray-800/70 rounded-lg p-2 flex items-center space-x-2">
               <span className="text-xs text-gray-300">Last wins:</span>
               {lastWins.length > 0 ? 
@@ -658,14 +609,12 @@ const SpinGame = () => {
           </div>
         </div>
         
-        {/* Controls section */}
-        <div className="bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700 shadow-inner backdrop-blur-sm mb-4">
-          {/* Bet amount selection */}
-          <div className="flex flex-wrap justify-center gap-2 mb-4">
-            {bettingOptions.map(option => (
+        <div className="bg-gray-900 bg-opacity-70 p-3 rounded-xl border border-gray-700 shadow-inner backdrop-blur-sm">
+          <div className="grid grid-cols-4 gap-1 mb-3">
+            {bettingOptions.slice(0, 8).map(option => (
               <motion.button
                 key={option}
-                className={`px-3 py-1.5 rounded-lg font-medium text-sm ${bet === option ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                className={`px-2 py-1 rounded-lg font-medium text-sm ${bet === option ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300'}`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => selectBettingOption(option)}
@@ -676,11 +625,10 @@ const SpinGame = () => {
             ))}
           </div>
           
-          {/* Bet multiplier */}
-          <div className="flex justify-center mb-4">
-            <div className="bg-gray-800 rounded-lg p-2">
+          <div className="flex justify-center mb-3">
+            <div className="bg-gray-800 rounded-lg p-2 w-full max-w-xs">
               <p className="text-xs text-center text-gray-400 mb-1">Bet Multiplier</p>
-              <div className="flex space-x-1">
+              <div className="flex justify-center space-x-1">
                 {[1, 2, 3, 5, 10].map((mult) => (
                   <motion.button
                     key={mult}
@@ -699,15 +647,13 @@ const SpinGame = () => {
             </div>
           </div>
           
-          {/* Main controls */}
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            {/* Audio, back, refresh buttons */}
-            <div className="flex items-center space-x-3 mb-4 md:mb-0">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0">
+            <div className="flex items-center space-x-3 w-full justify-center md:justify-start">
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                 <Button 
                   variant="outline" 
                   size="icon"
-                  className="bg-gray-800 h-12 w-12 rounded-full border-gray-600"
+                  className="bg-gray-800 h-10 w-10 rounded-full border-gray-600"
                   onClick={() => setMuted(!muted)}
                 >
                   {muted ? <VolumeX className="h-5 w-5 text-gray-400" /> : <Volume2 className="h-5 w-5 text-white" />}
@@ -718,7 +664,7 @@ const SpinGame = () => {
                 <Button 
                   variant="outline" 
                   size="icon"
-                  className="bg-gray-800 h-12 w-12 rounded-full border-gray-600"
+                  className="bg-gray-800 h-10 w-10 rounded-full border-gray-600"
                   onClick={() => navigate('/')}
                 >
                   <ArrowRight className="h-5 w-5 text-gray-300" />
@@ -729,7 +675,7 @@ const SpinGame = () => {
                 <Button 
                   variant="outline" 
                   size="icon"
-                  className="bg-gray-800 h-12 w-12 rounded-full border-gray-600"
+                  className="bg-gray-800 h-10 w-10 rounded-full border-gray-600"
                   onClick={() => window.location.reload()}
                 >
                   <RefreshCw className="h-5 w-5 text-gray-300" />
@@ -737,8 +683,7 @@ const SpinGame = () => {
               </motion.div>
             </div>
             
-            {/* Bet adjustment controls */}
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
+            <div className="flex items-center space-x-2 w-full justify-center">
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                 <Button 
                   variant="outline" 
@@ -751,7 +696,7 @@ const SpinGame = () => {
                 </Button>
               </motion.div>
               
-              <div className="bg-gray-800 px-4 py-2 rounded-md text-white font-mono text-xl w-24 text-center">
+              <div className="bg-gray-800 px-4 py-2 rounded-md text-white font-mono text-xl w-20 text-center">
                 {bet * betMultiplier}৳
               </div>
               
@@ -768,10 +713,9 @@ const SpinGame = () => {
               </motion.div>
             </div>
             
-            {/* Spin button */}
-            <div>
+            <div className="w-full flex justify-center md:justify-end">
               <motion.button
-                className={`bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 px-8 h-14 w-36 rounded-full text-lg flex items-center justify-center shadow-lg ${spinning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-2 px-6 h-12 w-full md:w-36 rounded-full text-lg flex items-center justify-center shadow-lg ${spinning ? 'opacity-50 cursor-not-allowed' : ''}`}
                 whileHover={!spinning ? { scale: 1.05 } : {}}
                 whileTap={!spinning ? { scale: 0.95 } : {}}
                 onClick={handleSpin}
@@ -792,7 +736,6 @@ const SpinGame = () => {
           </div>
         </div>
         
-        {/* Rules dialog */}
         <Dialog open={showRules} onOpenChange={setShowRules}>
           <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg">
             <DialogHeader>
