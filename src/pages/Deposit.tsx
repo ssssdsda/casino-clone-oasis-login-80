@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -244,7 +243,7 @@ const Deposit = () => {
               <p className="text-gray-300 text-sm mt-2">{t('contactSupport')}</p>
             </div>
             
-            {/* Amount Selection */}
+            {/* Amount Selection - Updated styles */}
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-bold text-white mb-4">{t('selectAmount')}</h2>
               
@@ -285,7 +284,7 @@ const Deposit = () => {
               </div>
             </div>
             
-            {/* Deposit Button */}
+            {/* Deposit Button - Updated style */}
             <Button
               className="w-full bg-gray-900 hover:bg-gray-800 text-white py-6 text-lg font-bold"
               onClick={handleSubmit}
