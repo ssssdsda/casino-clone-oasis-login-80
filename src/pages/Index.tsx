@@ -253,10 +253,31 @@ const Index = () => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Add a loading state to ensure images have time to load
+  useEffect(() => {
+    // Allow time for images to preload
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
   };
+  
+  // If still loading, show a simple loading indicator
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-casino-dark flex flex-col items-center justify-center">
+        <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="mt-4 text-white">Loading games...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">

@@ -19,17 +19,32 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
   const isMobile = useIsMobile();
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Reset states when image changes
   useEffect(() => {
     setImageError(false);
     setImageLoaded(false);
+    setRetryCount(0);
   }, [image]);
   
   // Handle image load error
   const handleImageError = () => {
     console.error(`Failed to load image: ${image}`);
-    setImageError(true);
+    
+    // Try to reload the image a few times before giving up
+    if (retryCount < 3) {
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        const imgElement = document.querySelector(`img[src="${image}"]`) as HTMLImageElement;
+        if (imgElement) {
+          const timestamp = new Date().getTime();
+          imgElement.src = `${image}?retry=${timestamp}`;
+        }
+      }, 1000);
+    } else {
+      setImageError(true);
+    }
   };
   
   const handleImageLoad = () => {
@@ -78,19 +93,20 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
           </div>
         )}
         
-        {imageError ? (
-          <div className="w-full h-full flex items-center justify-center bg-gray-800 text-white text-xs p-1 text-center">
+        <img 
+          src={imageSrc} 
+          alt={title} 
+          className={`w-full h-full object-cover ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+          loading="lazy"
+          onError={handleImageError}
+          onLoad={handleImageLoad}
+        />
+        
+        {/* Display title as fallback if image errors */}
+        {imageError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-white text-xs p-1 text-center">
             {title}
           </div>
-        ) : (
-          <img 
-            src={imageSrc} 
-            alt={title} 
-            className={`w-full h-full object-cover ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            loading="lazy"
-            onError={handleImageError}
-            onLoad={handleImageLoad}
-          />
         )}
         
         {/* Overlay gradient */}

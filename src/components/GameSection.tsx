@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import GameCard from './GameCard';
 import { useLanguage } from '@/context/LanguageContext';
@@ -26,9 +25,27 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
   const { t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [games, setGames] = useState<Game[]>(propGames);
+  const [games, setGames] = useState<Game[]>([]);
   const [visibleGames, setVisibleGames] = useState<Game[]>([]);
   const [showAll, setShowAll] = useState(false);
+  
+  // Helper function to ensure image paths are valid
+  const validateImagePath = (path: string) => {
+    if (!path) return '/placeholder.svg';
+    
+    // Check if path starts with http/https or /lovable-uploads or /placeholder.svg
+    if (path.startsWith('http://') || path.startsWith('https://') || 
+        path.startsWith('/lovable-uploads') || path.startsWith('/placeholder')) {
+      return path;
+    }
+    
+    // Otherwise, assume it should be in lovable-uploads and fix it
+    if (path.startsWith('/')) {
+      return path;
+    }
+    
+    return `/lovable-uploads/${path}`;
+  };
   
   // Update games when propGames changes
   useEffect(() => {
@@ -38,13 +55,17 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
       return;
     }
     
+    console.log("Original games data:", propGames);
+    
     // Validate each game to ensure it has required properties
     const validGames = propGames.map(game => {
       // Ensure each game has an ID
       const gameId = game.id || `game-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Use a placeholder for missing images
-      const gameImage = game.image || '/placeholder.svg';
+      // Validate and fix image path
+      const gameImage = validateImagePath(game.image);
+      
+      console.log(`Game: ${game.title}, Original image: ${game.image}, Validated image: ${gameImage}`);
       
       return {
         ...game,
@@ -52,6 +73,8 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
         image: gameImage
       };
     });
+    
+    console.log("Validated games data:", validGames);
     
     setGames(validGames);
     
@@ -63,10 +86,12 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
   }, [propGames, isMobile]);
   
   const handleGameClick = (game: Game) => {
+    console.log(`Clicked game: ${game.title} with path: ${game.path}`);
+    
     if (game.path) {
       navigate(game.path);
     } else {
-      console.log(`Clicked game: ${game.title}`);
+      console.log(`No path defined for game: ${game.title}`);
       toast(`${game.title} clicked`, {
         description: "Game coming soon",
         position: "bottom-center"
