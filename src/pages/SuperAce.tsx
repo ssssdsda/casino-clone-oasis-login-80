@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +6,7 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, RotateCw, Plus, Minus, RefreshCw, HeartFilled } from 'lucide-react';
+import { ArrowLeft, RotateCw, Plus, Minus, RefreshCw, Heart } from 'lucide-react';
 
 // Card suits and values
 const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
