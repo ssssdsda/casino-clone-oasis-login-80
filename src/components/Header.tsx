@@ -17,6 +17,14 @@ const Header = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   
+  // Format balance to remove decimal part
+  const formatBalance = (balance: number | undefined) => {
+    if (balance === undefined) return '0';
+    return Math.floor(balance).toString();
+  };
+  
+  const formattedBalance = formatBalance(user?.balance);
+  
   return (
     <header className="w-full bg-casino py-3 px-4 flex flex-col">
       <div className="flex items-center justify-between">
@@ -57,7 +65,7 @@ const Header = () => {
                           <User className="h-4 w-4 text-casino-accent mr-2" />
                           <span className="font-medium">{user?.username}</span>
                         </div>
-                        <span className="text-casino-accent font-bold">{t('currency')}{user?.balance}</span>
+                        <span className="text-casino-accent font-bold">{t('currency')}{formattedBalance}</span>
                       </div>
                       
                       <Button 
@@ -82,7 +90,7 @@ const Header = () => {
             {isAuthenticated && (
               <div className="bg-casino-dark rounded-lg px-2 py-1 flex items-center">
                 <span className="text-xs font-medium mr-1">{user?.username}</span>
-                <span className="text-casino-accent text-xs font-bold">{t('currency')}{user?.balance}</span>
+                <span className="text-casino-accent text-xs font-bold">{t('currency')}{formattedBalance}</span>
               </div>
             )}
           </div>
@@ -141,7 +149,7 @@ const Header = () => {
                 <div className="bg-casino-dark rounded-full px-2 py-1 flex items-center">
                   <User className="h-3 w-3 text-casino-accent mr-1" />
                   <span className="text-xs font-medium mr-1">{user?.username}</span>
-                  <span className="text-casino-accent text-xs font-bold">{t('currency')}{user?.balance}</span>
+                  <span className="text-casino-accent text-xs font-bold">{t('currency')}{formattedBalance}</span>
                 </div>
                 <Button 
                   variant="ghost" 

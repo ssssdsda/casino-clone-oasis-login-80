@@ -80,7 +80,7 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
     setGames(validGames);
     
     // Only show first few games initially for better performance
-    const initialGameCount = isMobile ? 6 : 8;
+    const initialGameCount = isMobile ? 8 : 10;
     setVisibleGames(validGames.slice(0, initialGameCount));
     setShowAll(validGames.length <= initialGameCount);
     
@@ -117,9 +117,9 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
   }
   
   return (
-    <div className="space-y-3 mb-6">
+    <div className="space-y-2 mb-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-md md:text-xl font-bold text-white">{t(title)}</h2>
+        <h2 className="text-md md:text-lg font-bold text-white">{t(title)}</h2>
         {!showAll && games.length > visibleGames.length && (
           <button 
             className="text-xs md:text-sm text-orange-500 font-semibold"
@@ -132,8 +132,8 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
       
       <div className="flex justify-center w-full">
         <div className={`grid ${isMobile 
-          ? 'grid-cols-3 gap-2' 
-          : 'grid-cols-4 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-8 gap-2 md:gap-4'} justify-items-center`}>
+          ? 'grid-cols-4 gap-1' 
+          : 'grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-10 gap-2'} justify-items-center`}>
           {visibleGames.map((game) => (
             <GameCard 
               key={game.id}

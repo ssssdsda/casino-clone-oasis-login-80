@@ -68,22 +68,22 @@ const GameCard = ({ title, image, isNew, onClick, onEditClick }: GameCardProps) 
   
   return (
     <div 
-      className="relative rounded-lg overflow-hidden cursor-pointer game-card transition-transform hover:scale-105"
+      className="flex flex-col items-center cursor-pointer game-card transition-transform hover:scale-105"
       onClick={handleCardClick}
       style={{ 
-        maxWidth: isMobile ? '100px' : '140px',
+        maxWidth: isMobile ? '80px' : '120px',
         width: '100%' 
       }}
     >
-      {/* New tag at the top */}
-      {isNew && (
-        <div className="absolute top-1 left-1 bg-orange-500 text-[8px] md:text-xs font-bold text-black px-1 py-0.5 rounded z-10">
-          NEW
-        </div>
-      )}
-
       {/* Game image with loading state */}
-      <div className="aspect-[3/4] relative bg-gray-800">
+      <div className="relative rounded-lg overflow-hidden aspect-square w-full">
+        {/* New tag at the top */}
+        {isNew && (
+          <div className="absolute top-1 left-1 bg-orange-500 text-[8px] md:text-xs font-bold text-black px-1 py-0.5 rounded z-10">
+            NEW
+          </div>
+        )}
+
         {!imageLoaded && !imageError && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
             <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -109,16 +109,6 @@ const GameCard = ({ title, image, isNew, onClick, onEditClick }: GameCardProps) 
           </div>
         )}
         
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-        
-        {/* Game title */}
-        <div className="absolute bottom-0 left-0 right-0 p-1.5">
-          <h3 className={`${isMobile ? 'text-[10px]' : 'text-xs md:text-sm'} font-medium text-white truncate`}>
-            {title}
-          </h3>
-        </div>
-        
         {/* Favorite button */}
         <button className="absolute top-1 right-1 text-white opacity-0 transition-opacity hover:opacity-100 focus:opacity-100 favorite-icon">
           <Heart className="h-3 w-3 md:h-4 md:w-4" />
@@ -140,6 +130,13 @@ const GameCard = ({ title, image, isNew, onClick, onEditClick }: GameCardProps) 
             </svg>
           </button>
         )}
+      </div>
+
+      {/* Game title below image */}
+      <div className="mt-1 text-center">
+        <h3 className={`${isMobile ? 'text-[10px]' : 'text-xs'} font-medium text-white truncate`}>
+          {title}
+        </h3>
       </div>
 
       <style>
