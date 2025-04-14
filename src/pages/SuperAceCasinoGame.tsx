@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Settings } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { shouldBetWin } from '@/utils/bettingSystem';
 
 // Types
 type CardSuit = 'hearts' | 'diamonds' | 'clubs' | 'spades' | 'scatter';
@@ -45,7 +46,7 @@ const generateCardGrid = (): CardType[][] => {
   const grid: CardType[][] = [];
   for (let i = 0; i < 4; i++) {
     const row: CardType[] = [];
-    for (let j = 0; j < 4; j++) { // Changed from 5 to 4 columns
+    for (let j = 0; j < 4; j++) { // 4x4 grid as requested
       row.push(generateRandomCard());
     }
     grid.push(row);
@@ -182,6 +183,13 @@ const SuperAceCasinoGame = () => {
     betCount: 0 // Track number of bets to control wins/losses
   });
   
+  // Update balance when user changes
+  useEffect(() => {
+    if (user) {
+      setGameState(prev => ({ ...prev, balance: user.balance }));
+    }
+  }, [user?.balance, user]);
+  
   const handleSpin = () => {
     if (gameState.isSpinning || gameState.balance < gameState.bet) return;
     
@@ -211,13 +219,16 @@ const SuperAceCasinoGame = () => {
       const newCards = generateCardGrid();
       
       // Determine if the player should win based on bet count
-      // First 2 bets always win, all subsequent bets lose
-      const shouldWin = newBetCount <= 2;
+      // First 2 bets always win, all subsequent bets have controlled odds
+      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.uid || 'anonymous');
       
       // Calculate win amount
       let totalWin = 0;
       if (shouldWin) {
         totalWin = Math.floor(Math.random() * 5 + 5) * gameState.bet; // Win between 5x and 10x bet
+        
+        // Cap at 100
+        totalWin = Math.min(totalWin, 100);
       }
       
       const finalBalance = newBalance + totalWin;

