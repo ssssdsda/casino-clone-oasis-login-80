@@ -19,8 +19,8 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
   const isMobile = useIsMobile();
   const [imageError, setImageError] = useState(false);
   
-  // Add a random query parameter to force the browser to reload the image
-  const imageUrl = `${image}?v=${new Date().getTime()}`;
+  // Remove random query parameter to prevent image caching issues
+  const imageUrl = image;
   
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent clicking the card if the edit button is clicked
@@ -49,18 +49,23 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
 
       {/* Game image */}
       <div className="aspect-[3/4] relative bg-gray-800">
-        <img 
-          src={imageUrl} 
-          alt={title} 
-          className="w-full h-full object-cover"
-          loading="lazy"
-          onError={(e) => {
-            console.error(`Failed to load image: ${image}`);
-            // Set a fallback image if the original image fails to load
-            (e.target as HTMLImageElement).src = '/placeholder.svg';
-            setImageError(true);
-          }}
-        />
+        {imageError ? (
+          <div className="w-full h-full flex items-center justify-center bg-gray-800 text-white text-xs p-1 text-center">
+            {title}
+          </div>
+        ) : (
+          <img 
+            src={imageUrl} 
+            alt={title} 
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              console.error(`Failed to load image: ${image}`);
+              // Set a fallback image or display game title
+              setImageError(true);
+            }}
+          />
+        )}
         
         {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />

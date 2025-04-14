@@ -26,11 +26,18 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [games, setGames] = useState<Game[]>(propGames);
+  const [visibleGames, setVisibleGames] = useState<Game[]>([]);
+  const [showAll, setShowAll] = useState(false);
   
   // Update games when propGames changes
   useEffect(() => {
     setGames(propGames);
-  }, [propGames]);
+    
+    // Only show first 8 games initially for better performance
+    const initialGameCount = isMobile ? 3 : 8;
+    setVisibleGames(propGames.slice(0, initialGameCount));
+    setShowAll(propGames.length <= initialGameCount);
+  }, [propGames, isMobile]);
   
   const handleGameClick = (game: Game) => {
     if (game.path) {
@@ -46,6 +53,11 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
     }
   };
   
+  const handleViewAll = () => {
+    setVisibleGames(games);
+    setShowAll(true);
+  };
+  
   // If there are no games to display, don't render the section
   if (games.length === 0) {
     return null;
@@ -55,16 +67,21 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
     <div className="space-y-3 mb-6">
       <div className="flex items-center justify-between">
         <h2 className="text-md md:text-xl font-bold text-white">{t(title)}</h2>
-        <button className="text-xs md:text-sm text-orange-500 font-semibold">
-          View All
-        </button>
+        {!showAll && games.length > visibleGames.length && (
+          <button 
+            className="text-xs md:text-sm text-orange-500 font-semibold"
+            onClick={handleViewAll}
+          >
+            View All
+          </button>
+        )}
       </div>
       
       <div className="flex justify-center w-full">
         <div className={`grid ${isMobile 
           ? 'grid-cols-3 gap-2' 
-          : 'grid-cols-6 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-8 gap-4'} justify-items-center`}>
-          {games.map((game) => (
+          : 'grid-cols-4 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-8 gap-2 md:gap-4'} justify-items-center`}>
+          {visibleGames.map((game) => (
             <GameCard 
               key={game.id}
               id={game.id}
