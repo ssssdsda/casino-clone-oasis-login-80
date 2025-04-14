@@ -26,6 +26,7 @@ import CoinUpGame from "./pages/CoinUpGame";
 import GoldenBasinGame from "./pages/GoldenBasinGame";
 import Bonus from "./pages/Bonus";
 import BonusControl from "./pages/BonusControl";
+import GridChanger from "./pages/GridChanger";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "./context/LanguageContext";
 
@@ -42,6 +43,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/admin/images" element={<ImagesChanger />} />
+              <Route path="/admin/grid-changer" element={<GridChanger />} />
               <Route path="/game/spin" element={<SpinGame />} />
               <Route path="/admin/spin-control" element={<SpinControl />} />
               <Route path="/game/megaspin" element={<MegaSpin />} />
