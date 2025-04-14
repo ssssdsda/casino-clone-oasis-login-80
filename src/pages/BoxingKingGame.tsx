@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Minus, Plus, Settings, RefreshCw, Zap, Wifi } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -6,20 +6,21 @@ import { useAuth } from '@/context/AuthContext';
 
 // Define slot symbols with optimized loading strategy
 const symbols = {
-  A: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
-  K: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
-  Q: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
-  J: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
-  BLUE_FIST: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
-  RED_FIST: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
-  BOXER: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
-  GLOVE: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
-  SHORTS: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png'
+  A: '/lovable-uploads/a1ddbca9-01d0-433e-89e5-5299a6741bbd.png',
+  K: '/lovable-uploads/f3cc67b3-6063-43a6-841f-f4a23037d206.png',
+  Q: 'https://placehold.co/100/blue/white?text=Q',
+  J: 'https://placehold.co/100/green/white?text=J',
+  BLUE_FIST: 'https://placehold.co/100/blue/white?text=FIST',
+  RED_FIST: 'https://placehold.co/100/red/white?text=FIST',
+  BOXER: 'https://placehold.co/100/purple/white?text=BOXER',
+  GLOVE: 'https://placehold.co/100/orange/white?text=GLOVE',
+  SHORTS: 'https://placehold.co/100/cyan/white?text=SHORTS'
 };
 
 // Preload images in a separate component to avoid blocking the main rendering
 const ImagePreloader = () => {
   useEffect(() => {
+    // Preload all symbol images
     Object.values(symbols).forEach(src => {
       const img = new Image();
       img.src = src;
@@ -31,13 +32,16 @@ const ImagePreloader = () => {
 
 // Define paylines
 const paylines = [
-  [0, 1, 2, 3, 4],
-  [5, 6, 7, 8, 9],
-  [10, 11, 12, 13, 14],
+  // Horizontal lines
+  [0, 1, 2, 3, 4], // Top row
+  [5, 6, 7, 8, 9], // Middle row
+  [10, 11, 12, 13, 14], // Bottom row
   
+  // V shapes
   [0, 6, 12, 8, 4],
   [10, 6, 2, 8, 14],
   
+  // Zigzag
   [0, 6, 2, 8, 4],
   [10, 6, 12, 8, 14]
 ];
@@ -71,7 +75,7 @@ const symbolPayouts = {
 const BoxingKingGame = () => {
   const { user, updateUserBalance } = useAuth();
   const [betAmount, setBetAmount] = useState(3);
-  const [reels, setReels] = useState(Array(15).fill('A'));
+  const [reels, setReels] = useState(Array(15).fill('A')); // Initial state with just one symbol type
   const [spinning, setSpinning] = useState(false);
   const [autoplay, setAutoplay] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
@@ -81,21 +85,26 @@ const BoxingKingGame = () => {
   const spinSound = useRef(new Audio('/sounds/spin.mp3'));
   const winSound = useRef(new Audio('/sounds/win.mp3'));
 
+  // Initialize the game
   useEffect(() => {
     const initialization = async () => {
+      // Load sounds without awaiting them
       spinSound.current.load();
       winSound.current.load();
       
+      // Generate random reels
       generateRandomReels();
       
+      // Simulate quick loading
       await new Promise(resolve => setTimeout(resolve, 100));
       setIsLoading(false);
     };
     
     initialization();
     
+    // Create audio element
     audioRef.current = new Audio('/sounds/boxing-theme.mp3');
-    audioRef.current.preload = 'none';
+    audioRef.current.preload = 'none'; // Only load on demand
     
     return () => {
       if (audioRef.current) {
@@ -104,7 +113,9 @@ const BoxingKingGame = () => {
     };
   }, []);
 
+  // Helper function to get random symbol based on weights
   const getRandomSymbol = () => {
+    // Create weighted array
     const weightedSymbols: string[] = [];
     Object.entries(symbolWeights).forEach(([symbol, weight]) => {
       for (let i = 0; i < weight; i++) {
@@ -112,15 +123,18 @@ const BoxingKingGame = () => {
       }
     });
     
+    // Pick random symbol from weighted array
     const randomIndex = Math.floor(Math.random() * weightedSymbols.length);
     return weightedSymbols[randomIndex];
   };
 
+  // Generate random symbols for all reels
   const generateRandomReels = () => {
     const newReels = Array(15).fill('').map(() => getRandomSymbol());
     setReels(newReels);
   };
 
+  // Calculate wins - memoize to avoid recalculation
   const calculateWins = React.useCallback((currentReels: string[]) => {
     let totalWin = 0;
     const winLines: number[][] = [];
@@ -129,6 +143,7 @@ const BoxingKingGame = () => {
       const lineSymbols = line.map(position => currentReels[position]);
       const firstSymbol = lineSymbols[0];
       
+      // Count consecutive matching symbols from left
       let matchCount = 1;
       for (let i = 1; i < lineSymbols.length; i++) {
         if (lineSymbols[i] === firstSymbol) {
@@ -138,8 +153,9 @@ const BoxingKingGame = () => {
         }
       }
       
+      // Calculate win if 3 or more matches
       if (matchCount >= 3) {
-        const payoutIndex = matchCount - 3;
+        const payoutIndex = matchCount - 3; // 0 for 3 matches, 1 for 4, 2 for 5
         const symbolPayout = symbolPayouts[firstSymbol as keyof typeof symbolPayouts][payoutIndex];
         const lineWin = betAmount * symbolPayout;
         totalWin += lineWin;
@@ -151,6 +167,7 @@ const BoxingKingGame = () => {
     return { totalWin, winLines };
   }, [betAmount]);
 
+  // Spin the reels
   const spin = async () => {
     if (spinning) return;
     
@@ -172,8 +189,10 @@ const BoxingKingGame = () => {
       return;
     }
 
+    // Play spin sound
     spinSound.current.play().catch(e => console.log("Audio play error:", e));
 
+    // Deduct bet amount
     if (user && updateUserBalance) {
       updateUserBalance(user.balance - betAmount);
     }
@@ -182,23 +201,29 @@ const BoxingKingGame = () => {
     setWinningLines([]);
     setWinAmount(0);
     
+    // Animate spinning - optimized for performance
     generateRandomReels();
     await new Promise(resolve => setTimeout(resolve, 300));
     generateRandomReels();
     
+    // Final reel state
     const finalReels = Array(15).fill('').map(() => getRandomSymbol());
     setReels(finalReels);
     
+    // Calculate wins
     const { totalWin, winLines } = calculateWins(finalReels);
     
+    // Short delay to show final reels before showing wins
     await new Promise(resolve => setTimeout(resolve, 300));
     
     if (totalWin > 0) {
+      // Play win sound
       winSound.current.play().catch(e => console.log("Audio play error:", e));
       
       setWinAmount(totalWin);
       setWinningLines(winLines);
       
+      // Add win to balance
       if (user && updateUserBalance) {
         updateUserBalance(user.balance + totalWin);
       }
@@ -206,6 +231,7 @@ const BoxingKingGame = () => {
     
     setSpinning(false);
     
+    // Continue autoplay if enabled
     if (autoplay) {
       setTimeout(spin, 2000);
     }
@@ -220,7 +246,7 @@ const BoxingKingGame = () => {
       }
     }
   };
-
+  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -236,12 +262,15 @@ const BoxingKingGame = () => {
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
+      {/* Game header with branding */}
       <div className="bg-gradient-to-r from-purple-900 to-red-900 p-2 flex justify-between items-center">
         <div className="text-yellow-500 text-2xl font-bold">Boxing King</div>
         <div className="text-yellow-500"></div>
       </div>
 
+      {/* Main game area */}
       <div className="flex-1 relative bg-gradient-to-b from-purple-900 to-black p-4 flex items-center justify-center">
+        {/* Boxing ring background */}
         <div className="absolute inset-0 z-0">
           <div className="w-full h-full bg-[url('https://placehold.co/1200x800/330033/440044')]"></div>
           <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-red-900/50 to-transparent"></div>
@@ -250,6 +279,7 @@ const BoxingKingGame = () => {
           <div className="absolute top-0 right-0 bottom-0 w-20 bg-gradient-to-l from-blue-900/50 to-transparent"></div>
         </div>
 
+        {/* Slot grid - optimized rendering */}
         <div className="relative z-10 bg-gray-900/80 border-4 border-gray-700 rounded-lg p-2 shadow-2xl">
           <div className="grid grid-cols-5 grid-rows-3 gap-1">
             {reels.map((symbol, index) => (
@@ -282,6 +312,7 @@ const BoxingKingGame = () => {
         </div>
       </div>
 
+      {/* Controls */}
       <div className="bg-gray-900 text-white p-4">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center">

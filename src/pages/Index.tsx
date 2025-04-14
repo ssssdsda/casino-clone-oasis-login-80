@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -23,7 +24,7 @@ const featuredGames = [
   {
     id: 'boxing-king',
     title: 'Boxing King',
-    image: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
+    image: '/lovable-uploads/433bf174-e919-4799-843c-f8c595b47f2a.png', // Updated image here
     multiplier: '50000',
     isNew: true,
     path: '/game/boxing-king'
@@ -236,13 +237,14 @@ const casinoGames = [
   },
 ];
 
+// Define all game categories for filtering
 const gameCategories: Record<string, any[]> = {
   featuredGames,
   popularGames,
   slots: slotGames,
   liveGames,
   tableGames: casinoGames,
-  sports: [],
+  sports: [],  // Empty array for now but can be populated later
   fishing: [],
   arcade: []
 };
@@ -256,7 +258,9 @@ const Index = () => {
     setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
   };
   
+  // Force reload image caches on component mount
   useEffect(() => {
+    // Create a new image object and set its src to the Aviator image to force browser to reload it
     const preloadImage = new Image();
     preloadImage.src = '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png?v=' + new Date().getTime();
   }, []);
