@@ -4,233 +4,12 @@ import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
 import Banner from '@/components/Banner';
 import PromoBanner from '@/components/PromoBanner';
-import GameCategories from '@/components/GameCategories';
-import GameSection from '@/components/GameSection';
 import Footer from '@/components/Footer';
 import { WelcomePopup } from '@/components/WelcomePopup';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
 
-// Game data
-const featuredGames = [
-  {
-    id: 'aviator',
-    title: 'Aviator',
-    image: '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png',
-    isNew: true,
-    path: '/game/aviator'
-  },
-  {
-    id: 'boxing-king',
-    title: 'Boxing King',
-    image: '/lovable-uploads/a7972c95-1dbd-4394-8102-016b0b210e5f.png',
-    isNew: true,
-    path: '/game/boxing-king'
-  },
-  {
-    id: 'casino-win-spin',
-    title: 'Casino Win Spin',
-    image: '/lovable-uploads/b09d12e1-cf60-415e-8731-e1f41e3d8568.png',
-    isNew: true,
-    path: '/game/spin'
-  },
-  {
-    id: 'mega-spin',
-    title: 'Mega Tilt Spin',
-    image: '/lovable-uploads/1d04069d-e915-4604-8d23-5d2144c3fd5f.png',
-    isNew: true,
-    path: '/game/megaspin'
-  },
-  {
-    id: 'money-coming',
-    title: 'Money Coming',
-    image: '/lovable-uploads/7b71f0b4-ac4b-4935-a536-cae4e563a9b4.png',
-    isNew: true,
-    path: '/game/moneygram'
-  },
-  {
-    id: 'super-ace',
-    title: 'Super Ace Casino',
-    image: '/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png',
-    isNew: true,
-    path: '/game/super-ace'
-  },
-  {
-    id: 'fortune-gems-feat',
-    title: 'Fortune Gems',
-    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
-    isNew: true,
-    path: '/game/fortune-gems'
-  },
-  {
-    id: 'golden-basin-feat',
-    title: 'Golden Basin',
-    image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
-    isNew: true,
-    path: '/game/golden-basin'
-  }
-];
-
-const popularGames = [
-  {
-    id: 'super-ace-popular',
-    title: 'Super Ace',
-    image: '/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png',
-    path: '/game/super-ace'
-  },
-  {
-    id: 'fortune-gems',
-    title: 'Fortune Gems',
-    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
-    path: '/game/fortune-gems'
-  },
-  {
-    id: 'coin-up',
-    title: 'Coin Up',
-    image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
-    isNew: true,
-    path: '/game/coin-up'
-  },
-  {
-    id: 'aviator-popular',
-    title: 'Aviator',
-    image: '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png',
-    path: '/game/aviator'
-  },
-  {
-    id: 'tiger-rush',
-    title: 'Tiger Rush',
-    image: '/placeholder.svg',
-  },
-  {
-    id: 'golden-basin',
-    title: 'Golden Basin',
-    image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
-    path: '/game/golden-basin'
-  },
-  {
-    id: '777coins',
-    title: '777 Coins',
-    image: '/placeholder.svg',
-    path: '/game/777coins'
-  },
-  {
-    id: 'mega-spin-pop',
-    title: 'Mega Tilt Spin',
-    image: '/lovable-uploads/60a4d162-c8e1-4253-bd9c-50266479e10f.png',
-    path: '/game/megaspin'
-  },
-];
-
-const slotGames = [
-  {
-    id: 'mega-spin-slot',
-    title: 'Mega Tilt Spin',
-    image: '/lovable-uploads/60a4d162-c8e1-4253-bd9c-50266479e10f.png',
-    path: '/game/megaspin'
-  },
-  {
-    id: 'lucky-heroes',
-    title: 'Lucky Heroes',
-    image: '/placeholder.svg',
-  },
-  {
-    id: 'golden-wheel',
-    title: 'Golden Wheel',
-    image: '/placeholder.svg',
-  },
-  {
-    id: 'diamond-rush',
-    title: 'Diamond Rush',
-    image: '/placeholder.svg',
-  },
-  {
-    id: 'fortune-gems-slot',
-    title: 'Fortune Gems',
-    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
-    isNew: true,
-    path: '/game/fortune-gems'
-  },
-  {
-    id: 'coin-up-slot',
-    title: 'Coin Up',
-    image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
-    isNew: true,
-    path: '/game/coin-up'
-  },
-  {
-    id: 'golden-basin-slot',
-    title: 'Golden Basin',
-    image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
-    isNew: true,
-    path: '/game/golden-basin'
-  },
-  {
-    id: '777coins-slot',
-    title: '777 Coins',
-    image: '/placeholder.svg',
-    path: '/game/777coins'
-  },
-];
-
-const liveGames = [
-  {
-    id: 'live-cricket',
-    title: 'Live Cricket',
-    image: '/placeholder.svg',
-    isNew: true,
-    path: '/game/live-cricket'
-  },
-  {
-    id: 'live-football',
-    title: 'Live Football',
-    image: '/placeholder.svg',
-    isNew: true,
-    path: '/game/live-football'
-  },
-  {
-    id: 'live-baccarat',
-    title: 'Live Baccarat',
-    image: '/placeholder.svg',
-  },
-];
-
-const casinoGames = [
-  {
-    id: 'royal-poker',
-    title: 'Royal Poker',
-    image: '/placeholder.svg',
-  },
-  {
-    id: 'blackjack-pro',
-    title: 'Blackjack Pro',
-    image: '/placeholder.svg',
-  },
-  {
-    id: 'roulette-master',
-    title: 'Roulette Master',
-    image: '/placeholder.svg',
-    isNew: true,
-  },
-  {
-    id: 'boxing-king-casino',
-    title: 'Boxing King',
-    image: '/lovable-uploads/a7972c95-1dbd-4394-8102-016b0b210e5f.png',
-    isNew: true,
-    path: '/game/boxing-king'
-  }
-];
-
-const gameCategories: Record<string, any[]> = {
-  featuredGames,
-  popularGames,
-  slots: slotGames,
-  liveGames,
-  tableGames: casinoGames,
-  sports: [],
-  fishing: [],
-  arcade: []
-};
+// We're removing all the game data and game sections as requested
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -266,22 +45,22 @@ const Index = () => {
       <div className="flex flex-1">
         {!isMobile && <CategorySidebar onCategorySelect={handleCategorySelect} selectedCategory={selectedCategory} />}
         <main className={`flex-1 p-1 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
-          <GameCategories onCategorySelect={handleCategorySelect} selectedCategory={selectedCategory} />
-          <div className="mt-2 md:mt-4 space-y-2 md:space-y-4">
-            {selectedCategory ? (
-              <GameSection 
-                title={selectedCategory} 
-                games={gameCategories[selectedCategory] || []} 
-              />
-            ) : (
-              <>
-                <GameSection title="featuredGames" games={featuredGames} />
-                <GameSection title="popularGames" games={popularGames} />
-                <GameSection title="slots" games={slotGames} />
-                <GameSection title="liveGames" games={liveGames} />
-                <GameSection title="tableGames" games={casinoGames} />
-              </>
-            )}
+          <Banner />
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-orange-500 mb-4">Welcome to Our Casino</h2>
+            <p className="text-gray-300 max-w-2xl">
+              We're updating our games. Please check back soon for an enhanced gaming experience!
+            </p>
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-lg shadow-lg">
+                <h3 className="text-xl font-bold text-orange-400 mb-3">Deposit</h3>
+                <p className="text-gray-400 mb-4">Add funds to your account to start playing our exciting games.</p>
+              </div>
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-lg shadow-lg">
+                <h3 className="text-xl font-bold text-orange-400 mb-3">Bonus</h3>
+                <p className="text-gray-400 mb-4">Check out our latest promotions and bonuses.</p>
+              </div>
+            </div>
           </div>
         </main>
       </div>
@@ -292,3 +71,4 @@ const Index = () => {
 };
 
 export default Index;
+
