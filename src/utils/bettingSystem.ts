@@ -75,14 +75,12 @@ export const calculateWinAmount = (betAmount: number, multiplier: number): numbe
 
 /**
  * Generates a referral code for a user
- * In a real implementation, this would be more sophisticated
+ * This function now returns the user ID directly as the referral code
  * 
  * @param userId The ID of the user
- * @returns A referral code
+ * @returns The user ID as the referral code
  */
 export const generateReferralCode = (userId: string): string => {
-  // In a real implementation, this would generate a shorter, more user-friendly code
-  // For now, just use the user ID
   return userId;
 };
 
@@ -95,7 +93,8 @@ export const generateReferralCode = (userId: string): string => {
  */
 export const trackReferral = async (referrerId: string, referredId: string): Promise<boolean> => {
   try {
-    // In a real implementation, this would store the referral in a database
+    // In a real implementation, this would store the referral in the database
+    // which is handled by Firebase Firestore in the AuthContext
     console.log(`User ${referrerId} referred user ${referredId}`);
     return true;
   } catch (error) {

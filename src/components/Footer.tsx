@@ -46,8 +46,8 @@ const Footer = () => {
           <span className="text-xs">Bonus</span>
         </button>
         
-        {/* Replace one of the existing buttons with the referral button */}
-        <div className="scale-110">
+        {/* Highlight the referral button */}
+        <div className="scale-110 transform -translate-y-1">
           <ReferralButton />
         </div>
         

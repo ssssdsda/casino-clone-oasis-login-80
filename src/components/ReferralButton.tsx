@@ -13,7 +13,7 @@ const ReferralButton = () => {
     <Button 
       onClick={() => navigate('/referral')}
       variant="outline"
-      className="bg-gradient-to-r from-purple-700 to-orange-600 border-purple-500 text-white font-semibold flex gap-2 items-center justify-center animate-pulse-slow"
+      className="bg-gradient-to-r from-green-600 to-green-700 border-green-500 text-white font-semibold flex gap-2 items-center justify-center animate-pulse-slow"
     >
       <Users className="h-4 w-4" />
       {t('referral')}
