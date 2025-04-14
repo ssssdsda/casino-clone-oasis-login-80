@@ -95,11 +95,13 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
         )}
       </div>
 
-      <style jsx>{`
-        .game-card:hover .edit-button {
-          opacity: 1;
-        }
-      `}</style>
+      <style>
+        {`
+          .game-card:hover .edit-button {
+            opacity: 1;
+          }
+        `}
+      </style>
     </div>
   );
 };
