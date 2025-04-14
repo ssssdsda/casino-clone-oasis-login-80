@@ -23,7 +23,7 @@ const featuredGames = [
   {
     id: 'boxing-king',
     title: 'Boxing King',
-    image: '/lovable-uploads/047cc796-53b7-4c0b-a938-259ab29ca8c8.png',
+    image: '/lovable-uploads/a4a65939-826c-4fa7-8278-abf8b906f731.png',
     multiplier: '50000',
     isNew: true,
     path: '/game/boxing-king'
