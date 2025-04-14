@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { ChevronUp, ChevronDown, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
@@ -163,7 +162,7 @@ const PlinkoGame = () => {
     // Save bet to Firebase
     try {
       await addDoc(collection(firestore, "bets"), {
-        userId: user?.uid || "anonymous",
+        userId: user?.id || "anonymous",
         betAmount: betAmount,
         game: "Plinko",
         timestamp: serverTimestamp(),

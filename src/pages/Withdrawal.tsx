@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Wallet, Clock, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
@@ -29,7 +28,6 @@ const Withdrawal = () => {
   const [withdrawalId, setWithdrawalId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Countdown timer after withdrawal is submitted
     if (withdrawalSubmitted) {
       const timer = setInterval(() => {
         setTimeRemaining(prevTime => {
@@ -42,7 +40,6 @@ const Withdrawal = () => {
               className: "bg-green-500 text-white"
             });
             
-            // Update withdrawal status in Firebase
             updateWithdrawalStatus("completed");
             
             return 0;
@@ -61,7 +58,6 @@ const Withdrawal = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
-  // Update withdrawal status in Firebase
   const updateWithdrawalStatus = async (status: string) => {
     if (!withdrawalId) return;
     
@@ -108,10 +104,9 @@ const Withdrawal = () => {
     
     setIsProcessing(true);
     
-    // Save withdrawal request to Firebase
     try {
       const docRef = await addDoc(collection(firestore, "withdrawals"), {
-        userId: user?.uid || "anonymous",
+        userId: user?.id || "anonymous",
         walletAddress,
         amount: parseFloat(amount),
         status: "pending",
@@ -121,7 +116,6 @@ const Withdrawal = () => {
       
       setWithdrawalId(docRef.id);
       
-      // Simulate processing
       setTimeout(() => {
         setIsProcessing(false);
         setWithdrawalSubmitted(true);
