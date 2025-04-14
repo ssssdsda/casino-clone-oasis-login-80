@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -29,7 +28,6 @@ const paymentMethods = [
   { id: 'rocket', name: 'Rocket', logo: '/lovable-uploads/d10fd039-e61a-4e50-8145-a1efe284ada2.png' },
 ];
 
-// Updated predefined amounts to be within the 200-1000 range
 const predefinedAmounts = [200, 500, 800, 1000];
 
 const Withdrawal = () => {
@@ -51,7 +49,6 @@ const Withdrawal = () => {
   useEffect(() => {
     if (user) {
       fetchWithdrawalHistory();
-      // Listen for status changes in active withdrawal requests
       listenToActiveWithdrawals();
     }
   }, [user]);
@@ -99,23 +96,23 @@ const Withdrawal = () => {
     }
   };
   
-  // Listen for changes to active withdrawal requests
   const listenToActiveWithdrawals = () => {
     if (!user) return;
     
-    // Set up listener for each active withdrawal
-    const unsubscribe = onSnapshot(
+    const pendingWithdrawalsQuery = query(
       collection(db, "withdrawals"),
       where("userId", "==", user.id),
-      where("status", "==", "pending"),
+      where("status", "==", "pending")
+    );
+    
+    const unsubscribe = onSnapshot(
+      pendingWithdrawalsQuery,
       (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === "modified") {
             const data = change.doc.data();
             
-            // If the status changed to completed, update the user's balance
             if (data.status === 'completed' && user) {
-              // Deduct amount from user balance when withdrawal is approved
               updateUserBalance(user.balance - data.amount);
               
               toast({
@@ -127,7 +124,6 @@ const Withdrawal = () => {
                 className: "bg-green-600 text-white",
               });
               
-              // Refresh withdrawal history
               fetchWithdrawalHistory();
             } else if (data.status === 'rejected') {
               toast({
@@ -138,7 +134,6 @@ const Withdrawal = () => {
                 variant: "destructive",
               });
               
-              // Refresh withdrawal history
               fetchWithdrawalHistory();
             }
           }
@@ -146,7 +141,6 @@ const Withdrawal = () => {
       }
     );
     
-    // Clean up listener on unmount
     return () => unsubscribe();
   };
   
@@ -186,7 +180,6 @@ const Withdrawal = () => {
       return;
     }
     
-    // Set minimum withdrawal to 200
     if (amount < 200) {
       toast({
         title: "Error",
@@ -196,7 +189,6 @@ const Withdrawal = () => {
       return;
     }
     
-    // Set maximum withdrawal to 1000
     if (amount > 1000) {
       toast({
         title: "Error",
@@ -227,8 +219,6 @@ const Withdrawal = () => {
     setProcessing(true);
     
     try {
-      // Don't deduct from balance here, instead wait for status change to 'completed'
-      // Create withdrawal request in Firestore
       await addDoc(collection(db, "withdrawals"), {
         userId: user.id,
         username: user.username,
@@ -246,11 +236,9 @@ const Withdrawal = () => {
           : "উত্তোলন অনুরোধ সফলভাবে জমা দেওয়া হয়েছে"
       });
       
-      // Reset form
       setCustomAmount('');
       setAccountNumber('');
       
-      // Refresh withdrawal history
       fetchWithdrawalHistory();
     } catch (error) {
       console.error("Withdrawal error:", error);
@@ -424,7 +412,6 @@ const Withdrawal = () => {
           </CardContent>
         </Card>
         
-        {/* Withdrawal History */}
         <Card className="bg-casino border border-gray-700">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">
