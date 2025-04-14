@@ -120,9 +120,15 @@ const Deposit = () => {
       return;
     }
     
-    // For bKash, use specific link for 500৳
-    if (amount === 500) {
+    // Set payment URL based on selected amount
+    if (amount === 100) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt100/OO0xWr');
+    } else if (amount === 200) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt200/cAVSkv');
+    } else if (amount === 500) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt500/2taUT3');
+    } else if (amount === 1000) {
+      setPaymentURL('b7a39122-0062-4d4a-b799-11908caf422b');
     } else {
       // For other amounts, use the generic format
       setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);

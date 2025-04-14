@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,7 +26,6 @@ import CoinUpGame from "./pages/CoinUpGame";
 import GoldenBasinGame from "./pages/GoldenBasinGame";
 import Bonus from "./pages/Bonus";
 import BonusControl from "./pages/BonusControl";
-import GridChanger from "./pages/GridChanger";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "./context/LanguageContext";
 import AviatorControl from "./pages/AviatorControl";
@@ -35,7 +35,6 @@ const queryClient = new QueryClient();
 const routes = [
   <Route path="/" element={<Index />} />,
   <Route path="/admin/images" element={<ImagesChanger />} />,
-  <Route path="/admin/grid-changer" element={<GridChanger />} />,
   <Route path="/game/spin" element={<SpinGame />} />,
   <Route path="/admin/spin-control" element={<SpinControl />} />,
   <Route path="/game/megaspin" element={<MegaSpin />} />,
