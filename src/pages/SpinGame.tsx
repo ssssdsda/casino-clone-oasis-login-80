@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw, Info, Plus, Minus } from 'lucide-react';
@@ -741,4 +742,134 @@ const SpinGame = () => {
                 <Button 
                   variant="outline" 
                   size="icon"
-                  className
+                  className="bg-gray-800 h-12 w-12 rounded-full border-gray-600"
+                  onClick={() => navigate('/')}
+                >
+                  <ArrowRight className="h-5 w-5 text-gray-300" />
+                </Button>
+              </motion.div>
+              
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="bg-gray-800 h-12 w-12 rounded-full border-gray-600"
+                  onClick={() => window.location.reload()}
+                >
+                  <RefreshCw className="h-5 w-5 text-gray-300" />
+                </Button>
+              </motion.div>
+            </div>
+            
+            {/* Bet adjustment controls */}
+            <div className="flex items-center space-x-2 mb-4 md:mb-0">
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="bg-gray-700 h-10 w-10 rounded-full border-gray-600"
+                  onClick={() => changeBet(-1)}
+                  disabled={spinning || bet <= 1}
+                >
+                  <Minus className="h-4 w-4 text-gray-300" />
+                </Button>
+              </motion.div>
+              
+              <div className="bg-gray-800 px-4 py-2 rounded-md text-white font-mono text-xl w-24 text-center">
+                {bet * betMultiplier}৳
+              </div>
+              
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="bg-gray-700 h-10 w-10 rounded-full border-gray-600"
+                  onClick={() => changeBet(1)}
+                  disabled={spinning || bet >= 100}
+                >
+                  <Plus className="h-4 w-4 text-gray-300" />
+                </Button>
+              </motion.div>
+            </div>
+            
+            {/* Spin button */}
+            <div>
+              <motion.button
+                className={`bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 px-8 h-14 w-36 rounded-full text-lg flex items-center justify-center shadow-lg ${spinning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                whileHover={!spinning ? { scale: 1.05 } : {}}
+                whileTap={!spinning ? { scale: 0.95 } : {}}
+                onClick={handleSpin}
+                disabled={spinning}
+              >
+                {spinning ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Spinning...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-5 w-5 fill-current" /> SPIN
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Rules dialog */}
+        <Dialog open={showRules} onOpenChange={setShowRules}>
+          <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-2xl text-center text-yellow-400">Casino Win Spin Rules</DialogTitle>
+              <DialogDescription className="text-gray-300">
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-white flex items-center">
+                      <Star className="h-4 w-4 text-yellow-500 mr-2" /> How to Play
+                    </h3>
+                    <p>Select your bet amount and click SPIN. Match 3 or 4 identical symbols on the center pay line to win.</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-white flex items-center">
+                      <Star className="h-4 w-4 text-yellow-500 mr-2" /> Symbol Values (Per Unit Bet)
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {fruitSymbols.map(symbol => (
+                        <div key={symbol.id} className="flex items-center gap-2 bg-gray-800 rounded p-2">
+                          <img src={symbol.image} alt={symbol.id} className="w-8 h-8 object-contain" />
+                          <div>
+                            <div className="capitalize font-medium">{symbol.id}</div>
+                            <div className="text-sm text-green-400">x{symbol.value}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-white flex items-center">
+                      <Star className="h-4 w-4 text-yellow-500 mr-2" /> Special Rules
+                    </h3>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Match 4 identical symbols for 2x the standard payout</li>
+                      <li>The Wild symbol substitutes for any other symbol</li>
+                      <li>Multiplier applies to your base bet amount</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="pt-2 text-center text-sm text-gray-400">
+                    Play responsibly. 18+ only.
+                  </div>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default SpinGame;
