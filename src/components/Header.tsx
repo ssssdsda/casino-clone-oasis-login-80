@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Bell, LogOut, User, Wallet, Headphones, Globe, Menu } from 'lucide-react';
+import { Bell, LogOut, User, Wallet, Headphones, Globe, Menu, Users } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/context/AuthContext';
 import { LoginButton } from './LoginButton';
@@ -57,6 +57,17 @@ const Header = () => {
                     <Headphones className="h-4 w-4 mr-2 text-gray-300" />
                     <span>{t('customerSupport')}</span>
                   </Button>
+                  
+                  {isAuthenticated && (
+                    <Button 
+                      variant="outline" 
+                      className="flex items-center justify-start bg-gradient-to-r from-purple-700 to-orange-600 border-purple-500 text-white"
+                      onClick={() => navigate('/referral')}
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      <span>{t('referral')}</span>
+                    </Button>
+                  )}
                   
                   {isAuthenticated ? (
                     <div className="flex flex-col space-y-2">

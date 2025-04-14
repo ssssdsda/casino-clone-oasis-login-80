@@ -72,3 +72,34 @@ export const calculateWinAmount = (betAmount: number, multiplier: number): numbe
   
   return Math.floor(winAmount);
 };
+
+/**
+ * Generates a referral code for a user
+ * In a real implementation, this would be more sophisticated
+ * 
+ * @param userId The ID of the user
+ * @returns A referral code
+ */
+export const generateReferralCode = (userId: string): string => {
+  // In a real implementation, this would generate a shorter, more user-friendly code
+  // For now, just use the user ID
+  return userId;
+};
+
+/**
+ * Tracks a new referral in the system
+ * 
+ * @param referrerId The ID of the user who referred someone
+ * @param referredId The ID of the user who was referred
+ * @returns Whether the referral was successfully tracked
+ */
+export const trackReferral = async (referrerId: string, referredId: string): Promise<boolean> => {
+  try {
+    // In a real implementation, this would store the referral in a database
+    console.log(`User ${referrerId} referred user ${referredId}`);
+    return true;
+  } catch (error) {
+    console.error("Error tracking referral:", error);
+    return false;
+  }
+};

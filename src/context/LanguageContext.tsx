@@ -1,16 +1,14 @@
-
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, ReactNode } from 'react';
 
 type Language = 'en' | 'bn';
 
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  translations: Record<string, Record<string, string>>;
   t: (key: string) => string;
 }
 
-const translations = {
+const translations: Record<Language, Record<string, string>> = {
   en: {
     login: "Login",
     register: "Register",
@@ -37,7 +35,6 @@ const translations = {
     fishingGames: "Fishing",
     arcadeGames: "Arcade",
     currency: "$",
-    // Deposit page translations
     depositFunds: "Deposit Funds",
     balance: "Balance",
     back: "Back",
@@ -64,6 +61,19 @@ const translations = {
     paymentProcessingTime: "Your balance will reflect within 5 minutes after deposit",
     waitForBalance: "Please be patient as it may not show immediately",
     contactSupport: "If your balance is not updated, please contact customer support",
+    referral: 'Refer & Earn',
+    referralProgram: 'Referral Program',
+    referralLink: 'Your Referral Link',
+    copyLink: 'Copy Link',
+    shareLink: 'Share Link',
+    totalReferrals: 'Total Referrals',
+    pendingRewards: 'Pending Rewards',
+    totalEarned: 'Total Earned',
+    howItWorks: 'How It Works',
+    step1: 'Share your unique referral link with friends',
+    step2: 'Your friend registers using your link',
+    step3: 'When they make their first deposit, you earn ₹119!',
+    rewardsCredited: 'Rewards are credited automatically when your friend makes a deposit'
   },
   bn: {
     login: "লগইন",
@@ -85,13 +95,12 @@ const translations = {
     getCode: "কোড পান",
     popularGames: "জনপ্রিয় গেমস",
     slots: "স্লটস",
-    liveGames: "লাইভ ক্যাসিনো",
+    liveGames: "লাইব ক্যাসিনো",
     tableGames: "টেবিল গেমস",
     sportsGames: "স্পোর্টস",
     fishingGames: "ফিশিং",
     arcadeGames: "আর্কেড",
     currency: "৳",
-    // Deposit page translations
     depositFunds: "টাকা জমা করুন",
     balance: "ব্যালেন্স",
     back: "পিছনে",
@@ -118,20 +127,33 @@ const translations = {
     paymentProcessingTime: "জমা করার পর ৫ মিনিটের মধ্যে আপনার ব্যালেন্স আপডেট হবে",
     waitForBalance: "দয়া করে ধৈর্য ধরুন, এটি তৎক্ষণাৎ দেখা নাও যেতে পারে",
     contactSupport: "যদি আপনার ব্যালেন্স আপডেট না হয়, কাস্টমার সাপোর্টে যোগাযোগ করুন",
+    referral: 'রেফার এবং আর্ন',
+    referralProgram: 'রেফারেল প্রোগ্রাম',
+    referralLink: 'আপনার রেফারেল লিংক',
+    copyLink: 'লিংক কপি করুন',
+    shareLink: 'লিংক শেয়ার করুন',
+    totalReferrals: 'মোট রেফারেল',
+    pendingRewards: 'অপেক্ষারত পুরস্কার',
+    totalEarned: 'মোট অর্জিত',
+    howItWorks: 'কিভাবে কাজ করে',
+    step1: 'আপনার বন্ধুদের সাথে আপনার অনন্য রেফারেল লিংক শেয়ার করুন',
+    step2: 'আপনার বন্ধু আপনার লিংক ব্যবহার করে নিবন্ধন করেন',
+    step3: 'তারা প্রথম ডিপোজিট করলে, আপনি ৳১১৯ অর্জন করবেন!',
+    rewardsCredited: 'আপনার বন্ধু যখন ডিপোজিট করবেন তখন পুরস্কার স্বয়ংক্রিয়ভাবে জমা হবে'
   }
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-  const [language, setLanguage] = useState<Language>('bn');
+export const LanguageProvider = ({ children }: { children: ReactNode }) => {
+  const [language, setLanguage] = useState<Language>('en');
 
-  const t = (key: string) => {
+  const t = (key: string): string => {
     return translations[language][key] || key;
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, translations, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -139,7 +161,7 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;

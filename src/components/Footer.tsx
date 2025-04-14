@@ -1,64 +1,71 @@
 
 import React from 'react';
-import { Mail, Phone, Headphones, MessageSquare } from 'lucide-react';
-import { Button } from './ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { useLanguage } from '@/context/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Home, FileText, Gift, Bell, Menu } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import ReferralButton from './ReferralButton';
 
 const Footer = () => {
-  const { t } = useLanguage();
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  if (!isMobile) {
+    return (
+      <footer className="bg-casino p-4 text-center text-white text-sm">
+        <div className="container mx-auto">
+          <p>&copy; 2025 CK444. All rights reserved.</p>
+        </div>
+      </footer>
+    );
+  }
   
   return (
-    <footer className="w-full bg-casino py-4 px-4 border-t border-gray-800">
-      <div className="container mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 mb-4 md:mb-0">
-            <div className="flex items-center space-x-2">
-              <Phone className="h-4 w-4 text-casino-accent" />
-              <span className="text-gray-300">{t('supportPhone')}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Mail className="h-4 w-4 text-casino-accent" />
-              <span className="text-gray-300">{t('supportEmail')}</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="bg-casino-dark border-casino-accent text-casino-accent flex items-center space-x-2">
-                  <Headphones className="h-4 w-4" />
-                  <span>{t('customerSupport')}</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 bg-casino border border-casino-accent">
-                <div className="space-y-4">
-                  <h4 className="font-medium text-white">{t('customerSupport')}</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-start space-x-2">
-                      <MessageSquare className="h-4 w-4 text-casino-accent mt-1" />
-                      <div>
-                        <p className="text-sm text-gray-300">
-                          Our support team is available 24/7 to assist you with any issues or questions.
-                        </p>
-                      </div>
-                    </div>
-                    <Button className="w-full bg-casino-accent hover:bg-casino-accent-hover text-black font-bold">
-                      Start Live Chat
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+    <div className="fixed bottom-0 left-0 right-0 bg-casino border-t border-casino-accent z-50">
+      <div className="flex justify-between items-center p-2">
+        <button 
+          onClick={() => navigate('/')}
+          className={cn(
+            "flex flex-col items-center justify-center py-1 px-3 rounded-md",
+            location.pathname === '/' ? "text-casino-accent" : "text-gray-300"
+          )}
+        >
+          <Home className="h-5 w-5" />
+          <span className="text-xs">Home</span>
+        </button>
+        
+        <button 
+          onClick={() => navigate('/bonus')}
+          className={cn(
+            "flex flex-col items-center justify-center py-1 px-3 rounded-md",
+            location.pathname === '/bonus' ? "text-casino-accent" : "text-gray-300"
+          )}
+        >
+          <Gift className="h-5 w-5" />
+          <span className="text-xs">Bonus</span>
+        </button>
+        
+        {/* Replace one of the existing buttons with the referral button */}
+        <div className="scale-110">
+          <ReferralButton />
         </div>
         
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-400">© {new Date().getFullYear()} CK444 Casino. All rights reserved.</p>
-          <p className="text-xs text-gray-500 mt-1">18+ | Play Responsibly</p>
-        </div>
+        <button 
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-md text-gray-300"
+        >
+          <Bell className="h-5 w-5" />
+          <span className="text-xs">Notify</span>
+        </button>
+        
+        <button 
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-md text-gray-300"
+        >
+          <Menu className="h-5 w-5" />
+          <span className="text-xs">More</span>
+        </button>
       </div>
-    </footer>
+    </div>
   );
 };
 

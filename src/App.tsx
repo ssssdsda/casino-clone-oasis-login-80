@@ -31,6 +31,7 @@ import { LanguageProvider } from "./context/LanguageContext";
 import AviatorControl from "./pages/AviatorControl";
 import PopupCustomizer from "./pages/PopupCustomizer";
 import WithdrawalManager from "./pages/WithdrawalManager";
+import ReferralProgram from "./pages/ReferralProgram";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const routes = [
   <Route path="/game/777coins" element={<CoinsGame />} />,
   <Route path="/admin/popup-customizer" element={<PopupCustomizer />} />,
   <Route path="/admin/withdrawal-manager" element={<WithdrawalManager />} />,
+  <Route path="/referral" element={<ReferralProgram />} />,
   <Route path="*" element={<NotFound />} />
 ];
 
