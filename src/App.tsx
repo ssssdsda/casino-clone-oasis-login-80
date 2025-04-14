@@ -12,6 +12,9 @@ import SpinControl from "./pages/SpinControl";
 import MegaSpin from "./pages/MegaSpin";
 import MegaSpinControl from "./pages/MegaSpinControl";
 import Withdrawal from "./pages/Withdrawal";
+import LiveCricket from "./pages/LiveCricket";
+import LiveFootball from "./pages/LiveFootball";
+import SuperAce from "./pages/SuperAce";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "./context/LanguageContext";
 
@@ -33,6 +36,9 @@ const App = () => (
               <Route path="/game/megaspin" element={<MegaSpin />} />
               <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />
               <Route path="/withdrawal" element={<Withdrawal />} />
+              <Route path="/game/live-cricket" element={<LiveCricket />} />
+              <Route path="/game/live-football" element={<LiveFootball />} />
+              <Route path="/game/super-ace" element={<SuperAce />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

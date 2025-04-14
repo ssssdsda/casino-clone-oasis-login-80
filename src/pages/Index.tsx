@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -27,6 +28,14 @@ const featuredGames = [
     multiplier: '50000',
     isNew: true,
     path: '/game/megaspin'
+  },
+  {
+    id: 'super-ace',
+    title: 'Super Ace Casino',
+    image: '/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png',
+    multiplier: '25000',
+    isNew: true,
+    path: '/game/super-ace'
   }
 ];
 
@@ -34,8 +43,9 @@ const popularGames = [
   {
     id: '1',
     title: 'Super Ace',
-    image: 'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png',
     multiplier: '2000',
+    path: '/game/super-ace'
   },
   {
     id: '2',
@@ -71,6 +81,7 @@ const slotGames = [
     id: '6',
     title: 'Mega Spin',
     image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=300&h=400',
+    path: '/game/megaspin'
   },
   {
     id: '7',
@@ -94,14 +105,17 @@ const slotGames = [
 const liveGames = [
   {
     id: '11',
-    title: 'Live Blackjack',
-    image: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&w=300&h=400',
+    title: 'Live Cricket',
+    image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=300&h=400',
     isNew: true,
+    path: '/game/live-cricket'
   },
   {
     id: '12',
-    title: 'Live Roulette',
-    image: 'https://images.unsplash.com/photo-1606167668584-78701c57f90d?auto=format&fit=crop&w=300&h=400',
+    title: 'Live Football',
+    image: 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=300&h=400',
+    isNew: true,
+    path: '/game/live-football'
   },
   {
     id: '13',

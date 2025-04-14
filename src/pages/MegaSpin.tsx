@@ -12,48 +12,19 @@ import { useLanguage } from '@/context/LanguageContext';
 // Generate wheel segments
 const generateWheelSegments = () => {
   return [
-    { value: 1, multiplier: 1 },
-    { value: 2, multiplier: 1 },
-    { value: 5, multiplier: 1 },
-    { value: 1, multiplier: 1 },
-    { value: 2, multiplier: 1 },
-    { value: 8, multiplier: 8 },
-    { value: 1, multiplier: 1 },
-    { value: 5, multiplier: 1 },
-    { value: 1, multiplier: 1 },
-    { value: 40, multiplier: 40 },
-    { value: 2, multiplier: 1 },
-    { value: 1, multiplier: 1 },
-    { value: 2, multiplier: 1 },
-    { value: 1, multiplier: 1 },
-    { value: 10, multiplier: 10 },
-    { value: 2, multiplier: 1 },
-    { value: 1, multiplier: 1 },
-    { value: 5, multiplier: 1 },
-    { value: 1, multiplier: 1 },
-    { value: 2, multiplier: 1 },
-    { value: 1, multiplier: 1 },
-    { value: 2, multiplier: 1 },
-    { value: 1, multiplier: 1 },
-    { value: 20, multiplier: 20 },
+    { value: 10, color: '#FF5252', textColor: 'white' },
+    { value: 50, color: '#E040FB', textColor: 'white' },
+    { value: 20, color: '#7C4DFF', textColor: 'white' },
+    { value: 100, color: '#448AFF', textColor: 'white' },
+    { value: 30, color: '#64FFDA', textColor: 'black' },
+    { value: 500, color: '#FFEB3B', textColor: 'black' },
+    { value: 40, color: '#FF9800', textColor: 'white' },
+    { value: 200, color: '#F44336', textColor: 'white' },
+    { value: 10, color: '#9C27B0', textColor: 'white' },
+    { value: 1000, color: '#FFEB3B', textColor: 'black' },
+    { value: 60, color: '#3F51B5', textColor: 'white' },
+    { value: 30, color: '#4CAF50', textColor: 'white' }
   ];
-};
-
-const getSegmentColor = (index) => {
-  const colors = [
-    'bg-purple-600', // Purple
-    'bg-yellow-400', // Yellow
-    'bg-orange-500', // Orange
-    'bg-red-600',    // Red
-    'bg-gray-300',   // Silver (for multiplier segments)
-  ];
-  
-  // Special segments (multipliers)
-  if ([5, 9, 14, 23].includes(index)) {
-    return colors[4];
-  }
-  
-  return colors[index % 4];
 };
 
 const MegaSpin = () => {
@@ -65,20 +36,21 @@ const MegaSpin = () => {
   const [wheelSegments] = useState(generateWheelSegments());
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<number | null>(null);
-  const [bet, setBet] = useState(1);
+  const [bet, setBet] = useState(10);
   const [balance, setBalance] = useState(user?.balance || 1000);
   const [muted, setMuted] = useState(true);
   const [winnings, setWinnings] = useState(0);
+  const [rotationAngle, setRotationAngle] = useState(0);
   
   const wheelRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   
   useEffect(() => {
-    // Show loading for 3 seconds
+    // Show loading for 2 seconds
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 3000);
+    }, 2000);
     
     // Create audio elements
     audioRef.current = new Audio('/placeholder.svg'); // Replace with actual spin sound
@@ -88,7 +60,7 @@ const MegaSpin = () => {
   }, []);
   
   const changeBet = (amount: number) => {
-    const newBet = Math.max(1, Math.min(100, bet + amount));
+    const newBet = Math.max(10, Math.min(1000, bet + amount));
     setBet(newBet);
   };
   
@@ -113,41 +85,38 @@ const MegaSpin = () => {
     }
     
     // Simulate wheel spinning
-    if (wheelRef.current) {
-      const spinDegrees = 1800 + Math.random() * 360; // Spin at least 5 times
-      wheelRef.current.style.transition = 'transform 5s cubic-bezier(0.2, 0.8, 0.3, 1)';
-      wheelRef.current.style.transform = `rotate(${spinDegrees}deg)`;
+    const spinDegrees = 2000 + Math.random() * 360; // Spin at least 5 times
+    setRotationAngle(prev => prev + spinDegrees);
+    
+    // Calculate which segment will be at the top when wheel stops
+    setTimeout(() => {
+      const finalRotation = spinDegrees % 360;
+      const segmentAngle = 360 / wheelSegments.length;
+      const segmentIndex = Math.floor((360 - finalRotation) / segmentAngle) % wheelSegments.length;
       
-      // Calculate which segment will be at the top when wheel stops
+      const winningSegment = wheelSegments[segmentIndex];
+      setResult(winningSegment.value);
+      
+      // Calculate winnings
+      const payout = bet * (winningSegment.value / 10);
+      setWinnings(payout);
+      setBalance(prev => prev + payout);
+      
+      if (!muted && winAudioRef.current && payout > 0) {
+        winAudioRef.current.play();
+      }
+      
+      toast({
+        title: t('youWon'),
+        description: `${t('currency')}${payout}`,
+        variant: "default",
+        className: "bg-green-500 text-white font-bold"
+      });
+      
       setTimeout(() => {
-        const finalRotation = spinDegrees % 360;
-        const segmentAngle = 360 / wheelSegments.length;
-        const segmentIndex = Math.floor((360 - finalRotation) / segmentAngle) % wheelSegments.length;
-        
-        const winningSegment = wheelSegments[segmentIndex];
-        setResult(winningSegment.value);
-        
-        // Calculate winnings
-        const payout = bet * winningSegment.multiplier;
-        setWinnings(payout);
-        setBalance(prev => prev + payout);
-        
-        if (!muted && winAudioRef.current && payout > 0) {
-          winAudioRef.current.play();
-        }
-        
-        toast({
-          title: t('youWon'),
-          description: `${t('currency')}${payout}`,
-          variant: "default",
-          className: "bg-green-500 text-white font-bold"
-        });
-        
-        setTimeout(() => {
-          setSpinning(false);
-        }, 1000);
-      }, 5000);
-    }
+        setSpinning(false);
+      }, 1000);
+    }, 5000);
   };
   
   const handleWheelClick = () => {
@@ -237,7 +206,7 @@ const MegaSpin = () => {
         
         {/* Wheel Section */}
         <motion.div
-          className="relative mx-auto max-w-2xl aspect-square"
+          className="relative mx-auto max-w-lg aspect-square mb-8"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
@@ -247,58 +216,64 @@ const MegaSpin = () => {
             className="relative w-full h-full cursor-pointer"
             onClick={handleWheelClick}
           >
-            {/* Outer ring with diamonds */}
-            <div className="absolute inset-0 rounded-full border-8 border-yellow-300 bg-black z-10"></div>
+            {/* Outer ring */}
+            <div className="absolute inset-0 rounded-full border-8 border-yellow-300 bg-gray-900 shadow-[0_0_15px_rgba(255,215,0,0.7)] z-10"></div>
             
             {/* Wheel segments */}
             <div 
               ref={wheelRef}
-              className="absolute inset-[20px] rounded-full overflow-hidden z-20"
+              className="absolute inset-[20px] rounded-full overflow-hidden z-20 transition-transform duration-[5s] ease-out"
               style={{ 
+                transform: `rotate(${rotationAngle}deg)`,
                 transformOrigin: 'center',
               }}
             >
               {wheelSegments.map((segment, index) => (
                 <div 
                   key={index} 
-                  className="absolute top-0 left-0 w-full h-full origin-bottom"
+                  className="absolute top-0 left-0 w-full h-full origin-center"
                   style={{ 
                     transform: `rotate(${index * (360 / wheelSegments.length)}deg)`,
-                    clipPath: 'polygon(50% 0%, 50% 50%, 100% 50%, 50% 0%)',
                   }}
                 >
                   <div 
-                    className={`w-full h-full ${getSegmentColor(index)}`}
+                    className="absolute top-0 left-0 right-0 bottom-0 origin-bottom-center"
+                    style={{ 
+                      clipPath: 'polygon(50% 0%, 100% 0%, 50% 100%, 0% 0%)',
+                      backgroundColor: segment.color,
+                      transform: 'translateY(-50%)',
+                    }}
                   >
                     <div 
-                      className="absolute top-[15%] left-1/2 -translate-x-1/2 rotate-180"
-                      style={{ transform: `translateX(-50%) rotate(${180 - index * (360 / wheelSegments.length)}deg)` }}
+                      className="absolute w-full text-center font-bold text-lg -rotate-90"
+                      style={{ 
+                        top: '30%', 
+                        color: segment.textColor,
+                        transformOrigin: 'center',
+                        transform: `rotate(${90 - (index * (360 / wheelSegments.length))}deg) translateY(-20px)`,
+                      }}
                     >
-                      <div className="bg-black rounded-full w-10 h-10 flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">
-                          {segment.multiplier > 1 ? `${segment.multiplier}x` : segment.value}
-                        </span>
-                      </div>
+                      <span className="text-xl md:text-2xl drop-shadow-md">{segment.value}৳</span>
                     </div>
                   </div>
                 </div>
               ))}
-            </div>
-            
-            {/* Center of wheel */}
-            <div className="absolute inset-0 flex items-center justify-center z-30">
-              <div className="w-1/3 h-1/3 rounded-full bg-gradient-to-r from-purple-700 via-pink-600 to-purple-700 flex items-center justify-center">
-                <div className="text-center text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-yellow-400 to-purple-400">
-                  <div className="font-bold text-xl">MEGA</div>
-                  <div className="font-bold text-2xl text-yellow-400">TILT</div>
-                  <div className="font-bold text-xl">SPIN</div>
+
+              {/* Center of wheel */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-1/4 h-1/4 rounded-full bg-gray-900 border-4 border-yellow-400 z-30 flex items-center justify-center shadow-lg">
+                  <div className="w-full h-full rounded-full bg-gradient-to-r from-purple-700 via-pink-600 to-purple-700 flex items-center justify-center">
+                    <div className="text-center text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200">
+                      SPIN
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
             
             {/* Pointer/ticker at top */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-2 z-40">
-              <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-b-[30px] border-b-yellow-400"></div>
+              <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-b-[30px] border-b-yellow-400 filter drop-shadow-lg"></div>
             </div>
           </div>
           
@@ -318,7 +293,7 @@ const MegaSpin = () => {
                 }}
                 transition={{ duration: 0.6, repeat: 3 }}
               >
-                <span className="text-black font-bold text-2xl">WIN {t('currency')}{winnings}</span>
+                <span className="text-black font-bold text-2xl">WIN {result}৳</span>
               </motion.div>
             </motion.div>
           )}
@@ -364,8 +339,8 @@ const MegaSpin = () => {
                       variant="ghost" 
                       size="sm" 
                       className="px-1 text-gray-400" 
-                      onClick={() => changeBet(-1)}
-                      disabled={bet <= 1 || spinning}
+                      onClick={() => changeBet(-10)}
+                      disabled={bet <= 10 || spinning}
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
@@ -388,15 +363,15 @@ const MegaSpin = () => {
                       repeatType: "reverse" 
                     }}
                   >
-                    {t('currency')}{bet}
+                    {bet}৳
                   </motion.span>
                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       className="px-1 text-gray-400" 
-                      onClick={() => changeBet(1)}
-                      disabled={bet >= 100 || spinning}
+                      onClick={() => changeBet(10)}
+                      disabled={bet >= 1000 || spinning}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -446,7 +421,7 @@ const MegaSpin = () => {
                     repeatType: "reverse"
                   }}
                 >
-                  {t('currency')}{balance.toFixed(2)}
+                  {balance.toFixed(2)}৳
                 </motion.div>
               </div>
             </div>
