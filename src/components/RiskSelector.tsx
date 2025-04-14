@@ -30,7 +30,7 @@ const RiskSelector: React.FC<RiskSelectorProps> = ({
         <div className="text-xs mb-1 text-gray-400">RISK</div>
         <div className="flex gap-1">
           <button 
-            onClick={() => onRiskChange(RISK_LEVELS.LOW as RiskLevel)}
+            onClick={() => onRiskChange(RISK_LEVELS.LOW)}
             className={`flex-1 py-2 text-center text-sm rounded-md ${
               selectedRisk === RISK_LEVELS.LOW ? "bg-green-600 text-white font-bold" : "bg-gray-700"
             }`}
@@ -38,7 +38,7 @@ const RiskSelector: React.FC<RiskSelectorProps> = ({
             LOW
           </button>
           <button 
-            onClick={() => onRiskChange(RISK_LEVELS.MEDIUM as RiskLevel)}
+            onClick={() => onRiskChange(RISK_LEVELS.MEDIUM)}
             className={`flex-1 py-2 text-center text-sm rounded-md ${
               selectedRisk === RISK_LEVELS.MEDIUM ? "bg-green-600 text-white font-bold" : "bg-gray-700"
             }`}
@@ -46,7 +46,7 @@ const RiskSelector: React.FC<RiskSelectorProps> = ({
             MEDIUM
           </button>
           <button 
-            onClick={() => onRiskChange(RISK_LEVELS.HIGH as RiskLevel)}
+            onClick={() => onRiskChange(RISK_LEVELS.HIGH)}
             className={`flex-1 py-2 text-center text-sm rounded-md ${
               selectedRisk === RISK_LEVELS.HIGH ? "bg-green-600 text-white font-bold" : "bg-gray-700"
             }`}

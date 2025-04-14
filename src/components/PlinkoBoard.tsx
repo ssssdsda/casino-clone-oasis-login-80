@@ -9,7 +9,8 @@ import {
   PIN_RADIUS,
   generatePinPositions,
   MULTIPLIER_COLORS,
-  RISK_LEVELS
+  RISK_LEVELS,
+  RiskLevel
 } from '@/utils/gameLogic';
 
 interface PlinkoBoardProps {
@@ -45,7 +46,7 @@ const PlinkoBoard: React.FC<PlinkoBoardProps> = ({
   const [balls, setBalls] = useState<Ball[]>([]);
   const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
   const [lastDropTime, setLastDropTime] = useState(0);
-  const [riskLevel, setRiskLevel] = useState(RISK_LEVELS.MEDIUM);
+  const [riskLevel, setRiskLevel] = useState<RiskLevel>(RISK_LEVELS.MEDIUM);
   
   // Generate multiplier elements based on multipliers
   const multiplierElements = multipliers.map((multiplier, index) => (
