@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -28,6 +27,30 @@ const featuredGames = [
     multiplier: '50000',
     isNew: true,
     path: '/game/boxing-king'
+  },
+  {
+    id: 'fortune-gems',
+    title: 'Fortune Gems',
+    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
+    multiplier: '20000',
+    isNew: true,
+    path: '/game/fortune-gems'
+  },
+  {
+    id: 'coin-up',
+    title: 'Coin Up',
+    image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
+    multiplier: '40000',
+    isNew: true,
+    path: '/game/coin-up'
+  },
+  {
+    id: 'golden-basin',
+    title: 'Golden Basin',
+    image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
+    multiplier: '35000',
+    isNew: true,
+    path: '/game/golden-basin'
   },
   {
     id: 'spin-win',
@@ -72,15 +95,19 @@ const popularGames = [
     path: '/game/super-ace'
   },
   {
-    id: '2',
-    title: 'Money Coming',
-    image: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?auto=format&fit=crop&w=300&h=400',
+    id: 'fortune-gems',
+    title: 'Fortune Gems',
+    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
+    multiplier: '3500',
+    path: '/game/fortune-gems'
   },
   {
-    id: '3',
-    title: 'Fortune Gems',
-    image: 'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?auto=format&fit=crop&w=300&h=400',
+    id: 'coin-up',
+    title: 'Coin Up',
+    image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
+    multiplier: '5000',
     isNew: true,
+    path: '/game/coin-up'
   },
   {
     id: '4',
@@ -94,9 +121,11 @@ const popularGames = [
     multiplier: '3000',
   },
   {
-    id: '6',
-    title: 'Dragon Power',
-    image: 'https://images.unsplash.com/photo-1533107862482-0e6974b06ec4?auto=format&fit=crop&w=300&h=400',
+    id: 'golden-basin',
+    title: 'Golden Basin',
+    image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
+    multiplier: '4500',
+    path: '/game/golden-basin'
   },
 ];
 
