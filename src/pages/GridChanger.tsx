@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -8,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, Image, Edit, Trash2 } from 'lucide-react';
+import { Upload, Image as LucideImage, Edit, Trash2 } from 'lucide-react';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import app from '@/lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
@@ -263,7 +264,7 @@ const GridChanger = () => {
       }
       
       // Preload the Aviator image
-      const preloadImage = new Image();
+      const preloadImage = document.createElement('img');
       preloadImage.src = '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png?v=' + new Date().getTime();
     } catch (error) {
       console.error("Error loading game data:", error);
