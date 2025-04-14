@@ -9,6 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import app from '@/lib/firebase';
+
+const firestore = getFirestore(app);
 
 const Withdrawal = () => {
   const navigate = useNavigate();
@@ -21,6 +26,7 @@ const Withdrawal = () => {
   const [withdrawalSubmitted, setWithdrawalSubmitted] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30 * 60); // 30 minutes in seconds
   const [balance] = useState(user?.balance || 1000);
+  const [withdrawalId, setWithdrawalId] = useState<string | null>(null);
 
   useEffect(() => {
     // Countdown timer after withdrawal is submitted
@@ -35,6 +41,10 @@ const Withdrawal = () => {
               variant: "default",
               className: "bg-green-500 text-white"
             });
+            
+            // Update withdrawal status in Firebase
+            updateWithdrawalStatus("completed");
+            
             return 0;
           }
           return prevTime - 1;
@@ -45,13 +55,28 @@ const Withdrawal = () => {
     }
   }, [withdrawalSubmitted, toast]);
 
-  const formatTime = (seconds) => {
+  const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
-  const handleSubmit = (e) => {
+  // Update withdrawal status in Firebase
+  const updateWithdrawalStatus = async (status: string) => {
+    if (!withdrawalId) return;
+    
+    try {
+      await addDoc(collection(firestore, "withdrawalUpdates"), {
+        withdrawalId,
+        status,
+        timestamp: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Error updating withdrawal status: ", error);
+    }
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!walletAddress) {
@@ -83,17 +108,40 @@ const Withdrawal = () => {
     
     setIsProcessing(true);
     
-    // Simulate processing
-    setTimeout(() => {
-      setIsProcessing(false);
-      setWithdrawalSubmitted(true);
-      toast({
-        title: "Withdrawal Initiated",
-        description: "Your withdrawal request has been submitted",
-        variant: "default",
-        className: "bg-blue-500 text-white"
+    // Save withdrawal request to Firebase
+    try {
+      const docRef = await addDoc(collection(firestore, "withdrawals"), {
+        userId: user?.uid || "anonymous",
+        walletAddress,
+        amount: parseFloat(amount),
+        status: "pending",
+        timestamp: serverTimestamp(),
+        userBalance: balance
       });
-    }, 2000);
+      
+      setWithdrawalId(docRef.id);
+      
+      // Simulate processing
+      setTimeout(() => {
+        setIsProcessing(false);
+        setWithdrawalSubmitted(true);
+        toast({
+          title: "Withdrawal Initiated",
+          description: "Your withdrawal request has been submitted",
+          variant: "default",
+          className: "bg-blue-500 text-white"
+        });
+      }, 2000);
+    } catch (error) {
+      console.error("Error saving withdrawal request: ", error);
+      setIsProcessing(false);
+      
+      toast({
+        title: "Error",
+        description: "There was an error submitting your withdrawal request",
+        variant: "destructive",
+      });
+    }
   };
   
   return (

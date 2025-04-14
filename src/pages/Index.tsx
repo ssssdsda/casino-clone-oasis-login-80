@@ -30,6 +30,14 @@ const featuredGames = [
     path: '/game/megaspin'
   },
   {
+    id: 'money-gram',
+    title: 'Money Coming',
+    image: '/lovable-uploads/047cc796-53b7-4c0b-a938-259ab29ca8c8.png',
+    multiplier: '30000',
+    isNew: true,
+    path: '/game/moneygram'
+  },
+  {
     id: 'super-ace',
     title: 'Super Ace Casino',
     image: '/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png',

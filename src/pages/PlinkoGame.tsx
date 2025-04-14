@@ -9,12 +9,17 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { cn } from '@/lib/utils';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import app from '@/lib/firebase';
 
-// Physics constants
-const GRAVITY = 0.5;
-const BOUNCE_FACTOR = 0.7;
-const FRICTION = 0.98;
-const RANDOM_FACTOR = 0.3;
+const firestore = getFirestore(app);
+
+// Physics constants - improved for better simulation
+const GRAVITY = 0.6;
+const BOUNCE_FACTOR = 0.65;
+const FRICTION = 0.97;
+const RANDOM_FACTOR = 0.35;
 
 // Pin generation settings
 const PIN_ROWS = 16;
@@ -62,6 +67,7 @@ const PlinkoGame = () => {
   const [lastWin, setLastWin] = useState<number | null>(null);
   const [autoPlayActive, setAutoPlayActive] = useState<boolean>(false);
   const [remainingBalls, setRemainingBalls] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
   // Pin positions
   const [pins, setPins] = useState<{x: number, y: number}[]>([]);
@@ -75,6 +81,15 @@ const PlinkoGame = () => {
     isMoving: boolean;
     multiplier: string | null;
   }[]>([]);
+
+  // Loading animation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   // Generate pins based on selected rows
   useEffect(() => {
@@ -130,7 +145,7 @@ const PlinkoGame = () => {
   };
   
   // Drop ball
-  const dropBall = () => {
+  const dropBall = async () => {
     if (isPlaying || autoPlayActive) return;
     
     if (balance < betAmount) {
@@ -145,20 +160,35 @@ const PlinkoGame = () => {
     setIsPlaying(true);
     setBalance(prev => prev - betAmount);
     
+    // Save bet to Firebase
+    try {
+      await addDoc(collection(firestore, "bets"), {
+        userId: user?.uid || "anonymous",
+        betAmount: betAmount,
+        game: "Plinko",
+        timestamp: serverTimestamp(),
+        userBalance: balance - betAmount
+      });
+    } catch (error) {
+      console.error("Error saving bet: ", error);
+    }
+    
     const ballId = `ball-${Date.now()}`;
     const startX = canvasRef.current ? canvasRef.current.clientWidth / 2 : 0;
     const startY = 20;
     
+    // Add initial ball with a slight random x velocity
     setActiveBalls(prev => [...prev, {
       id: ballId,
       x: startX,
       y: startY,
-      velocityX: 0,
+      velocityX: (Math.random() - 0.5) * 2, // Small random initial horizontal velocity
       velocityY: 0,
       isMoving: true,
       multiplier: null,
     }]);
     
+    // Start the physics simulation after a short delay
     setTimeout(() => {
       simulateBallDrop(ballId, startX, startY);
     }, 100);
@@ -181,6 +211,7 @@ const PlinkoGame = () => {
       count--;
       setRemainingBalls(count);
       
+      // Check if we should continue auto play after a delay
       setTimeout(() => {
         if (count > 0 && !isPlaying && autoPlayActive) {
           runAutoPlay();
@@ -200,30 +231,35 @@ const PlinkoGame = () => {
     setRemainingBalls(0);
   };
   
-  // Simulate physics for the ball drop
+  // Simulate physics for the ball drop with improved animation
   const simulateBallDrop = (ballId: string, startX: number, startY: number) => {
     let x = startX;
     let y = startY;
-    let vx = (Math.random() - 0.5) * 2; // Small initial horizontal movement
+    let vx = (Math.random() - 0.5) * 3; // Increased initial horizontal velocity for more randomness
     let vy = 0;
     let isMoving = true;
+    let lastUpdateTime = performance.now();
     
-    // Physics simulation loop
-    const updatePhysics = () => {
+    // Physics simulation loop with time-based updates for smoother animation
+    const updatePhysics = (currentTime: number) => {
       if (!isMoving || !canvasRef.current || !ballsContainerRef.current) return;
       
-      // Apply gravity
-      vy += GRAVITY;
+      // Calculate time delta for smooth physics regardless of frame rate
+      const deltaTime = (currentTime - lastUpdateTime) / 16; // Normalize to ~60fps
+      lastUpdateTime = currentTime;
+      
+      // Apply gravity with time scaling
+      vy += GRAVITY * deltaTime;
       
       // Update position with velocity
-      x += vx;
-      y += vy;
+      x += vx * deltaTime;
+      y += vy * deltaTime;
       
       // Get container dimensions
       const containerWidth = canvasRef.current.clientWidth;
       const containerHeight = canvasRef.current.clientHeight;
       
-      // Bounce off walls
+      // Bounce off walls with improved physics
       if (x - PIN_RADIUS < 0) {
         x = PIN_RADIUS;
         vx = -vx * BOUNCE_FACTOR;
@@ -232,30 +268,38 @@ const PlinkoGame = () => {
         vx = -vx * BOUNCE_FACTOR;
       }
       
-      // Check for collision with pins
+      // Check for collision with pins - improved collision detection
       pins.forEach(pin => {
         const dx = pin.x - x;
         const dy = pin.y - y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         if (distance < PIN_RADIUS * 2) {  // Collision detected (pin radius + ball radius)
-          // Calculate collision response
-          const angle = Math.atan2(dy, dx);
-          const tx = x + Math.cos(angle) * PIN_RADIUS * 2;
-          const ty = y + Math.sin(angle) * PIN_RADIUS * 2;
+          // Calculate collision normal vector
+          const nx = dx / distance;
+          const ny = dy / distance;
           
-          // Update positions and velocities after collision
-          x = tx;
-          y = ty;
+          // Calculate relative velocity
+          const relativeVelocity = vx * nx + vy * ny;
           
-          // Bounce with random factors to make it more realistic
-          const speed = Math.sqrt(vx * vx + vy * vy);
-          
-          // Add randomness to make the ball behave more realistically
-          const bounceAngle = Math.atan2(dy, dx) + (Math.random() - 0.5) * RANDOM_FACTOR;
-          
-          vx = -Math.cos(bounceAngle) * speed * BOUNCE_FACTOR;
-          vy = -Math.sin(bounceAngle) * speed * BOUNCE_FACTOR;
+          // Apply impulse only if objects are moving toward each other
+          if (relativeVelocity < 0) {
+            // Calculate impulse scalar
+            const impulse = -(1 + BOUNCE_FACTOR) * relativeVelocity;
+            
+            // Apply impulse to velocity
+            vx -= impulse * nx;
+            vy -= impulse * ny;
+            
+            // Move ball outside of collision
+            const overlap = PIN_RADIUS * 2 - distance;
+            x -= overlap * nx * 1.01; // Move slightly more to prevent sticking
+            y -= overlap * ny * 1.01;
+            
+            // Add randomness to make the game more interesting
+            vx += (Math.random() - 0.5) * RANDOM_FACTOR;
+            vy += (Math.random() - 0.5) * RANDOM_FACTOR;
+          }
         }
       });
       
@@ -334,8 +378,42 @@ const PlinkoGame = () => {
     };
     
     // Start the physics simulation
-    updatePhysics();
+    requestAnimationFrame(updatePhysics);
   };
+  
+  // Loading screen
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-indigo-950 flex flex-col">
+        <Header />
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <motion.div
+            className="text-5xl font-bold text-white mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            PLINKO
+          </motion.div>
+          
+          <motion.div
+            className="w-20 h-20 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          
+          <motion.p
+            className="mt-6 text-blue-400"
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            Loading game...
+          </motion.p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-indigo-950 flex flex-col">
@@ -531,7 +609,7 @@ const PlinkoGame = () => {
               backgroundImage: "repeating-linear-gradient(transparent, transparent 40px, rgba(255, 255, 255, 0.03) 40px, rgba(255, 255, 255, 0.03) 80px)"
             }}
           >
-            {/* Pins */}
+            {/* Pins with glow effect */}
             {pins.map((pin, index) => (
               <div 
                 key={index}
@@ -545,28 +623,45 @@ const PlinkoGame = () => {
               />
             ))}
             
-            {/* Balls container */}
+            {/* Balls container with improved animation */}
             <div ref={ballsContainerRef} className="absolute inset-0">
               {activeBalls.map(ball => (
                 <motion.div
                   key={ball.id}
-                  className="absolute w-5 h-5 rounded-full bg-white shadow-lg"
+                  className="absolute w-5 h-5 rounded-full bg-gradient-to-br from-white to-blue-100"
                   style={{
                     left: `${ball.x}px`,
                     top: `${ball.y}px`,
                     transform: 'translate(-50%, -50%)',
-                    boxShadow: '0 0 10px rgba(255, 255, 255, 0.9)'
+                    boxShadow: '0 0 10px rgba(255, 255, 255, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.8)'
                   }}
-                  animate={{
+                  initial={{ scale: 0 }}
+                  animate={{ 
                     x: ball.x - 10,
                     y: ball.y - 10,
-                    transition: { type: 'spring', bounce: 0 }
+                    scale: 1,
+                    transition: { 
+                      type: 'spring', 
+                      stiffness: 500,
+                      damping: 30
+                    }
                   }}
-                />
+                >
+                  {ball.multiplier && (
+                    <motion.span
+                      className="absolute inset-0 flex items-center justify-center text-xs font-bold"
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.2, duration: 0.3 }}
+                    >
+                      {ball.multiplier[0]}
+                    </motion.span>
+                  )}
+                </motion.div>
               ))}
             </div>
             
-            {/* Bottom multipliers */}
+            {/* Bottom multipliers with glow effect */}
             <div className="absolute bottom-0 left-0 right-0 flex">
               {multiplierElements}
             </div>
