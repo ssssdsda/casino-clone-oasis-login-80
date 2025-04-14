@@ -40,7 +40,7 @@ const featuredGames = [
   {
     id: 'mega-spin',
     title: 'Mega Spin',
-    image: '/lovable-uploads/ba454bb5-ce73-43cb-a2ee-68e5e0fd715f.png',
+    image: '/lovable-uploads/467a6111-4e8b-4892-9521-c87da94084c0.png',
     multiplier: '40000',
     isNew: true,
     path: '/game/megaspin'
@@ -130,7 +130,7 @@ const popularGames = [
   {
     id: 'mega-spin-pop',
     title: 'Mega Spin',
-    image: '/lovable-uploads/ba454bb5-ce73-43cb-a2ee-68e5e0fd715f.png',
+    image: '/lovable-uploads/467a6111-4e8b-4892-9521-c87da94084c0.png',
     multiplier: '4000',
     path: '/game/megaspin'
   },
@@ -140,7 +140,7 @@ const slotGames = [
   {
     id: '6',
     title: 'Mega Spin',
-    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/467a6111-4e8b-4892-9521-c87da94084c0.png',
     path: '/game/megaspin'
   },
   {
@@ -235,9 +235,23 @@ const casinoGames = [
   },
 ];
 
+// Define all game categories for filtering
+const gameCategories: Record<string, any[]> = {
+  featuredGames,
+  popularGames,
+  slots: slotGames,
+  liveGames,
+  tableGames: casinoGames,
+};
+
 const Index = () => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
+  };
   
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
@@ -246,13 +260,22 @@ const Index = () => {
       <div className="flex flex-1">
         {!isMobile && <CategorySidebar />}
         <main className={`flex-1 p-1 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
-          <GameCategories />
+          <GameCategories onCategorySelect={handleCategorySelect} selectedCategory={selectedCategory} />
           <div className="mt-2 md:mt-4 space-y-2 md:space-y-4">
-            <GameSection title="featuredGames" games={featuredGames} />
-            <GameSection title="popularGames" games={popularGames} />
-            <GameSection title="slots" games={slotGames} />
-            <GameSection title="liveGames" games={liveGames} />
-            <GameSection title="tableGames" games={casinoGames} />
+            {selectedCategory ? (
+              <GameSection 
+                title={selectedCategory} 
+                games={gameCategories[selectedCategory] || []} 
+              />
+            ) : (
+              <>
+                <GameSection title="featuredGames" games={featuredGames} />
+                <GameSection title="popularGames" games={popularGames} />
+                <GameSection title="slots" games={slotGames} />
+                <GameSection title="liveGames" games={liveGames} />
+                <GameSection title="tableGames" games={casinoGames} />
+              </>
+            )}
           </div>
         </main>
       </div>

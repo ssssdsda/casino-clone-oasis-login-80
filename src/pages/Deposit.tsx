@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, CreditCard, CheckCircle, Wallet, PlusCircle, Clock } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Wallet, PlusCircle, Clock } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
@@ -19,22 +19,12 @@ const firestore = getFirestore(app);
 // Preset deposit amounts
 const DEPOSIT_AMOUNTS = [100, 200, 300, 500, 600, 800, 1000, 1200, 1500, 2000];
 
-// Payment method options
-const PAYMENT_METHODS = [
-  { id: 'bkash', name: 'bKash', icon: '/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png', color: 'bg-pink-700' },
-  { id: 'nagad', name: 'Nagad', icon: '/lovable-uploads/7e03f44f-1482-4424-8f8c-40ab158dba36.png', color: 'bg-orange-600' },
-  { id: 'rocket', name: 'Rocket', icon: '/lovable-uploads/a023c13d-3432-4f56-abd9-5bcdbbd30602.png', color: 'bg-purple-600' },
-  { id: 'card', name: 'Card', icon: '', color: 'bg-blue-700' }
-];
-
 const Deposit = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, updateUserBalance } = useAuth();
   
   const [amount, setAmount] = useState<number>(500);
-  const [customAmount, setCustomAmount] = useState<string>('');
-  const [selectedMethod, setSelectedMethod] = useState<string>('bkash');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isComplete, setIsComplete] = useState<boolean>(false);
   const [depositId, setDepositId] = useState<string | null>(null);
@@ -47,25 +37,6 @@ const Deposit = () => {
   // Handle amount selection
   const handleAmountSelect = (amt: number) => {
     setAmount(amt);
-    setCustomAmount('');
-  };
-  
-  // Handle custom amount change
-  const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (/^\d*$/.test(value)) {
-      setCustomAmount(value);
-      if (value) {
-        setAmount(parseInt(value));
-      } else {
-        setAmount(0);
-      }
-    }
-  };
-  
-  // Handle payment method selection
-  const handleMethodSelect = (methodId: string) => {
-    setSelectedMethod(methodId);
   };
   
   // Track elapsed time for pending deposits
@@ -138,7 +109,7 @@ const Deposit = () => {
       return;
     }
 
-    if (!walletNumber && selectedMethod === 'bkash') {
+    if (!walletNumber) {
       toast({
         title: "Wallet Number Required",
         description: "Please enter your bKash wallet number",
@@ -147,47 +118,10 @@ const Deposit = () => {
       return;
     }
     
-    if (selectedMethod === 'bkash') {
-      // For bKash, open the payment link in a popup/dialog
-      // Using shop.bkash.com URL format as requested
-      setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
-      setPaymentDialogOpen(true);
-      return;
-    }
-    
-    setIsProcessing(true);
-    setElapsedTime(0);
-    
-    try {
-      // Create deposit record in Firebase
-      const docRef = await addDoc(collection(firestore, "deposits"), {
-        userId: user?.id || "anonymous",
-        amount,
-        paymentMethod: selectedMethod,
-        walletNumber: walletNumber || null,
-        status: "pending",
-        timestamp: serverTimestamp()
-      });
-      
-      setDepositId(docRef.id);
-      setDepositStatus('pending');
-      
-      toast({
-        title: "Deposit Request Sent",
-        description: "Your deposit request is being processed",
-        variant: "default",
-      });
-      
-    } catch (error) {
-      console.error("Error processing deposit:", error);
-      setIsProcessing(false);
-      
-      toast({
-        title: "Deposit Failed",
-        description: "An error occurred while processing your deposit",
-        variant: "destructive",
-      });
-    }
+    // For bKash, open the payment link in a popup/dialog
+    // Using shop.bkash.com URL format as requested
+    setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
+    setPaymentDialogOpen(true);
   };
   
   // Format elapsed time
@@ -297,7 +231,7 @@ const Deposit = () => {
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-bold text-white mb-4">Select Amount</h2>
               
-              <div className="grid grid-cols-5 gap-2 mb-4">
+              <div className="grid grid-cols-5 gap-2">
                 {DEPOSIT_AMOUNTS.map((amt) => (
                   <Button
                     key={amt}
@@ -309,54 +243,27 @@ const Deposit = () => {
                   </Button>
                 ))}
               </div>
-              
-              <div className="relative">
-                <input
-                  type="text"
-                  value={customAmount}
-                  onChange={handleCustomAmountChange}
-                  placeholder="Custom Amount"
-                  className="w-full bg-gray-900 text-white px-4 py-3 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 pl-10"
-                />
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">৳</div>
-              </div>
             </div>
             
-            {/* Payment Methods */}
+            {/* Payment Method - bKash Only */}
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-bold text-white mb-4">Payment Method</h2>
               
-              <div className="grid grid-cols-2 gap-3">
-                {PAYMENT_METHODS.map((method) => (
-                  <Button
-                    key={method.id}
-                    variant="outline"
-                    className={`flex items-center justify-center h-16 ${selectedMethod === method.id ? 'ring-2 ring-green-500 border-green-500' : 'border-gray-600'}`}
-                    onClick={() => handleMethodSelect(method.id)}
-                  >
-                    {method.icon ? (
-                      <img src={method.icon} alt={method.name} className="h-8 w-8 mr-2" />
-                    ) : (
-                      <CreditCard className="h-6 w-6 mr-2 text-blue-400" />
-                    )}
-                    <span className="font-medium text-white">{method.name}</span>
-                  </Button>
-                ))}
+              <div className="p-4 rounded-lg border border-gray-700 flex items-center justify-center">
+                <img src="/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png" alt="bKash" className="h-10 w-10 mr-3" />
+                <span className="font-medium text-white text-lg">bKash</span>
               </div>
               
-              {/* Wallet Number Input - only for mobile payments */}
-              {selectedMethod === 'bkash' && (
-                <div className="mt-4">
-                  <label className="text-sm text-gray-300 mb-1 block">bKash Wallet Number</label>
-                  <Input
-                    type="text"
-                    value={walletNumber}
-                    onChange={handleWalletNumberChange}
-                    placeholder="e.g. 01712345678"
-                    className="bg-gray-900 border-gray-700 text-white"
-                  />
-                </div>
-              )}
+              <div className="mt-4">
+                <label className="text-sm text-gray-300 mb-1 block">bKash Wallet Number</label>
+                <Input
+                  type="text"
+                  value={walletNumber}
+                  onChange={handleWalletNumberChange}
+                  placeholder="e.g. 01712345678"
+                  className="bg-gray-900 border-gray-700 text-white"
+                />
+              </div>
             </div>
             
             {/* Deposit Button */}
@@ -416,7 +323,7 @@ const Deposit = () => {
                   addDoc(collection(firestore, "deposits"), {
                     userId: user?.id || "anonymous",
                     amount,
-                    paymentMethod: selectedMethod,
+                    paymentMethod: "bkash",
                     walletNumber: walletNumber || null,
                     status: "pending", // Will be updated once payment is confirmed
                     timestamp: serverTimestamp()

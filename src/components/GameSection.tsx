@@ -75,6 +75,11 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
     }
   };
   
+  // If there are no games to display, don't render the section
+  if (games.length === 0) {
+    return null;
+  }
+  
   return (
     <div className="space-y-3 mb-6">
       <div className="flex items-center justify-between">

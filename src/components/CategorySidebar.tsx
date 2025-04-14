@@ -27,22 +27,41 @@ const Category: React.FC<CategoryProps> = ({ icon, label, isActive = false, onCl
   );
 };
 
-const CategorySidebar: React.FC = () => {
-  const [activeCategory, setActiveCategory] = React.useState('popular');
+interface CategorySidebarProps {
+  onCategorySelect?: (categoryId: string) => void;
+  selectedCategory?: string | null;
+}
+
+const CategorySidebar: React.FC<CategorySidebarProps> = ({ onCategorySelect, selectedCategory }) => {
+  const [activeCategory, setActiveCategory] = React.useState(selectedCategory || 'popular');
   const { t } = useLanguage();
 
   const categories = [
-    { id: 'popular', icon: <Flame size={22} />, label: t('popularGames') },
+    { id: 'popularGames', icon: <Flame size={22} />, label: t('popularGames') },
     { id: 'slots', icon: <Coins size={22} />, label: t('slots') },
-    { id: 'live', icon: <Heart size={22} />, label: t('liveGames') },
+    { id: 'liveGames', icon: <Heart size={22} />, label: t('liveGames') },
     { id: 'sports', icon: <Trophy size={22} />, label: t('sportsGames') },
-    { id: 'card', icon: <Dice5 size={22} />, label: t('tableGames') },
+    { id: 'tableGames', icon: <Dice5 size={22} />, label: t('tableGames') },
     { id: 'arcade', icon: <Gamepad2 size={22} />, label: t('arcadeGames') },
-    { id: 'fish', icon: <Joystick size={22} />, label: t('fishingGames') },
+    { id: 'fishing', icon: <Joystick size={22} />, label: t('fishingGames') },
     { id: 'bonus', icon: <Gift size={22} />, label: 'Bonus' },
     { id: 'vip', icon: <DollarSign size={22} />, label: 'VIP' },
     { id: 'download', icon: <Download size={22} />, label: 'Download' },
   ];
+
+  // Update active category when selectedCategory changes from props
+  React.useEffect(() => {
+    if (selectedCategory) {
+      setActiveCategory(selectedCategory);
+    }
+  }, [selectedCategory]);
+
+  const handleCategoryClick = (categoryId: string) => {
+    setActiveCategory(categoryId);
+    if (onCategorySelect) {
+      onCategorySelect(categoryId);
+    }
+  };
 
   return (
     <div className="hidden sm:block w-24 bg-casino-dark border-r border-gray-800">
@@ -53,7 +72,7 @@ const CategorySidebar: React.FC = () => {
             icon={category.icon}
             label={category.label}
             isActive={activeCategory === category.id}
-            onClick={() => setActiveCategory(category.id)}
+            onClick={() => handleCategoryClick(category.id)}
           />
         ))}
       </div>
