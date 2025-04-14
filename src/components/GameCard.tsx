@@ -12,9 +12,10 @@ interface GameCardProps {
   isNew?: boolean;
   onClick?: () => void;
   onEditClick?: (e: React.MouseEvent) => void;
+  requiresLogin?: boolean;
 }
 
-const GameCard = ({ title, image, isNew, onClick, onEditClick }: GameCardProps) => {
+const GameCard = ({ title, image, isNew, onClick, onEditClick, requiresLogin }: GameCardProps) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [imageError, setImageError] = useState(false);
@@ -81,6 +82,15 @@ const GameCard = ({ title, image, isNew, onClick, onEditClick }: GameCardProps) 
         {isNew && (
           <div className="absolute top-1 left-1 bg-orange-500 text-[8px] md:text-xs font-bold text-black px-1 py-0.5 rounded z-10">
             NEW
+          </div>
+        )}
+
+        {/* Login Required indicator */}
+        {requiresLogin && (
+          <div className="absolute top-1 right-1 bg-gray-800/70 text-[8px] md:text-xs text-white px-1 py-0.5 rounded z-10">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 inline mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
           </div>
         )}
 
