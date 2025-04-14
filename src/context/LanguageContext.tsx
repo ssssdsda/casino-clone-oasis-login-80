@@ -37,6 +37,33 @@ const translations = {
     fishingGames: "Fishing",
     arcadeGames: "Arcade",
     currency: "$",
+    // Deposit page translations
+    depositFunds: "Deposit Funds",
+    balance: "Balance",
+    back: "Back",
+    availableBalance: "Available Balance",
+    selectAmount: "Select Amount",
+    paymentMethod: "Payment Method",
+    walletNumber: "bKash Wallet Number",
+    walletNumberPlaceholder: "e.g. 01712345678",
+    depositNow: "Deposit Now",
+    depositProcessing: "Deposit Processing",
+    depositSuccessful: "Deposit Successful!",
+    amountAddedToAccount: "has been added to your account balance.",
+    redirectToGames: "You will be redirected back to the games...",
+    processingDescription: "Your deposit of",
+    processingInfo: "is being processed.",
+    elapsedTime: "Elapsed Time",
+    waitForProcess: "Please wait while we process your transaction. You will be notified once completed.",
+    bKashPayment: "bKash Payment",
+    completePayment: "Complete your payment of",
+    paymentRedirectInfo: "You will be redirected to bKash to complete your payment. After successful payment, your account will be credited automatically.",
+    cancel: "Cancel",
+    proceedToPayment: "Proceed to Payment",
+    walletNumberInstruction: "Enter the wallet number you will use to deposit",
+    paymentProcessingTime: "Your balance will reflect within 5 minutes after deposit",
+    waitForBalance: "Please be patient as it may not show immediately",
+    contactSupport: "If your balance is not updated, please contact customer support",
   },
   bn: {
     login: "লগইন",
@@ -64,13 +91,40 @@ const translations = {
     fishingGames: "ফিশিং",
     arcadeGames: "আর্কেড",
     currency: "৳",
+    // Deposit page translations
+    depositFunds: "টাকা জমা করুন",
+    balance: "ব্যালেন্স",
+    back: "পিছনে",
+    availableBalance: "বর্তমান ব্যালেন্স",
+    selectAmount: "পরিমাণ নির্বাচন করুন",
+    paymentMethod: "পেমেন্ট মাধ্যম",
+    walletNumber: "বিকাশ ওয়ালেট নম্বর",
+    walletNumberPlaceholder: "যেমন 01712345678",
+    depositNow: "এখন জমা করুন",
+    depositProcessing: "জমা প্রক্রিয়াধীন",
+    depositSuccessful: "জমা সফল হয়েছে!",
+    amountAddedToAccount: "আপনার অ্যাকাউন্টে যোগ করা হয়েছে।",
+    redirectToGames: "আপনি গেমসে ফিরে যাবেন...",
+    processingDescription: "আপনার",
+    processingInfo: "জমা প্রক্রিয়াধীন আছে।",
+    elapsedTime: "সময় অতিবাহিত",
+    waitForProcess: "আমরা আপনার লেনদেন প্রক্রিয়া করার সময় অপেক্ষা করুন। সম্পূর্ণ হলে আপনাকে অবহিত করা হবে।",
+    bKashPayment: "বিকাশ পেমেন্ট",
+    completePayment: "আপনার পেমেন্ট সম্পূর্ণ করুন",
+    paymentRedirectInfo: "আপনাকে বিকাশে রিডাইরেক্ট করা হবে আপনার পেমেন্ট সম্পূর্ণ করার জন্য। সফল পেমেন্টের পরে, আপনার অ্যাকাউন্টে স্বয়ংক্রিয়ভাবে ক্রেডিট করা হবে।",
+    cancel: "বাতিল",
+    proceedToPayment: "পেমেন্টে যান",
+    walletNumberInstruction: "যে ওয়ালেট নম্বর থেকে আপনি টাকা পাঠাবেন তা লিখুন",
+    paymentProcessingTime: "জমা করার পর ৫ মিনিটের মধ্যে আপনার ব্যালেন্স আপডেট হবে",
+    waitForBalance: "দয়া করে ধৈর্য ধরুন, এটি তৎক্ষণাৎ দেখা নাও যেতে পারে",
+    contactSupport: "যদি আপনার ব্যালেন্স আপডেট না হয়, কাস্টমার সাপোর্টে যোগাযোগ করুন",
   }
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('bn');
 
   const t = (key: string) => {
     return translations[language][key] || key;

@@ -13,6 +13,7 @@ import { ArrowLeft, CheckCircle, Wallet, PlusCircle, Clock } from 'lucide-react'
 import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
+import { useLanguage } from '@/context/LanguageContext';
 
 const firestore = getFirestore(app);
 
@@ -23,6 +24,7 @@ const Deposit = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, updateUserBalance } = useAuth();
+  const { t } = useLanguage();
   
   const [amount, setAmount] = useState<number>(500);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -73,8 +75,8 @@ const Deposit = () => {
           }
           
           toast({
-            title: "Deposit Approved",
-            description: `${amount}৳ has been added to your account`,
+            title: t('depositSuccessful'),
+            description: `${amount}${t('currency')} ${t('amountAddedToAccount')}`,
             variant: "default",
             className: "bg-green-600 text-white",
           });
@@ -96,7 +98,7 @@ const Deposit = () => {
     });
     
     return () => unsubscribe();
-  }, [depositId, amount, navigate, toast, updateUserBalance, user]);
+  }, [depositId, amount, navigate, toast, updateUserBalance, user, t]);
   
   // Handle deposit submission
   const handleSubmit = async () => {
@@ -111,16 +113,20 @@ const Deposit = () => {
 
     if (!walletNumber) {
       toast({
-        title: "Wallet Number Required",
-        description: "Please enter your bKash wallet number",
+        title: t('walletNumber'),
+        description: t('walletNumberInstruction'),
         variant: "destructive",
       });
       return;
     }
     
-    // For bKash, open the payment link in a popup/dialog
-    // Using shop.bkash.com URL format as requested
-    setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
+    // For bKash, use specific link for 500৳
+    if (amount === 500) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt500/2taUT3');
+    } else {
+      // For other amounts, use the generic format
+      setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
+    }
     setPaymentDialogOpen(true);
   };
   
@@ -150,16 +156,16 @@ const Deposit = () => {
             className="text-gray-300"
             onClick={() => navigate('/')}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('back')}
           </Button>
           
           <h1 className="text-2xl md:text-3xl font-bold text-center text-white">
-            Deposit Funds
+            {t('depositFunds')}
           </h1>
           
           <div className="bg-gray-800 px-3 py-2 rounded-lg border border-gray-700">
-            <div className="text-gray-400 text-xs">Balance</div>
-            <div className="text-yellow-400 font-bold">{user?.balance.toFixed(0)}৳</div>
+            <div className="text-gray-400 text-xs">{t('balance')}</div>
+            <div className="text-yellow-400 font-bold">{user?.balance.toFixed(0)}{t('currency')}</div>
           </div>
         </div>
         
@@ -179,12 +185,12 @@ const Deposit = () => {
             >
               <CheckCircle className="h-20 w-20 text-green-500" />
             </motion.div>
-            <h2 className="text-2xl font-bold text-white mb-2">Deposit Successful!</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('depositSuccessful')}</h2>
             <p className="text-gray-300 mb-4">
-              {amount}৳ has been added to your account balance.
+              {amount}{t('currency')} {t('amountAddedToAccount')}
             </p>
             <div className="text-sm text-gray-400">
-              You will be redirected back to the games...
+              {t('redirectToGames')}
             </div>
           </motion.div>
         ) : depositStatus === 'pending' ? (
@@ -202,16 +208,16 @@ const Deposit = () => {
             >
               <Clock className="h-20 w-20 text-yellow-500" />
             </motion.div>
-            <h2 className="text-2xl font-bold text-white mb-2">Deposit Processing</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('depositProcessing')}</h2>
             <p className="text-gray-300 mb-4">
-              Your deposit of {amount}৳ is being processed.
+              {t('processingDescription')} {amount}{t('currency')} {t('processingInfo')}
             </p>
             <div className="bg-gray-900 px-4 py-2 rounded-lg mb-4">
-              <div className="text-sm text-gray-400">Elapsed Time</div>
+              <div className="text-sm text-gray-400">{t('elapsedTime')}</div>
               <div className="text-xl font-mono text-yellow-400">{formatElapsedTime()}</div>
             </div>
             <div className="text-sm text-gray-400">
-              Please wait while we process your transaction. You will be notified once completed.
+              {t('waitForProcess')}
             </div>
           </motion.div>
         ) : (
@@ -220,16 +226,23 @@ const Deposit = () => {
             <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-4 shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-gray-300 text-sm">Available Balance</div>
-                  <div className="text-2xl font-bold text-white">{user?.balance.toFixed(0)}৳</div>
+                  <div className="text-gray-300 text-sm">{t('availableBalance')}</div>
+                  <div className="text-2xl font-bold text-white">{user?.balance.toFixed(0)}{t('currency')}</div>
                 </div>
                 <Wallet className="h-10 w-10 text-blue-300 opacity-50" />
               </div>
             </div>
             
+            {/* Payment Processing Info */}
+            <div className="bg-gray-800 rounded-xl p-4 border-l-4 border-yellow-500">
+              <p className="text-yellow-300 font-medium mb-1">{t('paymentProcessingTime')}</p>
+              <p className="text-gray-300 text-sm">{t('waitForBalance')}</p>
+              <p className="text-gray-300 text-sm mt-2">{t('contactSupport')}</p>
+            </div>
+            
             {/* Amount Selection */}
             <div className="bg-gray-800 rounded-xl p-4">
-              <h2 className="text-lg font-bold text-white mb-4">Select Amount</h2>
+              <h2 className="text-lg font-bold text-white mb-4">{t('selectAmount')}</h2>
               
               <div className="grid grid-cols-5 gap-2">
                 {DEPOSIT_AMOUNTS.map((amt) => (
@@ -239,7 +252,7 @@ const Deposit = () => {
                     className={`${amount === amt ? 'bg-green-600 hover:bg-green-700' : 'border-green-700 text-green-500'} text-sm md:text-lg font-bold h-12`}
                     onClick={() => handleAmountSelect(amt)}
                   >
-                    {amt}৳
+                    {amt}{t('currency')}
                   </Button>
                 ))}
               </div>
@@ -247,7 +260,7 @@ const Deposit = () => {
             
             {/* Payment Method - bKash Only */}
             <div className="bg-gray-800 rounded-xl p-4">
-              <h2 className="text-lg font-bold text-white mb-4">Payment Method</h2>
+              <h2 className="text-lg font-bold text-white mb-4">{t('paymentMethod')}</h2>
               
               <div className="p-4 rounded-lg border border-gray-700 flex items-center justify-center">
                 <img src="/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png" alt="bKash" className="h-10 w-10 mr-3" />
@@ -255,12 +268,13 @@ const Deposit = () => {
               </div>
               
               <div className="mt-4">
-                <label className="text-sm text-gray-300 mb-1 block">bKash Wallet Number</label>
+                <label className="text-sm text-gray-300 mb-1 block">{t('walletNumber')}</label>
+                <p className="text-xs text-yellow-400 mb-2">{t('walletNumberInstruction')}</p>
                 <Input
                   type="text"
                   value={walletNumber}
                   onChange={handleWalletNumberChange}
-                  placeholder="e.g. 01712345678"
+                  placeholder={t('walletNumberPlaceholder')}
                   className="bg-gray-900 border-gray-700 text-white"
                 />
               </div>
@@ -289,7 +303,7 @@ const Deposit = () => {
               ) : (
                 <>
                   <PlusCircle className="h-5 w-5 mr-2" />
-                  Deposit {amount}৳ Now
+                  {t('depositNow')} {amount}{t('currency')}
                 </>
               )}
             </Button>
@@ -301,20 +315,20 @@ const Deposit = () => {
       {/* bKash Payment Dialog */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogTitle>bKash Payment</DialogTitle>
+          <DialogTitle>{t('bKashPayment')}</DialogTitle>
           <DialogDescription>
-            Complete your payment of {amount}৳ via bKash
+            {t('completePayment')} {amount}{t('currency')} {t('paymentMethod')}
           </DialogDescription>
           <div className="flex flex-col items-center justify-center p-4 space-y-4">
             <img src="/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png" alt="bKash" className="w-16 h-16" />
             <p className="text-center text-sm text-gray-500">
-              You will be redirected to bKash to complete your payment. After successful payment, your account will be credited automatically.
+              {t('paymentRedirectInfo')}
             </p>
             <div className="flex space-x-4">
               <Button 
                 variant="outline" 
                 onClick={() => setPaymentDialogOpen(false)}>
-                Cancel
+                {t('cancel')}
               </Button>
               <Button 
                 onClick={() => {
@@ -333,7 +347,7 @@ const Deposit = () => {
                     setPaymentDialogOpen(false);
                   });
                 }}>
-                Proceed to Payment
+                {t('proceedToPayment')}
               </Button>
             </div>
           </div>
