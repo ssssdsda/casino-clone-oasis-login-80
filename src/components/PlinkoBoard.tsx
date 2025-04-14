@@ -5,9 +5,11 @@ import { RISK_LEVELS } from './RiskSelector';
 
 type PlinkoBoardProps = {
   rows: number;
-  cols: number;
-  onWin?: (amount: number) => void;
-  selectedRisk: RISK_LEVELS;
+  cols?: number;
+  onResult?: (multiplier: number, multiplierIndex: number) => void;
+  selectedRisk: string;
+  isDropping: boolean;
+  onDropComplete: () => void;
 };
 
 type PegPosition = {
@@ -24,11 +26,12 @@ type BallPosition = {
 const PlinkoBoard = ({
   rows = 8,
   cols = 9,
-  onWin,
-  selectedRisk
+  onResult,
+  selectedRisk,
+  isDropping,
+  onDropComplete
 }: PlinkoBoardProps) => {
   const [ballPosition, setBallPosition] = useState<BallPosition | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
   const [multiplier, setMultiplier] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
 
@@ -89,26 +92,18 @@ const PlinkoBoard = ({
     return slots;
   };
 
-  // Handle risk level selection
-  const handleRiskChange = (risk: RISK_LEVELS) => {
-    if (risk === RISK_LEVELS.LOW) {
-      // Low risk payout structure
-      console.log("Set to low risk");
-    } else if (risk === RISK_LEVELS.MEDIUM) {
-      // Medium risk payout structure
-      console.log("Set to medium risk");
-    } else if (risk === RISK_LEVELS.HIGH) {
-      // High risk payout structure
-      console.log("Set to high risk");
+  // Effect to watch for isDropping prop changes to trigger ball drop
+  React.useEffect(() => {
+    if (isDropping) {
+      dropBall();
     }
-  };
+  }, [isDropping]);
 
   // Drop a ball from a random position
   const dropBall = () => {
-    if (isAnimating || !boardRef.current) return;
+    if (!boardRef.current) return;
     
     // Reset previous state
-    setIsAnimating(true);
     setMultiplier(null);
     setSelectedSlot(null);
     
@@ -124,7 +119,7 @@ const PlinkoBoard = ({
     
     setBallPosition(newBallPosition);
     
-    // Simulate ball path
+    // Simulate ball path and animate
     simulatePathAndAnimate(newBallPosition);
   };
 
@@ -173,13 +168,17 @@ const PlinkoBoard = ({
     // Animate the ball along the path
     setTimeout(() => {
       // Animation complete
-      setIsAnimating(false);
       setSelectedSlot(closestSlot);
       setMultiplier(slots[closestSlot].multiplier);
       
-      // Call onWin callback if there's a win
-      if (onWin && slots[closestSlot].multiplier > 0) {
-        onWin(slots[closestSlot].multiplier);
+      // Call onResult callback
+      if (onResult) {
+        onResult(slots[closestSlot].multiplier, closestSlot);
+      }
+      
+      // Call onDropComplete callback
+      if (onDropComplete) {
+        setTimeout(onDropComplete, 1000);
       }
     }, 2000); // Animation duration
   };
@@ -249,30 +248,18 @@ const PlinkoBoard = ({
   }
 
   return (
-    <div className="w-full h-full flex flex-col items-center">
-      <div className="mb-4 flex space-x-2">
-        <button 
-          onClick={dropBall} 
-          disabled={isAnimating}
-          className="px-4 py-2 bg-amber-500 text-white rounded-md disabled:bg-gray-300"
-        >
-          {isAnimating ? "Dropping..." : "Drop Ball"}
-        </button>
-      </div>
-
-      <div 
-        ref={boardRef}
-        className="w-full h-[400px] bg-gradient-to-b from-amber-900 to-amber-800 rounded-lg relative overflow-hidden"
-      >
-        {pegElements}
-        {slotElements}
-        {ballElement}
-      </div>
-
+    <div 
+      ref={boardRef}
+      className="w-full h-[400px] bg-gradient-to-b from-amber-900 to-amber-800 rounded-lg relative overflow-hidden"
+    >
+      {pegElements}
+      {slotElements}
+      {ballElement}
+      
       {multiplier !== null && (
-        <div className="mt-4 text-2xl font-bold">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-bold z-20 bg-black/50 p-4 rounded-lg">
           {multiplier > 0 ? 
-            <span className="text-green-500">You won {multiplier}x!</span> : 
+            <span className="text-green-500">{multiplier}x Win!</span> : 
             <span className="text-red-500">Try again!</span>
           }
         </div>

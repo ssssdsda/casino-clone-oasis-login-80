@@ -12,19 +12,18 @@ import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import RiskSelector from '@/components/RiskSelector';
 import BetHistory from '@/components/BetHistory';
-import { RISK_LEVELS } from '@/utils/gameLogic';
 import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
 
 // Types
 type BetHistoryItem = {
   id: string;
-  bet: number;
-  multiplier: number;
-  payout: number;
-  timestamp: Date;
+  betAmount: number;
+  multiplier: string;
+  winAmount: number;
+  timestamp: string;
 };
 
-const generateMultipliers = (risk: RISK_LEVELS): number[] => {
+const generateMultipliers = (risk: string): number[] => {
   switch (risk) {
     case 'LOW':
       return [5.6, 2.1, 1.4, 1.1, 1.0, 0.5, 1.0, 1.1, 1.4, 2.1, 5.6];
@@ -44,7 +43,7 @@ const PlinkoGame = () => {
   
   const [loading, setLoading] = useState(true);
   const [betAmount, setBetAmount] = useState(10);
-  const [risk, setRisk] = useState<RISK_LEVELS>('MEDIUM');
+  const [risk, setRisk] = useState<string>('MEDIUM');
   const [multipliers, setMultipliers] = useState<number[]>(generateMultipliers('MEDIUM'));
   const [isDropping, setIsDropping] = useState(false);
   const [balance, setBalance] = useState(0);
@@ -118,7 +117,7 @@ const PlinkoGame = () => {
   };
   
   const handleBetResult = (multiplier: number, multiplierIndex: number) => {
-    const shouldWin = newBetCount <= 2 || shouldBetWin(user?.uid || 'anonymous');
+    const shouldWin = shouldBetWin(user?.id || 'anonymous');
     
     // Cap the winning amount at 100
     let actualMultiplier = multiplier;
@@ -138,10 +137,10 @@ const PlinkoGame = () => {
       // Add to bet history
       const historyItem: BetHistoryItem = {
         id: Math.random().toString(36).substring(2),
-        bet: betAmount,
-        multiplier: actualMultiplier,
-        payout: winAmount,
-        timestamp: new Date(),
+        betAmount: betAmount,
+        multiplier: actualMultiplier.toString(),
+        winAmount: winAmount,
+        timestamp: new Date().toISOString(),
       };
       
       setBetHistory(prev => [historyItem, ...prev].slice(0, 10));
@@ -156,10 +155,10 @@ const PlinkoGame = () => {
       // Player loses
       const historyItem: BetHistoryItem = {
         id: Math.random().toString(36).substring(2),
-        bet: betAmount,
-        multiplier: 0,
-        payout: 0,
-        timestamp: new Date(),
+        betAmount: betAmount,
+        multiplier: "0",
+        winAmount: 0,
+        timestamp: new Date().toISOString(),
       };
       
       setBetHistory(prev => [historyItem, ...prev].slice(0, 10));
@@ -176,7 +175,7 @@ const PlinkoGame = () => {
     setIsDropping(false);
   };
   
-  const handleRiskChange = (newRisk: RISK_LEVELS) => {
+  const handleRiskChange = (newRisk: string) => {
     setRisk(newRisk);
   };
   
@@ -215,13 +214,13 @@ const PlinkoGame = () => {
         </div>
         
         <div className="relative flex-grow flex flex-col items-center pb-4">
-          <RiskSelector risk={risk} onRiskChange={handleRiskChange} />
+          <RiskSelector selectedRisk={risk} onSelectRisk={handleRiskChange} />
           
           <div className="w-full flex-grow flex items-center justify-center p-2">
             <div className="w-full max-w-md bg-gray-800 rounded-lg overflow-hidden shadow-xl">
               <PlinkoBoard 
                 rows={8} 
-                risk={risk}
+                selectedRisk={risk}
                 onResult={handleBetResult}
                 isDropping={isDropping}
                 onDropComplete={handleDropComplete}
@@ -289,7 +288,13 @@ const PlinkoGame = () => {
               </div>
             </div>
             
-            <BetHistory history={betHistory} />
+            <BetHistory history={betHistory.map(item => ({
+              id: item.id,
+              timestamp: item.timestamp,
+              betAmount: item.betAmount,
+              multiplier: item.multiplier,
+              winAmount: item.winAmount
+            }))} />
           </div>
         </div>
       </main>

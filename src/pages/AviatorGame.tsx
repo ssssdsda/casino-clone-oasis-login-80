@@ -2,12 +2,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Minus, Plus, ChevronDown } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { shouldBetWin } from '@/utils/bettingSystem';
 
 const AviatorGame = () => {
   const { user, updateUserBalance } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [betAmount, setBetAmount] = useState(10);
   const [multiplier, setMultiplier] = useState(1.0);
@@ -17,6 +19,7 @@ const AviatorGame = () => {
   const [autoCashoutMultiplier, setAutoCashoutMultiplier] = useState(2.0);
   const [currentWin, setCurrentWin] = useState(0);
   const [hasPlacedBet, setHasPlacedBet] = useState(false);
+  const [betCount, setBetCount] = useState(0); // Track bets for betting system
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   const planeRef = useRef<HTMLDivElement>(null);
   const multiplierHistoryRef = useRef([
@@ -77,11 +80,18 @@ const AviatorGame = () => {
       setHasPlacedBet(true);
       setIsFlying(true);
       
+      // Increment bet count for betting system
+      setBetCount(prev => prev + 1);
+      
       takeoffSound.current.play().catch(e => console.log("Audio play error:", e));
 
-      const maxMultiplier = Math.random() < 0.1 
-        ? 10 + Math.random() * 20
-        : 1 + Math.random() * 5;
+      // Determine if this bet should win based on the rigged system
+      const shouldWinThisBet = shouldBetWin(user?.id || 'anonymous');
+      
+      // Set maximum multiplier based on whether user should win
+      const maxMultiplier = shouldWinThisBet 
+        ? (betAmount > 50 ? 1.5 : 2 + Math.random() * 3) // Lower multiplier for high bets
+        : 1 + Math.random();
 
       animationRef.current = setInterval(() => {
         setMultiplier(prev => {
@@ -115,7 +125,10 @@ const AviatorGame = () => {
     
     cashoutSound.current.play().catch(e => console.log("Audio play error:", e));
     
-    const winnings = betAmount * multiplier;
+    // Cap winnings at 100
+    const rawWinnings = betAmount * multiplier;
+    const winnings = Math.min(rawWinnings, 100);
+    
     if (user && updateUserBalance) {
       updateUserBalance(user.balance + winnings);
     }
@@ -196,15 +209,18 @@ const AviatorGame = () => {
       </div>
 
       <div className="flex justify-center my-4">
-        <img 
-          src="/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png?v=refresh" 
-          alt="Aviator Game Logo"
-          className="h-16"
-          onError={(e) => {
-            console.error("Failed to load Aviator logo");
-            (e.target as HTMLImageElement).src = '/placeholder.svg';
-          }}
-        />
+        <svg width="120" height="40" viewBox="0 0 120 40" className="text-red-600">
+          <path 
+            d="M100,20 L70,10 L20,10 L0,20 L20,30 L70,30 L100,20 Z" 
+            fill="currentColor" 
+          />
+          <path 
+            d="M90,20 L90,5 L100,3 L100,20 L90,20 Z" 
+            fill="currentColor" 
+          />
+          <circle cx="100" cy="20" r="4" fill="#FFF" />
+          <text x="45" y="23" fill="#FFF" fontSize="12" fontWeight="bold">AVIATOR</text>
+        </svg>
       </div>
 
       <div className="flex-1 bg-gradient-radial from-gray-800 to-black relative overflow-hidden">
@@ -275,17 +291,12 @@ const AviatorGame = () => {
       <div className="bg-gray-900 text-white p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="border border-gray-700 rounded-lg p-4">
           <div className="flex justify-between mb-4">
+            <div className="text-lg font-bold">Place your bet</div>
             <button 
-              className="bg-gray-800 px-4 py-2 rounded-lg"
-              disabled={hasPlacedBet}
-            >
-              Bet
-            </button>
-            <button 
-              className="bg-gray-800 px-4 py-2 rounded-lg"
+              className={`px-3 py-1 rounded-lg ${autoCashout ? 'bg-green-600' : 'bg-gray-700'}`}
               onClick={() => setAutoCashout(!autoCashout)}
             >
-              {autoCashout ? 'Manual' : 'Auto'}
+              {autoCashout ? 'Auto' : 'Manual'}
             </button>
           </div>
           
@@ -302,6 +313,18 @@ const AviatorGame = () => {
               
               <div className="grid grid-cols-4 gap-1 mt-2">
                 <button 
+                  onClick={() => !hasPlacedBet && setBetAmount(10)}
+                  className="bg-gray-800 py-1 px-2 text-xs rounded"
+                >
+                  10.00
+                </button>
+                <button 
+                  onClick={() => !hasPlacedBet && setBetAmount(50)}
+                  className="bg-gray-800 py-1 px-2 text-xs rounded"
+                >
+                  50.00
+                </button>
+                <button 
                   onClick={() => !hasPlacedBet && setBetAmount(100)}
                   className="bg-gray-800 py-1 px-2 text-xs rounded"
                 >
@@ -312,18 +335,6 @@ const AviatorGame = () => {
                   className="bg-gray-800 py-1 px-2 text-xs rounded"
                 >
                   200.00
-                </button>
-                <button 
-                  onClick={() => !hasPlacedBet && setBetAmount(500)}
-                  className="bg-gray-800 py-1 px-2 text-xs rounded"
-                >
-                  500.00
-                </button>
-                <button 
-                  onClick={() => !hasPlacedBet && setBetAmount(10000)}
-                  className="bg-gray-800 py-1 px-2 text-xs rounded"
-                >
-                  10,000.00
                 </button>
               </div>
             </div>
@@ -336,58 +347,82 @@ const AviatorGame = () => {
             </button>
           </div>
           
-          <button
-            onClick={hasPlacedBet ? cashOut : startGame}
-            className={`w-full py-3 rounded-lg text-xl ${
-              hasPlacedBet 
-                ? 'bg-green-500 hover:bg-green-600' 
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            {hasPlacedBet ? (
-              <span>Cash Out {currentWin.toFixed(2)} BDT</span>
-            ) : (
-              <div>
-                <span>Bet</span><br />
-                <span className="text-2xl">{betAmount.toFixed(2)} BDT</span>
-              </div>
-            )}
-          </button>
-        </div>
-        
-        <div className="border border-gray-700 rounded-lg p-4">
           {autoCashout && (
             <div className="mb-4">
-              <label className="block mb-2">Auto Cashout Multiplier</label>
-              <input
-                type="number"
-                step="0.1"
-                min="1.1"
-                max="100"
-                value={autoCashoutMultiplier}
-                onChange={(e) => setAutoCashoutMultiplier(Number(e.target.value))}
-                className="w-full bg-gray-800 p-2 rounded"
-              />
+              <label className="block mb-2 text-sm">Auto Cashout at</label>
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  step="0.1"
+                  min="1.1"
+                  max="100"
+                  value={autoCashoutMultiplier}
+                  onChange={(e) => setAutoCashoutMultiplier(Number(e.target.value))}
+                  className="w-full bg-gray-800 p-2 rounded"
+                  disabled={hasPlacedBet}
+                />
+                <span className="ml-2 text-xl">x</span>
+              </div>
             </div>
           )}
           
           <button
             onClick={hasPlacedBet ? cashOut : startGame}
-            className={`w-full py-3 rounded-lg text-xl ${
+            className={`w-full py-3 rounded-lg text-xl font-bold ${
               hasPlacedBet 
                 ? 'bg-green-500 hover:bg-green-600' 
                 : 'bg-green-600 hover:bg-green-700'
             }`}
+            disabled={(hasPlacedBet && gameOver) || (!hasPlacedBet && (!user || (user && user.balance < betAmount)))}
           >
             {hasPlacedBet ? (
-              <span>Cash Out {currentWin.toFixed(2)} BDT</span>
+              gameOver ? 'Game Over' : `Cash Out (${currentWin.toFixed(2)})`
             ) : (
-              <div>
-                <span>Bet</span><br />
-                <span className="text-2xl">{betAmount.toFixed(2)} BDT</span>
-              </div>
+              'Bet'
             )}
           </button>
+        </div>
+        
+        <div className="border border-gray-700 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-lg font-bold">Stats</div>
+            <div className="text-gray-400 text-sm">
+              Balance: {user ? user.balance.toFixed(2) : '0.00'}
+            </div>
+          </div>
+          
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Bet Amount:</span>
+              <span>{betAmount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Current Multiplier:</span>
+              <span className="font-bold text-green-400">{multiplier.toFixed(2)}x</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Potential Win:</span>
+              <span className="font-bold text-yellow-400">{currentWin.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <div className="mt-6">
+            <div className="text-center mb-2 text-gray-400 text-sm">Multiplier History</div>
+            <div className="flex flex-wrap gap-2">
+              {multiplierHistoryRef.current.slice(0, 10).map((m, i) => {
+                let bgColor = "bg-blue-600";
+                if (m >= 5) bgColor = "bg-green-600";
+                if (m >= 10) bgColor = "bg-purple-600";
+                if (m >= 15) bgColor = "bg-red-600";
+                
+                return (
+                  <div key={i} className={`${bgColor} rounded px-2 py-1 text-xs`}>
+                    {m.toFixed(2)}x
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -3,16 +3,16 @@ import React from 'react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
-// Define risk levels enum
-export enum RISK_LEVELS {
-  LOW = "LOW",
-  MEDIUM = "MEDIUM",
-  HIGH = "HIGH"
-}
+// Define risk levels
+export const RISK_LEVELS = {
+  LOW: "LOW",
+  MEDIUM: "MEDIUM",
+  HIGH: "HIGH"
+};
 
 type RiskSelectorProps = {
-  selectedRisk: RISK_LEVELS;
-  onSelectRisk: (risk: RISK_LEVELS) => void;
+  selectedRisk: string;
+  onSelectRisk: (risk: string) => void;
 };
 
 const RiskSelector = ({ selectedRisk, onSelectRisk }: RiskSelectorProps) => {
@@ -22,7 +22,7 @@ const RiskSelector = ({ selectedRisk, onSelectRisk }: RiskSelectorProps) => {
       
       <RadioGroup
         defaultValue={selectedRisk}
-        onValueChange={(value) => onSelectRisk(value as RISK_LEVELS)}
+        onValueChange={(value) => onSelectRisk(value)}
         className="space-y-2"
       >
         <div className="flex items-center">

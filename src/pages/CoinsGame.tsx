@@ -1,393 +1,317 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Settings, Plus, Minus, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Coins, ChevronDown, ChevronUp, Diamond, Star, Award, Trophy, CircleDollarSign } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import { useToast } from '@/components/ui/use-toast';
 import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
 
-// Types
-type IconType = 'coins' | 'diamond' | 'star' | 'award' | 'trophy' | 'dollarSign';
-type ReelItem = {
-  icon: IconType;
-  color: string;
-};
+// Coin UI Component with colorful icons
+interface CoinProps {
+  value: number;
+  isSpinning: boolean;
+  isSelected?: boolean;
+}
 
-// Constants
-const ICONS: { icon: IconType; component: React.ReactNode; color: string }[] = [
-  { icon: 'coins', component: <Coins className="h-full w-full" />, color: '#8B5CF6' }, // Vivid Purple
-  { icon: 'diamond', component: <Diamond className="h-full w-full" />, color: '#D946EF' }, // Magenta Pink
-  { icon: 'star', component: <Star className="h-full w-full" />, color: '#F97316' }, // Bright Orange
-  { icon: 'award', component: <Award className="h-full w-full" />, color: '#0EA5E9' }, // Ocean Blue
-  { icon: 'trophy', component: <Trophy className="h-full w-full" />, color: '#1EAEDB' }, // Bright Blue
-  { icon: 'dollarSign', component: <CircleDollarSign className="h-full w-full" />, color: '#33C3F0' }, // Sky Blue
-];
-
-// Utility functions
-const generateRandomIcon = (): ReelItem => {
-  const randomIcon = ICONS[Math.floor(Math.random() * ICONS.length)];
-  return {
-    icon: randomIcon.icon,
-    color: randomIcon.color,
+const Coin: React.FC<CoinProps> = ({ value, isSpinning, isSelected }) => {
+  // Function to choose coin color based on value
+  const getCoinColor = (value: number) => {
+    switch (value) {
+      case 1: return { bg: 'bg-bronze', text: 'text-amber-900' };
+      case 3: return { bg: 'bg-silver', text: 'text-gray-700' };
+      case 5: return { bg: 'bg-gold', text: 'text-yellow-800' };
+      case 7: return { bg: 'bg-purple-500', text: 'text-white' };
+      case 10: return { bg: 'bg-blue-500', text: 'text-white' };
+      case 20: return { bg: 'bg-green-500', text: 'text-white' };
+      case 77: return { bg: 'bg-gradient-to-br from-red-500 to-yellow-500', text: 'text-white' };
+      default: return { bg: 'bg-gray-300', text: 'text-gray-900' };
+    }
   };
+
+  const { bg, text } = getCoinColor(value);
+
+  return (
+    <div className={`
+      relative w-full aspect-square rounded-full 
+      flex items-center justify-center
+      shadow-lg transform transition-all duration-300
+      ${bg} ${isSelected ? 'ring-4 ring-yellow-300 scale-110 z-10' : ''}
+      ${isSpinning ? 'animate-spin' : ''}
+    `}>
+      <div className={`text-2xl font-bold ${text}`}>
+        {value === 77 ? (
+          <>
+            <span className="text-yellow-300">7</span>
+            <span className="text-yellow-300">7</span>
+          </>
+        ) : (
+          value
+        )}
+      </div>
+    </div>
+  );
 };
 
-const generateInitialReels = (): ReelItem[][] => {
-  return [
-    Array(5).fill(null).map(() => generateRandomIcon()),
-    Array(5).fill(null).map(() => generateRandomIcon()),
-    Array(5).fill(null).map(() => generateRandomIcon()),
-  ];
-};
+// Define bet levels
+const betLevels = [1, 5, 10, 25, 50, 100];
 
-// Payout table
-const PAYOUT_TABLE = {
-  three_of_a_kind: 5, // x5 multiplier
-  three_coins: 7, // x7 multiplier for three coins (highest value)
-};
-
-const CoinsGame = () => {
+// Main Game Component
+const CoinsGame: React.FC = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user, updateUserBalance } = useAuth();
-  const [reels, setReels] = useState<ReelItem[][]>(generateInitialReels());
+  const { toast } = useToast();
+
   const [spinning, setSpinning] = useState(false);
-  const [bet, setBet] = useState(10);
-  const [balance, setBalance] = useState(user?.balance || 1000);
-  const [winAmount, setWinAmount] = useState(0);
-  const [betCount, setBetCount] = useState(0); // Track number of bets for rigged system
-  
-  // Load balance from user auth
+  const [coins, setCoins] = useState<number[]>([1, 3, 5, 7, 10, 20, 77, 1]);
+  const [selectedCoinIndex, setSelectedCoinIndex] = useState<number | null>(null);
+  const [betLevel, setBetLevel] = useState(0); // Index into betLevels
+  const [balance, setBalance] = useState(1000);
+  const [betCount, setBetCount] = useState(0);
+
+  // Update balance when user changes
   useEffect(() => {
     if (user) {
       setBalance(user.balance);
     }
-  }, [user?.balance, user]);
-  
-  const handleBetChange = (amount: number) => {
-    const newBet = Math.max(5, Math.min(1000, bet + amount));
-    setBet(newBet);
-  };
-  
-  const handleSpin = useCallback(() => {
+  }, [user?.balance]);
+
+  // Function to handle coin spinning
+  const handleSpin = () => {
     if (spinning) return;
     
     if (!user) {
       toast({
         title: "Login Required",
         description: "Please login to play",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
     
-    if (balance < bet) {
+    const currentBet = betLevels[betLevel];
+    
+    if (balance < currentBet) {
       toast({
-        title: "Insufficient Funds",
-        description: "Please deposit more to play",
-        variant: "destructive",
+        title: "Insufficient Balance",
+        description: "Please deposit more funds to play",
+        variant: "destructive"
       });
       return;
     }
     
-    // Increment bet count
-    const newBetCount = betCount + 1;
-    setBetCount(newBetCount);
-    
-    // Deduct bet from balance
-    const newBalance = balance - bet;
+    // Deduct bet amount from balance
+    const newBalance = balance - currentBet;
     setBalance(newBalance);
     if (user) {
       updateUserBalance(newBalance);
     }
     
+    // Track bets for the betting system
+    const newBetCount = betCount + 1;
+    setBetCount(newBetCount);
+    
+    // Start spinning
     setSpinning(true);
-    setWinAmount(0);
+    setSelectedCoinIndex(null);
     
-    // Generate visual spinning effect with temporary reels
-    const spinInterval = setInterval(() => {
-      setReels(prev => prev.map(reel => {
-        // Shift each reel down and add a new random icon at the top
-        const newReel = [...reel];
-        newReel.pop();
-        newReel.unshift(generateRandomIcon());
-        return newReel;
-      }));
-    }, 100); // Fast spinning
+    // Determine if this spin should win based on the betting system
+    const shouldWin = shouldBetWin(user?.id || 'anonymous');
     
-    // Determine results after some time
+    // Generate a random result, but rig it based on shouldWin
     setTimeout(() => {
-      clearInterval(spinInterval);
-      
-      // Determine if this spin should win
-      const shouldWin = newBetCount <= 2 || shouldBetWin(user.uid);
-      
-      // Generate final result
-      let finalReels: ReelItem[][];
+      let targetIndex: number;
       
       if (shouldWin) {
-        // Create a winning combination
-        const winningIcon = ICONS[Math.floor(Math.random() * ICONS.length)];
-        
-        // Generate a winning combination in the center row
-        finalReels = [
-          Array(5).fill(null).map(() => generateRandomIcon()),
-          [
-            generateRandomIcon(),
-            { icon: winningIcon.icon, color: winningIcon.color },
-            { icon: winningIcon.icon, color: winningIcon.color },
-            { icon: winningIcon.icon, color: winningIcon.color },
-            generateRandomIcon(),
-          ],
-          Array(5).fill(null).map(() => generateRandomIcon()),
-        ];
-        
-        // Calculate win amount
-        let multiplier = PAYOUT_TABLE.three_of_a_kind;
-        if (winningIcon.icon === 'coins') {
-          multiplier = PAYOUT_TABLE.three_coins; // Higher payout for coins
+        // If should win, choose a winning value (7, 10, 20, or 77)
+        const winningValues = [7, 10, 20];
+        // Only occasionally give the jackpot (77)
+        if (Math.random() < 0.1) {
+          winningValues.push(77);
         }
-        
-        // Cap win at 100
-        let winAmount = Math.min(100, bet * multiplier);
-        
-        // Update balance with winnings
-        const updatedBalance = newBalance + winAmount;
-        setBalance(updatedBalance);
-        if (user) {
-          updateUserBalance(updatedBalance);
-        }
-        
-        setWinAmount(winAmount);
-        
-        // Show win notification
-        setTimeout(() => {
-          toast({
-            title: "You Won!",
-            description: `${winAmount} coins!`,
-            className: "bg-green-600 text-white",
-          });
-        }, 500);
+        const winValue = winningValues[Math.floor(Math.random() * winningValues.length)];
+        targetIndex = coins.findIndex(c => c === winValue);
       } else {
-        // Generate a losing combination
-        finalReels = generateInitialReels();
-        
-        // Show loss notification
-        setTimeout(() => {
-          toast({
-            title: "Better luck next time!",
-            description: `You lost ${bet} coins`,
-            variant: "destructive",
-          });
-        }, 500);
+        // If should lose, choose a low value (1, 3, 5)
+        const losingValues = [1, 3, 5];
+        const loseValue = losingValues[Math.floor(Math.random() * losingValues.length)];
+        targetIndex = coins.findIndex(c => c === loseValue);
       }
       
-      // Set final reels state
-      setReels(finalReels);
+      // If we couldn't find the target, pick a random position
+      if (targetIndex === -1) {
+        targetIndex = Math.floor(Math.random() * coins.length);
+      }
       
-      // End spinning state
-      setTimeout(() => {
-        setSpinning(false);
-      }, 500);
+      // Calculate the win amount
+      const winMultiplier = coins[targetIndex];
+      const winAmount = calculateWinAmount(currentBet, winMultiplier);
       
-    }, 2000); // Total spin time
-    
-  }, [spinning, user, balance, bet, toast, updateUserBalance, betCount]);
-  
-  const renderIcon = (item: ReelItem) => {
-    const iconData = ICONS.find(i => i.icon === item.icon);
-    
-    return (
-      <div className="h-16 w-16 flex items-center justify-center" style={{ color: item.color }}>
-        {iconData?.component}
-      </div>
-    );
+      // Animate spinning and stopping
+      animateSpinToIndex(targetIndex, winAmount);
+      
+    }, 500);
   };
-  
+
+  // Animate the spin to land on a specific index
+  const animateSpinToIndex = (targetIndex: number, winAmount: number) => {
+    // Number of full rotations plus the target index
+    const totalRotations = 3 * coins.length + targetIndex;
+    
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      setSelectedCoinIndex(currentIndex % coins.length);
+      currentIndex++;
+      
+      // Slow down near the end
+      const remainingSteps = totalRotations - currentIndex;
+      
+      if (currentIndex >= totalRotations) {
+        clearInterval(interval);
+        handleSpinResult(targetIndex, winAmount);
+      }
+    }, currentIndex > totalRotations - 10 ? 200 : 100); // Slow down at the end
+  };
+
+  // Handle the result of the spin
+  const handleSpinResult = (landedIndex: number, winAmount: number) => {
+    const currentBet = betLevels[betLevel];
+    
+    setTimeout(() => {
+      setSpinning(false);
+      
+      const coinValue = coins[landedIndex];
+      
+      if (coinValue > 1) {
+        // Player wins
+        const newBalance = balance + winAmount;
+        setBalance(newBalance);
+        if (user) {
+          updateUserBalance(newBalance);
+        }
+        
+        toast({
+          title: `You won ${coinValue}x!`,
+          description: `${winAmount.toFixed(2)} coins added to your balance.`,
+          variant: "default",
+          className: "bg-green-500 text-white"
+        });
+      } else {
+        // Player loses
+        toast({
+          title: "Better luck next time!",
+          description: `You landed on ${coinValue}x.`,
+          variant: "destructive"
+        });
+      }
+    }, 500);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-950 to-gray-900 flex flex-col">
-      <Header />
+    <div className="min-h-screen bg-gradient-to-b from-purple-900 to-indigo-900 text-white">
+      {/* Header */}
+      <div className="bg-purple-800 py-2 px-4 flex justify-between items-center">
+        <button onClick={() => navigate('/')} className="text-white">
+          <ArrowLeft size={24} />
+        </button>
+        <h1 className="text-2xl font-bold">77 Coins</h1>
+        <button className="text-white">
+          <Settings size={24} />
+        </button>
+      </div>
       
-      <main className="flex-1 flex flex-col max-w-md mx-auto w-full p-4">
-        <div className="flex justify-between items-center mb-4">
-          <Button 
-            variant="ghost" 
-            className="text-gray-400 hover:text-white"
-            onClick={() => navigate('/')}
-          >
-            <ChevronDown className="h-5 w-5 mr-1" />
-            Back
-          </Button>
-          
-          <h1 className="text-3xl font-bold text-center text-yellow-500">777 COINS</h1>
-          
-          <div className="w-20"></div>
+      {/* Main game content */}
+      <div className="max-w-md mx-auto p-4">
+        {/* Balance display */}
+        <div className="bg-purple-800 rounded-lg p-3 mb-6 flex justify-between">
+          <div>
+            <div className="text-xs text-purple-300">BALANCE</div>
+            <div className="text-xl font-bold">{balance.toFixed(2)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-purple-300">BET</div>
+            <div className="text-xl font-bold">{betLevels[betLevel].toFixed(2)}</div>
+          </div>
         </div>
         
-        {/* Game container */}
-        <div className="bg-gray-800 bg-opacity-80 backdrop-blur-sm rounded-lg border border-gray-700 p-4 mb-4 flex-grow flex flex-col">
-          {/* Wins display */}
-          <div className="bg-gray-900 rounded-md p-2 mb-4 text-center">
-            <span className="text-gray-400 text-sm">WIN</span>
-            <AnimatePresence mode="wait">
-              {winAmount > 0 ? (
-                <motion.div
-                  key="win"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  className="text-2xl font-bold text-yellow-500"
-                >
-                  {winAmount}
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="no-win"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-2xl font-bold text-gray-600"
-                >
-                  0
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          
-          {/* Reels */}
-          <div className="flex-grow flex flex-col justify-center">
-            <div className="bg-gray-900 border-4 border-gray-700 rounded-lg p-2 mb-4 relative overflow-hidden">
-              {/* Indicator lines */}
-              <div className="absolute left-0 right-0 h-0.5 bg-yellow-500 top-1/2 transform -translate-y-8 z-10"></div>
-              <div className="absolute left-0 right-0 h-0.5 bg-yellow-500 top-1/2 transform translate-y-8 z-10"></div>
+        {/* Coin wheel display - mobile friendly circle */}
+        <div className="relative mb-8">
+          <div className="aspect-square rounded-full border-8 border-purple-700 bg-purple-800 overflow-hidden flex items-center justify-center p-2">
+            <div className="w-full h-full relative">
+              {/* Circular arrangement of coins */}
+              <div className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2">
+                {coins.map((coin, index) => {
+                  // Calculate position on the circle
+                  const angle = (index / coins.length) * Math.PI * 2 - Math.PI / 2;
+                  const radius = 42; // % of container
+                  const left = 50 + radius * Math.cos(angle);
+                  const top = 50 + radius * Math.sin(angle);
+                  
+                  return (
+                    <div 
+                      key={index}
+                      className="absolute w-[20%] transform -translate-x-1/2 -translate-y-1/2"
+                      style={{
+                        left: `${left}%`,
+                        top: `${top}%`,
+                      }}
+                    >
+                      <Coin 
+                        value={coin} 
+                        isSpinning={false}
+                        isSelected={selectedCoinIndex === index}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
               
-              {/* Reels container */}
-              <div className="flex justify-center gap-1 p-2">
-                {reels.map((reel, reelIndex) => (
-                  <div 
-                    key={reelIndex} 
-                    className="bg-gray-800 rounded-md p-2 w-1/3 flex flex-col items-center"
-                    style={{ 
-                      transition: "transform 0.1s ease-out",
-                    }}
-                  >
-                    {reel.map((item, itemIndex) => (
-                      <div 
-                        key={`${reelIndex}-${itemIndex}`} 
-                        className={`p-1 ${itemIndex === 2 ? 'scale-110' : ''}`}
-                      >
-                        {renderIcon(item)}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          {/* Controls */}
-          <div className="flex justify-between items-center mt-2">
-            <div>
-              <div className="text-xs text-gray-400 mb-1">BET</div>
-              <div className="flex items-center bg-gray-900 rounded-md overflow-hidden">
-                <Button
-                  size="icon" 
-                  variant="ghost"
-                  className="h-10 rounded-none border-r border-gray-700"
-                  onClick={() => handleBetChange(-5)}
-                  disabled={bet <= 5 || spinning}
-                >
-                  <ChevronDown className="h-5 w-5" />
-                </Button>
-                
-                <div className="w-16 text-center font-bold text-yellow-500">
-                  {bet}
-                </div>
-                
-                <Button
-                  size="icon" 
-                  variant="ghost"
-                  className="h-10 rounded-none border-l border-gray-700"
-                  onClick={() => handleBetChange(5)}
-                  disabled={bet >= 1000 || spinning}
-                >
-                  <ChevronUp className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex flex-col items-center">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button 
-                  className={`rounded-full h-16 w-16 ${
-                    spinning 
-                      ? 'bg-gradient-to-b from-gray-600 to-gray-800 border-2 border-gray-500'
-                      : 'bg-gradient-to-b from-yellow-500 to-amber-600 border-2 border-yellow-300 hover:from-yellow-400 hover:to-amber-500'
-                  }`}
-                  disabled={spinning || !user || balance < bet}
-                  onClick={handleSpin}
-                >
-                  <span className="text-white font-bold">SPIN</span>
-                </Button>
-              </motion.div>
-            </div>
-            
-            <div>
-              <div className="text-xs text-gray-400 mb-1">BALANCE</div>
-              <div className="bg-gray-900 rounded-md px-3 py-2 min-w-[80px] text-center">
-                <span className="font-bold text-yellow-500">{balance}</span>
-              </div>
+              {/* Center pointer */}
+              <div className="absolute top-0 left-1/2 h-[10%] w-0.5 bg-yellow-400 transform -translate-x-1/2 z-10"></div>
             </div>
           </div>
         </div>
         
-        {/* Paytable */}
-        <div className="bg-gray-800 bg-opacity-80 backdrop-blur-sm rounded-lg border border-gray-700 p-4">
-          <h2 className="text-lg font-semibold text-white mb-2">Paytable</h2>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex">
-                <div className="h-6 w-6" style={{ color: '#8B5CF6' }}><Coins /></div>
-                <div className="h-6 w-6" style={{ color: '#8B5CF6' }}><Coins /></div>
-                <div className="h-6 w-6" style={{ color: '#8B5CF6' }}><Coins /></div>
-              </div>
-              <span className="text-yellow-500 font-bold">×7</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex">
-                <div className="h-6 w-6" style={{ color: '#33C3F0' }}><CircleDollarSign /></div>
-                <div className="h-6 w-6" style={{ color: '#33C3F0' }}><CircleDollarSign /></div>
-                <div className="h-6 w-6" style={{ color: '#33C3F0' }}><CircleDollarSign /></div>
-              </div>
-              <span className="text-yellow-500 font-bold">×5</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex">
-                <div className="h-6 w-6" style={{ color: '#F97316' }}><Star /></div>
-                <div className="h-6 w-6" style={{ color: '#F97316' }}><Star /></div>
-                <div className="h-6 w-6" style={{ color: '#F97316' }}><Star /></div>
-              </div>
-              <span className="text-yellow-500 font-bold">×5</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex">
-                <div className="h-6 w-6" style={{ color: '#D946EF' }}><Diamond /></div>
-                <div className="h-6 w-6" style={{ color: '#D946EF' }}><Diamond /></div>
-                <div className="h-6 w-6" style={{ color: '#D946EF' }}><Diamond /></div>
-              </div>
-              <span className="text-yellow-500 font-bold">×5</span>
-            </div>
-          </div>
+        {/* Bet controls */}
+        <div className="grid grid-cols-3 gap-2 mb-6">
+          {betLevels.map((bet, index) => (
+            <button
+              key={index}
+              onClick={() => setBetLevel(index)}
+              disabled={spinning}
+              className={`
+                py-2 rounded-lg font-bold transition-all
+                ${betLevel === index 
+                  ? 'bg-yellow-500 text-purple-900' 
+                  : 'bg-purple-700 text-white hover:bg-purple-600'}
+              `}
+            >
+              {bet}
+            </button>
+          ))}
         </div>
-      </main>
-      
-      <Footer />
+        
+        {/* Spin button */}
+        <button
+          onClick={handleSpin}
+          disabled={spinning || !user || (user && user.balance < betLevels[betLevel])}
+          className={`
+            w-full py-4 rounded-lg text-xl font-bold transition-all
+            ${spinning 
+              ? 'bg-gray-600 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500'}
+          `}
+        >
+          {spinning ? (
+            <div className="flex items-center justify-center">
+              <RefreshCw size={24} className="animate-spin mr-2" />
+              Spinning...
+            </div>
+          ) : (
+            'SPIN'
+          )}
+        </button>
+      </div>
     </div>
   );
 };

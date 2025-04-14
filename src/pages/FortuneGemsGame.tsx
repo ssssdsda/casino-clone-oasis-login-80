@@ -4,14 +4,24 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
-import { Gem, Crown, DollarSign, Settings, RefreshCw, Zap } from 'lucide-react';
+import { Gem, Crown, DollarSign, Settings, RefreshCw, Zap, Diamond, Heart, Club, Spade } from 'lucide-react';
+import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
 
-// Game symbols
+// Game symbols with colorful icons instead of images
 const gameSymbols = [
-  { id: 'A', type: 'letter', image: null, value: 1 },
-  { id: 'red-gem', type: 'gem', image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png', value: 2 },
-  { id: 'blue-gem', type: 'gem', image: null, value: 3 },
-  { id: 'wild', type: 'wild', image: null, value: 5 },
+  { id: 'A', type: 'letter', icon: <span className="text-4xl font-bold text-yellow-500">A</span>, value: 1 },
+  { id: 'red-gem', type: 'gem', icon: <Gem className="w-10 h-10 text-red-500" />, value: 2 },
+  { id: 'blue-gem', type: 'gem', icon: <Gem className="w-10 h-10 text-blue-500" />, value: 3 },
+  { id: 'diamond', type: 'gem', icon: <Diamond className="w-10 h-10 text-cyan-400" />, value: 3 },
+  { id: 'heart', type: 'card', icon: <Heart className="w-10 h-10 text-pink-500" />, value: 4 },
+  { id: 'club', type: 'card', icon: <Club className="w-10 h-10 text-green-500" />, value: 4 },
+  { id: 'spade', type: 'card', icon: <Spade className="w-10 h-10 text-purple-500" />, value: 4 },
+  { id: 'wild', type: 'wild', icon: (
+    <div className="flex flex-col items-center">
+      <Crown className="w-8 h-8 text-yellow-500" />
+      <div className="text-xs font-bold text-red-500">WILD</div>
+    </div>
+  ), value: 5 },
 ];
 
 // Multiplier values
@@ -24,14 +34,15 @@ const FortuneGemsGame = () => {
   
   // Game state
   const [reels, setReels] = useState<string[][]>([
-    ['A', 'A', 'A'],
-    ['red-gem', 'red-gem', 'red-gem'],
-    ['blue-gem', 'blue-gem', 'blue-gem'],
+    ['A', 'red-gem', 'wild'],
+    ['blue-gem', 'A', 'red-gem'],
+    ['wild', 'blue-gem', 'A'],
   ]);
   const [spinning, setSpinning] = useState(false);
   const [betAmount, setBetAmount] = useState(3);
   const [winAmount, setWinAmount] = useState(0);
   const [selectedMultiplier, setSelectedMultiplier] = useState(1);
+  const [betCount, setBetCount] = useState(0);
   const spinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const winSound = useRef<HTMLAudioElement | null>(null);
@@ -76,24 +87,46 @@ const FortuneGemsGame = () => {
       spinSound.current.play().catch(error => console.error("Error playing sound:", error));
     }
     
+    // Increment bet count for betting system
+    setBetCount(prev => prev + 1);
+    
     setSpinning(true);
     setWinAmount(0);
     
-    // Animate spinning
-    const newReels: string[][] = [[], [], []];
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        const randomIndex = Math.floor(Math.random() * gameSymbols.length);
-        newReels[i][j] = gameSymbols[randomIndex].id;
+    // Animate spinning - start with random symbols changing rapidly
+    const spinAnimation = setInterval(() => {
+      const randomReels: string[][] = [[], [], []];
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const randomIndex = Math.floor(Math.random() * gameSymbols.length);
+          randomReels[i][j] = gameSymbols[randomIndex].id;
+        }
       }
-    }
+      setReels(randomReels);
+    }, 100);
     
     // Calculate win after a delay
     if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current);
     
     spinTimeoutRef.current = setTimeout(() => {
-      setReels(newReels);
-      const winAmount = calculateWin(newReels, betAmount, selectedMultiplier);
+      clearInterval(spinAnimation);
+      
+      // Check if user should win based on betting system
+      const shouldWin = shouldBetWin(user?.id || 'anonymous');
+      
+      // Generate final result
+      let finalReels: string[][];
+      
+      if (shouldWin) {
+        // Create a winning combination
+        finalReels = generateWinningCombination();
+      } else {
+        // Create a losing combination
+        finalReels = generateLosingCombination();
+      }
+      
+      setReels(finalReels);
+      const winAmount = calculateWin(finalReels, betAmount, selectedMultiplier);
       setWinAmount(winAmount);
       
       if (winAmount > 0) {
@@ -114,6 +147,69 @@ const FortuneGemsGame = () => {
       
       setSpinning(false);
     }, 2000);
+  };
+  
+  // Generate a winning combination
+  const generateWinningCombination = (): string[][] => {
+    const result: string[][] = [[], [], []];
+    
+    // Choose a random symbol for the winning row
+    const winningSymbol = gameSymbols[Math.floor(Math.random() * (gameSymbols.length - 1))].id;
+    
+    // Choose a random row for the win (0, 1, or 2)
+    const winningRow = Math.floor(Math.random() * 3);
+    
+    // Fill all columns for the winning row with the winning symbol
+    for (let col = 0; col < 3; col++) {
+      result[col][winningRow] = winningSymbol;
+    }
+    
+    // Fill the rest with random symbols
+    for (let col = 0; col < 3; col++) {
+      for (let row = 0; row < 3; row++) {
+        if (row !== winningRow) {
+          const availableSymbols = gameSymbols.filter(s => s.id !== winningSymbol);
+          const randomSymbol = availableSymbols[Math.floor(Math.random() * availableSymbols.length)].id;
+          result[col][row] = randomSymbol;
+        }
+      }
+    }
+    
+    // Add some wilds randomly
+    if (Math.random() > 0.7) {
+      const randomCol = Math.floor(Math.random() * 3);
+      const randomRow = Math.floor(Math.random() * 3);
+      if (randomRow !== winningRow) {
+        result[randomCol][randomRow] = 'wild';
+      }
+    }
+    
+    return result;
+  };
+  
+  // Generate a losing combination
+  const generateLosingCombination = (): string[][] => {
+    const result: string[][] = [[], [], []];
+    
+    // Fill with random symbols ensuring no winning lines
+    for (let col = 0; col < 3; col++) {
+      for (let row = 0; row < 3; row++) {
+        // Choose a random symbol
+        const randomSymbol = gameSymbols[Math.floor(Math.random() * gameSymbols.length)].id;
+        result[col][row] = randomSymbol;
+      }
+    }
+    
+    // Make sure no horizontal lines are winning
+    for (let row = 0; row < 3; row++) {
+      if (result[0][row] === result[1][row] && result[1][row] === result[2][row]) {
+        // Found a winning line, break it
+        const newSymbol = gameSymbols.find(s => s.id !== result[0][row])?.id || 'A';
+        result[Math.floor(Math.random() * 3)][row] = newSymbol;
+      }
+    }
+    
+    return result;
   };
   
   // Calculate win
@@ -137,7 +233,8 @@ const FortuneGemsGame = () => {
       }
     }
     
-    return winAmount;
+    // Cap winnings at 100
+    return Math.min(winAmount, 100);
   };
   
   // Change bet amount
@@ -146,28 +243,10 @@ const FortuneGemsGame = () => {
     setBetAmount(amount);
   };
   
-  // Get symbol image or default
+  // Get symbol display
   const getSymbolDisplay = (symbolId: string) => {
     const symbol = gameSymbols.find(s => s.id === symbolId);
-    
-    if (symbol?.image) {
-      return <img src={symbol.image} alt={symbol.id} className="w-full h-full object-contain" />;
-    } else if (symbolId === 'A') {
-      return <div className="text-4xl font-bold text-yellow-500">A</div>;
-    } else if (symbolId === 'red-gem') {
-      return <Gem className="w-10 h-10 text-red-500" />;
-    } else if (symbolId === 'blue-gem') {
-      return <Gem className="w-10 h-10 text-blue-500" />;
-    } else if (symbolId === 'wild') {
-      return (
-        <div className="flex flex-col items-center">
-          <Crown className="w-8 h-8 text-yellow-500" />
-          <div className="text-xs font-bold text-red-500">WILD</div>
-        </div>
-      );
-    }
-    
-    return symbolId;
+    return symbol?.icon || symbolId;
   };
 
   return (
@@ -193,33 +272,19 @@ const FortuneGemsGame = () => {
           <div className="text-4xl font-bold text-yellow-400 text-center">{selectedMultiplier}x</div>
         </div>
 
-        {/* Guaranteed message */}
-        <div className="w-full text-center text-yellow-400 font-bold my-4">
-          guaranteed to be at least 2x.
-        </div>
-
         {/* Game board */}
         <div className="bg-amber-800 border-4 border-yellow-700 rounded-lg p-4 w-full max-w-lg">
           {/* Row numbers */}
           <div className="flex">
             <div className="w-10 flex flex-col justify-around">
               <div className="h-20 flex items-center justify-center">
-                <span className="bg-yellow-600 rounded-full w-6 h-6 flex items-center justify-center text-black font-bold">4</span>
+                <span className="bg-yellow-600 rounded-full w-6 h-6 flex items-center justify-center text-black font-bold">3</span>
               </div>
               <div className="h-20 flex items-center justify-center">
                 <span className="bg-yellow-600 rounded-full w-6 h-6 flex items-center justify-center text-black font-bold">2</span>
               </div>
               <div className="h-20 flex items-center justify-center">
                 <span className="bg-yellow-600 rounded-full w-6 h-6 flex items-center justify-center text-black font-bold">1</span>
-              </div>
-              <div className="h-8 flex items-center justify-center">
-                <div className="flex items-center">
-                  <span className="text-yellow-500 font-bold text-sm">EX</span>
-                  <span className="bg-yellow-600 rounded-full ml-1 w-5 h-5 flex items-center justify-center text-black font-bold text-xs">?</span>
-                </div>
-              </div>
-              <div className="h-8 flex items-center justify-center">
-                <span className="bg-yellow-600 rounded-full w-6 h-6 flex items-center justify-center text-black font-bold">5</span>
               </div>
             </div>
 
@@ -233,7 +298,7 @@ const FortuneGemsGame = () => {
                         key={`symbol-${reelIndex}-${symbolIndex}`} 
                         className={`
                           h-20 border border-amber-600 bg-amber-700 flex items-center justify-center
-                          ${spinning ? 'animate-spin-slow' : ''}
+                          ${spinning ? 'animate-pulse' : ''}
                         `}
                       >
                         {getSymbolDisplay(symbol)}
@@ -250,19 +315,19 @@ const FortuneGemsGame = () => {
                     <div 
                       key={`multiplier-${index}`}
                       className={`
-                        h-20 border border-red-800 bg-red-900 flex items-center justify-center
+                        h-12 border border-red-800 bg-red-900 flex items-center justify-center
                         ${selectedMultiplier === mult ? 'border-2 border-yellow-400' : ''}
                       `}
                       onClick={() => setSelectedMultiplier(mult)}
                     >
                       <div className={`
-                        w-12 h-12 rounded-full flex items-center justify-center
+                        w-10 h-10 rounded-full flex items-center justify-center
                         ${index === 0 ? 'bg-gray-600' : 
                           index === 1 ? 'bg-green-700' : 
                           index === 2 ? 'bg-blue-600' : 
                           index === 3 ? 'bg-purple-700' : 'bg-red-700'}
                       `}>
-                        <span className="text-yellow-300 text-xl font-bold">{mult}x</span>
+                        <span className="text-yellow-300 text-sm font-bold">{mult}x</span>
                       </div>
                     </div>
                   ))}
@@ -285,12 +350,13 @@ const FortuneGemsGame = () => {
               <button 
                 onClick={() => changeBetAmount(betAmount - 1)}
                 className="px-2 py-1 text-yellow-400"
-                disabled={betAmount <= 1}
+                disabled={betAmount <= 1 || spinning}
               >-</button>
               <span className="px-2">{betAmount}</span>
               <button 
                 onClick={() => changeBetAmount(betAmount + 1)}
                 className="px-2 py-1 text-yellow-400"
+                disabled={spinning}
               >+</button>
             </div>
           </div>
@@ -307,10 +373,6 @@ const FortuneGemsGame = () => {
           >
             {spinning ? <RefreshCw className="animate-spin" /> : <Zap className="h-6 w-6" />}
           </Button>
-        </div>
-        
-        <div className="mt-2 text-xs text-yellow-400 opacity-70">
-          Press turbo spin
         </div>
       </div>
     </div>
