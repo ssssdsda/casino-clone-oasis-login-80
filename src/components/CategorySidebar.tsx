@@ -33,7 +33,7 @@ interface CategorySidebarProps {
 }
 
 const CategorySidebar: React.FC<CategorySidebarProps> = ({ onCategorySelect, selectedCategory }) => {
-  const [activeCategory, setActiveCategory] = React.useState(selectedCategory || 'popular');
+  const [activeCategory, setActiveCategory] = React.useState(selectedCategory || 'popularGames');
   const { t } = useLanguage();
 
   const categories = [

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -40,7 +39,7 @@ const featuredGames = [
   {
     id: 'mega-spin',
     title: 'Mega Spin',
-    image: '/lovable-uploads/467a6111-4e8b-4892-9521-c87da94084c0.png',
+    image: '/lovable-uploads/329daeeb-8f31-461c-9f1d-c0b91bf31520.png',
     multiplier: '40000',
     isNew: true,
     path: '/game/megaspin'
@@ -138,9 +137,9 @@ const popularGames = [
 
 const slotGames = [
   {
-    id: '6',
+    id: 'mega-spin-slot',
     title: 'Mega Spin',
-    image: '/lovable-uploads/467a6111-4e8b-4892-9521-c87da94084c0.png',
+    image: '/lovable-uploads/329daeeb-8f31-461c-9f1d-c0b91bf31520.png',
     path: '/game/megaspin'
   },
   {
@@ -242,6 +241,9 @@ const gameCategories: Record<string, any[]> = {
   slots: slotGames,
   liveGames,
   tableGames: casinoGames,
+  sports: [],  // Empty array for now but can be populated later
+  fishing: [],
+  arcade: []
 };
 
 const Index = () => {

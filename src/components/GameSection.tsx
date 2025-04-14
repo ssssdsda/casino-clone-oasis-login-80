@@ -56,7 +56,10 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
       'popularGames': 'popularGames',
       'slots': 'slotGames',
       'liveGames': 'liveGames',
-      'tableGames': 'casinoGames'
+      'tableGames': 'casinoGames',
+      'sports': 'sportsGames',
+      'fishing': 'fishingGames',
+      'arcade': 'arcadeGames'
     };
     return mapping[title];
   };
