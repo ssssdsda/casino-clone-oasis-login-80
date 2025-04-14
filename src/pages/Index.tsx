@@ -22,7 +22,7 @@ const featuredGames = [
   {
     id: 'boxing-king',
     title: 'Boxing King',
-    image: '/lovable-uploads/2b65ebea-23b2-4496-be3c-cc3abe47fa21.png',
+    image: '/lovable-uploads/a7972c95-1dbd-4394-8102-016b0b210e5f.png',
     isNew: true,
     path: '/game/boxing-king'
   },
@@ -214,13 +214,12 @@ const casinoGames = [
   {
     id: 'boxing-king-casino',
     title: 'Boxing King',
-    image: '/lovable-uploads/2b65ebea-23b2-4496-be3c-cc3abe47fa21.png',
+    image: '/lovable-uploads/a7972c95-1dbd-4394-8102-016b0b210e5f.png',
     isNew: true,
     path: '/game/boxing-king'
   }
 ];
 
-// Define all game categories for filtering
 const gameCategories: Record<string, any[]> = {
   featuredGames,
   popularGames,
@@ -238,9 +237,7 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Add a loading state to ensure images have time to load
   useEffect(() => {
-    // Allow time for images to preload
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1000);
@@ -252,7 +249,6 @@ const Index = () => {
     setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
   };
   
-  // If still loading, show a simple loading indicator
   if (isLoading) {
     return (
       <div className="min-h-screen bg-casino-dark flex flex-col items-center justify-center">
