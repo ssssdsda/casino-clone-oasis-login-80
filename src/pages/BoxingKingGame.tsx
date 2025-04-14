@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 // Define slot symbols
 const symbols = {
   A: '/lovable-uploads/5e74a510-40f4-4987-8011-5d4569b5aa7c.png', // Using the boxing king image
-  K: '/lovable-uploads/f3cc67b3-6063-43a6-841f-f4a23037d206.png', // Using uploaded aviator image as placeholder
+  K: '/lovable-uploads/5e74a510-40f4-4987-8011-5d4569b5aa7c.png', // Using boxing king image
   Q: 'https://placehold.co/100/blue/white?text=Q',
   J: 'https://placehold.co/100/green/white?text=J',
   BLUE_FIST: 'https://placehold.co/100/blue/white?text=FIST',

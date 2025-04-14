@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -20,7 +19,7 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
   const [imageError, setImageError] = useState(false);
   
   // Add a random query parameter to force the browser to reload the image
-  const imageUrl = `${image}?v=${new Date().getTime()}`;
+  const imageUrl = `${image}?v=${Math.random().toString(36).substring(7)}`;
   
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent clicking the card if the edit button is clicked

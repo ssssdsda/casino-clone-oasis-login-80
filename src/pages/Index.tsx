@@ -109,31 +109,32 @@ const popularGames = [
     path: '/game/aviator'
   },
   {
-    id: '5',
-    title: 'Tiger Rush',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    id: 'boxing-king-popular',
+    title: 'Boxing King',
+    image: '/lovable-uploads/5e74a510-40f4-4987-8011-5d4569b5aa7c.png',
     multiplier: '3000',
+    path: '/game/boxing-king'
+  },
+  {
+    id: 'mega-spin-popular',
+    title: 'Mega Spin',
+    image: '/lovable-uploads/700ecf21-9025-4468-ad55-9ac9e464d922.png',
+    multiplier: '4500',
+    path: '/game/megaspin'
+  },
+  {
+    id: 'casino-spin-popular',
+    title: 'Casino Win Spin',
+    image: '/lovable-uploads/da68ee0a-2bd5-45b4-9054-079d162553d5.png',
+    multiplier: '3200',
+    path: '/game/spin'
   },
   {
     id: 'golden-basin',
     title: 'Golden Basin',
     image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
-    multiplier: '4500',
-    path: '/game/golden-basin'
-  },
-  {
-    id: '777coins',
-    title: '777 Coins',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
-    multiplier: '3200',
-    path: '/game/777coins'
-  },
-  {
-    id: 'mega-spin-pop',
-    title: 'Mega Spin',
-    image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
     multiplier: '4000',
-    path: '/game/megaspin'
+    path: '/game/golden-basin'
   },
 ];
 
@@ -141,8 +142,21 @@ const slotGames = [
   {
     id: 'mega-spin-slot',
     title: 'Mega Spin',
-    image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
+    image: '/lovable-uploads/700ecf21-9025-4468-ad55-9ac9e464d922.png',
     path: '/game/megaspin'
+  },
+  {
+    id: 'boxing-king-slot',
+    title: 'Boxing King',
+    image: '/lovable-uploads/5e74a510-40f4-4987-8011-5d4569b5aa7c.png',
+    multiplier: '2600',
+    path: '/game/boxing-king'
+  },
+  {
+    id: 'casino-win-slot',
+    title: 'Casino Win Spin',
+    image: '/lovable-uploads/da68ee0a-2bd5-45b4-9054-079d162553d5.png',
+    path: '/game/spin'
   },
   {
     id: '7',

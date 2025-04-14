@@ -147,10 +147,8 @@ const SpinGame = () => {
     }
   };
 
-  // Return JSX for the component
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-800 to-purple-950 flex flex-col">
-      {/* Header */}
       <div className="bg-purple-900 text-white p-4 flex justify-between items-center">
         <button onClick={() => navigate('/')} className="text-white">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -161,9 +159,7 @@ const SpinGame = () => {
         <div className="w-6"></div>
       </div>
 
-      {/* Game area */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 relative">
-        {/* Display the win amount if there is one */}
         {currentWin > 0 && (
           <motion.div 
             initial={{ scale: 0, opacity: 0 }}
@@ -174,9 +170,7 @@ const SpinGame = () => {
           </motion.div>
         )}
         
-        {/* Game machine */}
         <div className="relative w-64 h-80 mb-8">
-          {/* Casino machine image */}
           <img 
             src={spinMachineImage} 
             alt="Casino Win Spin" 
@@ -187,14 +181,12 @@ const SpinGame = () => {
             }}
           />
           
-          {/* Multiplier display */}
           <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
                          text-white text-xl font-bold bg-purple-800/80 px-3 py-1 rounded-md">
             {multiplier.toFixed(2)}x
           </div>
         </div>
 
-        {/* Controls */}
         <div className="w-full max-w-md bg-purple-900 p-4 rounded-lg">
           <div className="flex justify-between mb-4">
             <button 
