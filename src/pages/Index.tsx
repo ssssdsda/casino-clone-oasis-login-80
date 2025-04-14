@@ -15,7 +15,7 @@ const featuredGames = [
   {
     id: 'aviator',
     title: 'Aviator',
-    image: '/lovable-uploads/f3cc67b3-6063-43a6-841f-f4a23037d206.png',
+    image: '/lovable-uploads/a3e90a5f-a0a6-4d9b-934d-a112e6c58a1e.png',
     multiplier: '100000',
     isNew: true,
     path: '/game/aviator'
@@ -23,55 +23,31 @@ const featuredGames = [
   {
     id: 'boxing-king',
     title: 'Boxing King',
-    image: '/lovable-uploads/a1ddbca9-01d0-433e-89e5-5299a6741bbd.png',
+    image: '/lovable-uploads/23ba5110-65e1-4f2e-8330-95f1a62d130d.png',
     multiplier: '50000',
     isNew: true,
     path: '/game/boxing-king'
   },
   {
-    id: 'fortune-gems',
-    title: 'Fortune Gems',
-    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
-    multiplier: '20000',
-    isNew: true,
-    path: '/game/fortune-gems'
-  },
-  {
-    id: 'coin-up',
-    title: 'Coin Up',
-    image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
-    multiplier: '40000',
-    isNew: true,
-    path: '/game/coin-up'
-  },
-  {
-    id: 'golden-basin',
-    title: 'Golden Basin',
-    image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
-    multiplier: '35000',
-    isNew: true,
-    path: '/game/golden-basin'
-  },
-  {
-    id: 'spin-win',
+    id: 'casino-win-spin',
     title: 'Casino Win Spin',
-    image: '/lovable-uploads/0589ec98-6814-4024-b231-39c6e8aceab7.png',
-    multiplier: '10000',
+    image: '/lovable-uploads/92fab6e1-76fd-48ee-b9ea-819c8f10fef0.png',
+    multiplier: '20000',
     isNew: true,
     path: '/game/spin'
   },
   {
     id: 'mega-spin',
     title: 'Mega Spin',
-    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=300&h=400',
-    multiplier: '50000',
+    image: '/lovable-uploads/ba454bb5-ce73-43cb-a2ee-68e5e0fd715f.png',
+    multiplier: '40000',
     isNew: true,
     path: '/game/megaspin'
   },
   {
-    id: 'money-gram',
+    id: 'money-coming',
     title: 'Money Coming',
-    image: '/lovable-uploads/047cc796-53b7-4c0b-a938-259ab29ca8c8.png',
+    image: '/lovable-uploads/7b71f0b4-ac4b-4935-a536-cae4e563a9b4.png',
     multiplier: '30000',
     isNew: true,
     path: '/game/moneygram'
