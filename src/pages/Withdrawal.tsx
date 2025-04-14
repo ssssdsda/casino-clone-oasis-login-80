@@ -1,357 +1,410 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Wallet, Clock, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
-import app from '@/lib/firebase';
 
-const firestore = getFirestore(app);
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/context/LanguageContext';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Header from '@/components/Header';
+import { ArrowLeft, BadgeCheck, Clock, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore';
+
+interface WithdrawalRequest {
+  id: string;
+  amount: number;
+  paymentMethod: string;
+  accountNumber: string;
+  status: 'pending' | 'completed' | 'rejected';
+  createdAt: Date;
+  completedAt?: Date;
+}
+
+const paymentMethods = [
+  { id: 'bkash', name: 'bKash', logo: '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png' },
+  { id: 'nagad', name: 'Nagad', logo: '/lovable-uploads/6fc263a6-a7b2-4cf2-afe5-9fb0b99fdd91.png' },
+  { id: 'rocket', name: 'Rocket', logo: '/lovable-uploads/d10fd039-e61a-4e50-8145-a1efe284ada2.png' },
+];
+
+const predefinedAmounts = [500, 1000, 2000, 5000];
 
 const Withdrawal = () => {
-  const navigate = useNavigate();
+  const { user, updateUserBalance } = useAuth();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { t, language } = useLanguage();
   
-  const [walletAddress, setWalletAddress] = useState('');
-  const [amount, setAmount] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [withdrawalSubmitted, setWithdrawalSubmitted] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(30 * 60); // 30 minutes in seconds
-  const [balance] = useState(user?.balance || 1000);
-  const [withdrawalId, setWithdrawalId] = useState<string | null>(null);
-
+  const [amount, setAmount] = useState<number>(500);
+  const [customAmount, setCustomAmount] = useState<string>('');
+  const [selectedMethod, setSelectedMethod] = useState<string>('bkash');
+  const [accountNumber, setAccountNumber] = useState<string>('');
+  const [processing, setProcessing] = useState<boolean>(false);
+  const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRequest[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  
+  const db = getFirestore();
+  
   useEffect(() => {
-    if (withdrawalSubmitted) {
-      const timer = setInterval(() => {
-        setTimeRemaining(prevTime => {
-          if (prevTime <= 1) {
-            clearInterval(timer);
-            toast({
-              title: "Withdrawal Complete",
-              description: "Your funds have been sent to your wallet.",
-              variant: "default",
-              className: "bg-green-500 text-white"
-            });
-            
-            updateWithdrawalStatus("completed");
-            
-            return 0;
-          }
-          return prevTime - 1;
-        });
-      }, 1000);
+    if (user) {
+      fetchWithdrawalHistory();
+    }
+  }, [user]);
+  
+  const fetchWithdrawalHistory = async () => {
+    if (!user) return;
+    
+    setLoadingHistory(true);
+    try {
+      const q = query(
+        collection(db, "withdrawals"),
+        where("userId", "==", user.id),
+        orderBy("createdAt", "desc")
+      );
       
-      return () => clearInterval(timer);
-    }
-  }, [withdrawalSubmitted, toast]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-  
-  const updateWithdrawalStatus = async (status: string) => {
-    if (!withdrawalId) return;
-    
-    try {
-      await addDoc(collection(firestore, "withdrawalUpdates"), {
-        withdrawalId,
-        status,
-        timestamp: serverTimestamp()
+      const querySnapshot = await getDocs(q);
+      const history: WithdrawalRequest[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        history.push({
+          id: doc.id,
+          amount: data.amount,
+          paymentMethod: data.paymentMethod,
+          accountNumber: data.accountNumber,
+          status: data.status,
+          createdAt: data.createdAt.toDate(),
+          completedAt: data.completedAt ? data.completedAt.toDate() : undefined,
+        });
       });
+      
+      setWithdrawalHistory(history);
     } catch (error) {
-      console.error("Error updating withdrawal status: ", error);
+      console.error("Error fetching withdrawal history:", error);
+    } finally {
+      setLoadingHistory(false);
     }
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!walletAddress) {
+  const handleAmountChange = (value: number) => {
+    setAmount(value);
+    setCustomAmount('');
+  };
+  
+  const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setCustomAmount(value);
+      if (value) {
+        setAmount(parseInt(value));
+      } else {
+        setAmount(0);
+      }
+    }
+  };
+  
+  const handleWithdrawal = async () => {
+    if (!user) {
       toast({
         title: "Error",
-        description: "Please enter a wallet address",
-        variant: "destructive",
+        description: language === 'en' ? "Please log in to continue" : "চালিয়ে যেতে লগ ইন করুন",
+        variant: "destructive"
       });
       return;
     }
     
-    if (!amount || parseFloat(amount) <= 0) {
+    if (!amount || amount <= 0) {
       toast({
         title: "Error",
-        description: "Please enter a valid amount",
-        variant: "destructive",
+        description: language === 'en' ? "Please enter a valid amount" : "একটি বৈধ পরিমাণ লিখুন",
+        variant: "destructive"
       });
       return;
     }
     
-    if (parseFloat(amount) > balance) {
+    if (amount < 500) {
       toast({
-        title: "Insufficient Funds",
-        description: "You don't have enough balance for this withdrawal",
-        variant: "destructive",
+        title: "Error",
+        description: language === 'en' ? "Minimum withdrawal amount is ৳500" : "সর্বনিম্ন উত্তোলনের পরিমাণ ৳৫০০",
+        variant: "destructive"
       });
       return;
     }
     
-    setIsProcessing(true);
+    if (!accountNumber || accountNumber.length < 10) {
+      toast({
+        title: "Error",
+        description: language === 'en' ? "Please enter a valid account number" : "একটি বৈধ অ্যাকাউন্ট নম্বর লিখুন",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (user.balance < amount) {
+      toast({
+        title: "Error",
+        description: language === 'en' ? "Insufficient balance" : "অপর্যাপ্ত ব্যালেন্স",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setProcessing(true);
     
     try {
-      const docRef = await addDoc(collection(firestore, "withdrawals"), {
-        userId: user?.id || "anonymous",
-        walletAddress,
-        amount: parseFloat(amount),
+      // Deduct amount from user balance
+      await updateUserBalance(user.balance - amount);
+      
+      // Create withdrawal request in Firestore
+      await addDoc(collection(db, "withdrawals"), {
+        userId: user.id,
+        username: user.username,
+        amount: amount,
+        paymentMethod: selectedMethod,
+        accountNumber: accountNumber,
         status: "pending",
-        timestamp: serverTimestamp(),
-        userBalance: balance
+        createdAt: serverTimestamp()
       });
-      
-      setWithdrawalId(docRef.id);
-      
-      setTimeout(() => {
-        setIsProcessing(false);
-        setWithdrawalSubmitted(true);
-        toast({
-          title: "Withdrawal Initiated",
-          description: "Your withdrawal request has been submitted",
-          variant: "default",
-          className: "bg-blue-500 text-white"
-        });
-      }, 2000);
-    } catch (error) {
-      console.error("Error saving withdrawal request: ", error);
-      setIsProcessing(false);
       
       toast({
-        title: "Error",
-        description: "There was an error submitting your withdrawal request",
-        variant: "destructive",
+        title: "Success",
+        description: language === 'en' 
+          ? "Withdrawal request submitted successfully" 
+          : "উত্তোলন অনুরোধ সফলভাবে জমা দেওয়া হয়েছে"
       });
+      
+      // Reset form
+      setCustomAmount('');
+      setAccountNumber('');
+      
+      // Refresh withdrawal history
+      fetchWithdrawalHistory();
+    } catch (error) {
+      console.error("Withdrawal error:", error);
+      toast({
+        title: "Error",
+        description: language === 'en' 
+          ? "Failed to process withdrawal request" 
+          : "উত্তোলন অনুরোধ প্রক্রিয়া করতে ব্যর্থ হয়েছে",
+        variant: "destructive"
+      });
+      
+      // Restore user balance in case of error
+      if (user) {
+        updateUserBalance(user.balance);
+      }
+    } finally {
+      setProcessing(false);
     }
   };
   
+  const getStatusBadge = (status: string) => {
+    switch(status) {
+      case 'pending':
+        return (
+          <div className="flex items-center text-yellow-500">
+            <Clock className="h-4 w-4 mr-1" />
+            <span>{language === 'en' ? 'Pending' : 'বিচারাধীন'}</span>
+          </div>
+        );
+      case 'completed':
+        return (
+          <div className="flex items-center text-green-500">
+            <BadgeCheck className="h-4 w-4 mr-1" />
+            <span>{language === 'en' ? 'Completed' : 'সম্পন্ন'}</span>
+          </div>
+        );
+      case 'rejected':
+        return (
+          <div className="flex items-center text-red-500">
+            <AlertCircle className="h-4 w-4 mr-1" />
+            <span>{language === 'en' ? 'Rejected' : 'প্রত্যাখ্যাত'}</span>
+          </div>
+        );
+      default:
+        return <span>{status}</span>;
+    }
+  };
+  
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'bn-BD', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-blue-950 flex flex-col">
+    <div className="min-h-screen bg-casino-dark text-white">
       <Header />
-      <main className="flex-1 max-w-3xl mx-auto w-full p-4">
-        <div className="mb-6 flex items-center">
-          <Button
-            variant="outline"
-            className="text-gray-300"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Games
-          </Button>
-          
-          <motion.h1 
-            className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-blue-500 ml-auto mr-auto"
-            animate={{ 
-              textShadow: ["0 0 4px rgba(6,182,212,0.3)", "0 0 8px rgba(6,182,212,0.6)", "0 0 4px rgba(6,182,212,0.3)"]
-            }}
-            transition={{ 
-              duration: 2, 
-              repeat: Infinity,
-              repeatType: "reverse" 
-            }}
-          >
-            Withdrawal
-          </motion.h1>
+
+      <div className="container max-w-lg mx-auto p-4 pt-6">
+        <div className="flex items-center mb-4">
+          <Link to="/" className="text-gray-400 mr-2">
+            <ArrowLeft size={20} />
+          </Link>
+          <h1 className="text-2xl font-bold">{t('withdraw')}</h1>
         </div>
         
-        <motion.div
-          className="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {!withdrawalSubmitted ? (
-            <>
-              <div className="flex items-center justify-between mb-8 p-4 bg-gray-700 rounded-lg">
-                <div className="flex items-center">
-                  <Wallet className="h-10 w-10 text-green-500 mr-4" />
-                  <div>
-                    <p className="text-gray-300 text-sm">Available Balance</p>
-                    <p className="text-white font-bold text-2xl">${balance.toFixed(2)}</p>
-                  </div>
-                </div>
-                <div className="bg-gray-800 px-4 py-2 rounded-lg">
-                  <p className="text-gray-300 text-sm">Processing Time</p>
-                  <p className="text-white font-bold">~30 minutes</p>
-                </div>
+        <Card className="bg-casino border border-gray-700 mb-6">
+          <CardHeader>
+            <CardTitle>{language === 'en' ? 'Withdrawal' : 'টাকা তোলা'}</CardTitle>
+            <CardDescription className="text-gray-400">
+              {language === 'en' 
+                ? 'Withdraw funds to your mobile banking account' 
+                : 'আপনার মোবাইল ব্যাংকিং অ্যাকাউন্টে টাকা তুলুন'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="amount" className="text-gray-300 mb-2 block">
+                {language === 'en' ? 'Select Amount' : 'পরিমাণ নির্বাচন করুন'}
+              </Label>
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {predefinedAmounts.map((amt) => (
+                  <Button
+                    key={amt}
+                    type="button"
+                    variant={amount === amt ? "default" : "outline"}
+                    className={amount === amt ? "bg-casino-accent text-black" : "text-white"}
+                    onClick={() => handleAmountChange(amt)}
+                  >
+                    {t('currency')}{amt}
+                  </Button>
+                ))}
               </div>
-            
-              <form onSubmit={handleSubmit}>
-                <div className="mb-6">
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Wallet Address
-                  </label>
+              <div>
+                <Label htmlFor="custom-amount" className="text-gray-300 mb-2 block">
+                  {language === 'en' ? 'Or Enter Custom Amount' : 'অথবা কাস্টম পরিমাণ লিখুন'}
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    {t('currency')}
+                  </span>
                   <Input
-                    type="text"
-                    placeholder="Enter your wallet address"
-                    className="bg-gray-700 border-gray-600 text-white"
-                    value={walletAddress}
-                    onChange={(e) => setWalletAddress(e.target.value)}
-                    required
+                    id="custom-amount"
+                    className="pl-8 bg-casino-dark border-gray-600 text-white"
+                    placeholder="1000"
+                    value={customAmount}
+                    onChange={handleCustomAmountChange}
                   />
                 </div>
-                
-                <div className="mb-8">
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Amount to Withdraw
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      className="bg-gray-700 border-gray-600 text-white pl-8"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      min="1"
-                      max={balance}
-                      required
-                    />
-                  </div>
-                  <div className="flex justify-between mt-2">
-                    <button 
-                      type="button"
-                      className="text-xs text-blue-400 hover:text-blue-300"
-                      onClick={() => setAmount((balance * 0.25).toFixed(2))}
-                    >
-                      25%
-                    </button>
-                    <button 
-                      type="button"
-                      className="text-xs text-blue-400 hover:text-blue-300"
-                      onClick={() => setAmount((balance * 0.5).toFixed(2))}
-                    >
-                      50%
-                    </button>
-                    <button 
-                      type="button"
-                      className="text-xs text-blue-400 hover:text-blue-300"
-                      onClick={() => setAmount((balance * 0.75).toFixed(2))}
-                    >
-                      75%
-                    </button>
-                    <button 
-                      type="button"
-                      className="text-xs text-blue-400 hover:text-blue-300"
-                      onClick={() => setAmount(balance.toFixed(2))}
-                    >
-                      Max
-                    </button>
-                  </div>
-                </div>
-                
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white py-3 rounded-lg font-medium"
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Request Withdrawal'
-                  )}
-                </Button>
-              </form>
-            </>
-          ) : (
-            <div className="text-center">
-              <motion.div
-                className="w-24 h-24 mx-auto mb-6 bg-green-800 rounded-full flex items-center justify-center"
-                animate={{ 
-                  scale: [1, 1.05, 1],
-                  boxShadow: ["0 0 0px rgba(22,163,74,0.5)", "0 0 30px rgba(22,163,74,0.8)", "0 0 0px rgba(22,163,74,0.5)"]
-                }}
-                transition={{ 
-                  duration: 2, 
-                  repeat: Infinity,
-                  repeatType: "reverse" 
-                }}
-              >
-                {timeRemaining > 0 ? (
-                  <Clock className="h-12 w-12 text-green-400" />
-                ) : (
-                  <CheckCircle className="h-12 w-12 text-green-400" />
-                )}
-              </motion.div>
-              
-              <h2 className="text-2xl font-bold text-white mb-4">
-                {timeRemaining > 0 ? "Withdrawal Processing" : "Withdrawal Complete"}
-              </h2>
-              
-              <div className="bg-gray-700 p-4 rounded-lg mb-6">
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-300">Amount:</span>
-                  <span className="text-white font-bold">${amount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Wallet:</span>
-                  <span className="text-white font-medium truncate max-w-[200px]">{walletAddress}</span>
-                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  {language === 'en' ? 'Minimum: ৳500' : 'সর্বনিম্ন: ৳৫০০'}
+                </p>
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="payment-method" className="text-gray-300">
+                {language === 'en' ? 'Payment Method' : 'পেমেন্ট পদ্ধতি'}
+              </Label>
+              <Select
+                defaultValue={selectedMethod}
+                onValueChange={setSelectedMethod}
+              >
+                <SelectTrigger className="bg-casino-dark border-gray-600 text-white">
+                  <SelectValue placeholder="Select a payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethods.map((method) => (
+                    <SelectItem key={method.id} value={method.id}>
+                      <div className="flex items-center">
+                        <img src={method.logo} alt={method.name} className="w-6 h-6 mr-2" />
+                        {method.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="account-number" className="text-gray-300">
+                {language === 'en' 
+                  ? `${selectedMethod.charAt(0).toUpperCase() + selectedMethod.slice(1)} Number` 
+                  : `${selectedMethod.charAt(0).toUpperCase() + selectedMethod.slice(1)} নম্বর`}
+              </Label>
+              <Input
+                id="account-number"
+                className="bg-casino-dark border-gray-600 text-white"
+                placeholder={language === 'en' ? 'Enter your number' : 'আপনার নম্বর লিখুন'}
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+              />
+            </div>
+            
+            <div className="pt-2">
+              <Button
+                className="w-full bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
+                onClick={handleWithdrawal}
+                disabled={processing || !amount || amount < 500 || !accountNumber}
+              >
+                {processing 
+                  ? (language === 'en' ? 'Processing...' : 'প্রক্রিয়াজাতকরণ...') 
+                  : (language === 'en' ? 'Submit Withdrawal Request' : 'উত্তোলন অনুরোধ জমা দিন')}
+              </Button>
               
-              {timeRemaining > 0 ? (
-                <>
-                  <p className="text-gray-300 mb-4">Your withdrawal is being processed and will be sent to your wallet shortly</p>
-                  
-                  <div className="mb-6">
-                    <div className="relative pt-1">
-                      <div className="flex mb-2 items-center justify-between">
-                        <div>
-                          <span className="text-xs font-semibold inline-block text-blue-400">
-                            Processing
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs font-semibold inline-block text-blue-400">
-                            {formatTime(timeRemaining)}
-                          </span>
-                        </div>
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                {language === 'en' 
+                  ? 'Your withdrawal request will be processed within 24 hours' 
+                  : 'আপনার উত্তোলনের অনুরোধ ২৪ ঘন্টার মধ্যে প্রক্রিয়া করা হবে'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Withdrawal History */}
+        <Card className="bg-casino border border-gray-700">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">
+              {language === 'en' ? 'Withdrawal History' : 'উত্তোলনের ইতিহাস'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingHistory ? (
+              <div className="flex justify-center p-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+              </div>
+            ) : withdrawalHistory.length === 0 ? (
+              <div className="text-center text-gray-400 py-4">
+                {language === 'en' 
+                  ? 'No withdrawal history found' 
+                  : 'কোনও উত্তোলনের ইতিহাস পাওয়া যায়নি'}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {withdrawalHistory.map((withdrawal) => (
+                  <div 
+                    key={withdrawal.id} 
+                    className="bg-casino-dark p-3 rounded-lg border border-gray-700"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-white">
+                          {t('currency')}{withdrawal.amount}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {formatDate(withdrawal.createdAt)}
+                        </p>
                       </div>
-                      <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-600">
-                        <motion.div 
-                          className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
-                          initial={{ width: "0%" }}
-                          animate={{ width: `${100 - (timeRemaining / (30 * 60)) * 100}%` }}
-                          transition={{ duration: 1 }}
-                        ></motion.div>
-                      </div>
+                      {getStatusBadge(withdrawal.status)}
+                    </div>
+                    <div className="mt-2 text-sm text-gray-400">
+                      <p>
+                        {withdrawal.paymentMethod.charAt(0).toUpperCase() + withdrawal.paymentMethod.slice(1)}: {withdrawal.accountNumber}
+                      </p>
                     </div>
                   </div>
-                  
-                  <p className="text-sm text-gray-400">Estimated time remaining: {formatTime(timeRemaining)}</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-gray-300 mb-6">Your funds have been successfully sent to your wallet</p>
-                  
-                  <Button
-                    className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
-                    onClick={() => navigate('/')}
-                  >
-                    Return to Games
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
-        </motion.div>
-      </main>
-      <Footer />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

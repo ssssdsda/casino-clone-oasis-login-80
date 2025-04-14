@@ -1,14 +1,13 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { motion } from 'framer-motion';
 import { Minus, Plus, Settings, RefreshCw, Zap, Wifi } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 
-// Define slot symbols
+// Define slot symbols with optimized loading strategy
 const symbols = {
-  A: '/lovable-uploads/a1ddbca9-01d0-433e-89e5-5299a6741bbd.png', // Using uploaded boxing image as placeholder
-  K: '/lovable-uploads/f3cc67b3-6063-43a6-841f-f4a23037d206.png', // Using uploaded aviator image as placeholder
+  A: '/lovable-uploads/a1ddbca9-01d0-433e-89e5-5299a6741bbd.png',
+  K: '/lovable-uploads/f3cc67b3-6063-43a6-841f-f4a23037d206.png',
   Q: 'https://placehold.co/100/blue/white?text=Q',
   J: 'https://placehold.co/100/green/white?text=J',
   BLUE_FIST: 'https://placehold.co/100/blue/white?text=FIST',
@@ -16,6 +15,19 @@ const symbols = {
   BOXER: 'https://placehold.co/100/purple/white?text=BOXER',
   GLOVE: 'https://placehold.co/100/orange/white?text=GLOVE',
   SHORTS: 'https://placehold.co/100/cyan/white?text=SHORTS'
+};
+
+// Preload images in a separate component to avoid blocking the main rendering
+const ImagePreloader = () => {
+  useEffect(() => {
+    // Preload all symbol images
+    Object.values(symbols).forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
+  
+  return null;
 };
 
 // Define paylines
@@ -34,7 +46,7 @@ const paylines = [
   [10, 6, 12, 8, 14]
 ];
 
-// Define symbol weights (higher number = higher chance of appearing)
+// Define symbol weights
 const symbolWeights = {
   A: 20,
   K: 15,
@@ -47,7 +59,7 @@ const symbolWeights = {
   SHORTS: 15
 };
 
-// Define symbol payouts (multiplier for 3, 4, or 5 in a row)
+// Define symbol payouts
 const symbolPayouts = {
   A: [1, 2, 5],
   K: [1, 2, 5],
@@ -63,22 +75,36 @@ const symbolPayouts = {
 const BoxingKingGame = () => {
   const { user, updateUserBalance } = useAuth();
   const [betAmount, setBetAmount] = useState(3);
-  const [reels, setReels] = useState(Array(15).fill('A')); // 5x3 grid = 15 positions
+  const [reels, setReels] = useState(Array(15).fill('A')); // Initial state with just one symbol type
   const [spinning, setSpinning] = useState(false);
   const [autoplay, setAutoplay] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
   const [winningLines, setWinningLines] = useState<number[][]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const spinSound = useRef(new Audio('/sounds/spin.mp3'));
   const winSound = useRef(new Audio('/sounds/win.mp3'));
 
   // Initialize the game
   useEffect(() => {
-    generateRandomReels();
+    const initialization = async () => {
+      // Load sounds without awaiting them
+      spinSound.current.load();
+      winSound.current.load();
+      
+      // Generate random reels
+      generateRandomReels();
+      
+      // Simulate quick loading
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setIsLoading(false);
+    };
+    
+    initialization();
     
     // Create audio element
     audioRef.current = new Audio('/sounds/boxing-theme.mp3');
-    audioRef.current.loop = true;
+    audioRef.current.preload = 'none'; // Only load on demand
     
     return () => {
       if (audioRef.current) {
@@ -108,8 +134,8 @@ const BoxingKingGame = () => {
     setReels(newReels);
   };
 
-  // Calculate wins
-  const calculateWins = (currentReels: string[]) => {
+  // Calculate wins - memoize to avoid recalculation
+  const calculateWins = React.useCallback((currentReels: string[]) => {
     let totalWin = 0;
     const winLines: number[][] = [];
     
@@ -139,7 +165,7 @@ const BoxingKingGame = () => {
     });
     
     return { totalWin, winLines };
-  };
+  }, [betAmount]);
 
   // Spin the reels
   const spin = async () => {
@@ -175,11 +201,10 @@ const BoxingKingGame = () => {
     setWinningLines([]);
     setWinAmount(0);
     
-    // Animate spinning
-    for (let i = 0; i < 3; i++) {
-      generateRandomReels();
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+    // Animate spinning - optimized for performance
+    generateRandomReels();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    generateRandomReels();
     
     // Final reel state
     const finalReels = Array(15).fill('').map(() => getRandomSymbol());
@@ -189,7 +214,7 @@ const BoxingKingGame = () => {
     const { totalWin, winLines } = calculateWins(finalReels);
     
     // Short delay to show final reels before showing wins
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     if (totalWin > 0) {
       // Play win sound
@@ -221,6 +246,19 @@ const BoxingKingGame = () => {
       }
     }
   };
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-yellow-500">Boxing King</h2>
+          <p className="text-gray-400 mt-2">Loading game...</p>
+        </div>
+        <ImagePreloader />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
@@ -241,7 +279,7 @@ const BoxingKingGame = () => {
           <div className="absolute top-0 right-0 bottom-0 w-20 bg-gradient-to-l from-blue-900/50 to-transparent"></div>
         </div>
 
-        {/* Slot grid */}
+        {/* Slot grid - optimized rendering */}
         <div className="relative z-10 bg-gray-900/80 border-4 border-gray-700 rounded-lg p-2 shadow-2xl">
           <div className="grid grid-cols-5 grid-rows-3 gap-1">
             {reels.map((symbol, index) => (
@@ -252,20 +290,21 @@ const BoxingKingGame = () => {
                     ? 'border-yellow-400 animate-pulse'
                     : 'border-purple-700'
                 } rounded overflow-hidden flex items-center justify-center`}
-                initial={{ opacity: 0, scale: 0.8 }}
+                initial={{ opacity: 0.8 }}
                 animate={{ 
                   opacity: 1, 
-                  scale: winningLines.some(line => line.includes(index)) ? [1, 1.05, 1] : 1,
-                  transition: { 
-                    scale: { repeat: Infinity, duration: 0.5 } 
-                  }
+                  scale: winningLines.some(line => line.includes(index)) ? [1, 1.05, 1] : 1 
                 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
+                transition={{ 
+                  duration: 0.2, 
+                  scale: { repeat: winningLines.some(line => line.includes(index)) ? Infinity : 0, duration: 0.5 } 
+                }}
               >
                 <img 
                   src={symbols[symbol as keyof typeof symbols]} 
                   alt={symbol} 
                   className="w-20 h-20 object-contain"
+                  loading="eager"
                 />
               </motion.div>
             ))}
@@ -345,10 +384,6 @@ const BoxingKingGame = () => {
           >
             <Plus size={18} />
           </button>
-        </div>
-        
-        <div className="mt-4 text-xs text-gray-500 text-right">
-          Transaction 17005-538289-53960077
         </div>
       </div>
     </div>
