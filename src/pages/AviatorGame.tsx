@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Minus, Plus, ChevronDown } from 'lucide-react';
@@ -25,12 +24,10 @@ const AviatorGame = () => {
     2.42, 1.26, 1.38
   ]);
 
-  // Sound effects
   const takeoffSound = useRef(new Audio('/sounds/takeoff.mp3'));
   const cashoutSound = useRef(new Audio('/sounds/cashout.mp3'));
   const crashSound = useRef(new Audio('/sounds/crash.mp3'));
 
-  // Set up the game
   useEffect(() => {
     return () => {
       if (animationRef.current) {
@@ -40,7 +37,7 @@ const AviatorGame = () => {
   }, []);
 
   const goToControlPanel = () => {
-    navigate('/aviator-control');
+    navigate('/game/aviator-control');
   };
 
   const startGame = () => {
@@ -62,12 +59,9 @@ const AviatorGame = () => {
       return;
     }
 
-    // Reset plane position
     setIsFlying(false);
     
-    // Short delay before starting flight to reset the plane position
     setTimeout(() => {
-      // Deduct bet amount from user balance
       if (user && updateUserBalance) {
         updateUserBalance(user.balance - betAmount);
       }
@@ -78,28 +72,23 @@ const AviatorGame = () => {
       setHasPlacedBet(true);
       setIsFlying(true);
       
-      // Play takeoff sound
       takeoffSound.current.play().catch(e => console.log("Audio play error:", e));
 
-      // Determine when the plane will crash (random)
       const maxMultiplier = Math.random() < 0.1 
-        ? 10 + Math.random() * 20 // 10% chance for high multiplier
-        : 1 + Math.random() * 5;  // 90% chance for lower multiplier
+        ? 10 + Math.random() * 20
+        : 1 + Math.random() * 5;
 
       animationRef.current = setInterval(() => {
         setMultiplier(prev => {
           const increment = prev < 1.5 ? 0.01 : (prev < 5 ? 0.03 : 0.1);
           const newMultiplier = +(prev + increment).toFixed(2);
           
-          // Update current potential win
           setCurrentWin(betAmount * newMultiplier);
           
-          // Auto cashout if enabled and threshold reached
           if (autoCashout && newMultiplier >= autoCashoutMultiplier) {
             cashOut();
           }
           
-          // Check if plane should crash
           if (newMultiplier >= maxMultiplier) {
             gameCrash();
             return maxMultiplier;
@@ -119,26 +108,21 @@ const AviatorGame = () => {
       animationRef.current = null;
     }
     
-    // Play cashout sound
     cashoutSound.current.play().catch(e => console.log("Audio play error:", e));
     
-    // Add winnings to balance
     const winnings = betAmount * multiplier;
     if (user && updateUserBalance) {
       updateUserBalance(user.balance + winnings);
     }
     
-    // Show success message
     toast({
       title: "Win!",
       description: `You cashed out at ${multiplier}x and won ${winnings.toFixed(2)}!`,
     });
     
-    // Reset game state
     setIsFlying(false);
     setHasPlacedBet(false);
     
-    // Add to history
     multiplierHistoryRef.current = [multiplier, ...multiplierHistoryRef.current].slice(0, 23);
   };
 
@@ -148,22 +132,18 @@ const AviatorGame = () => {
       animationRef.current = null;
     }
     
-    // Play crash sound
     crashSound.current.play().catch(e => console.log("Audio play error:", e));
     
-    // Show crash message
     toast({
       title: "Crashed!",
       description: `The plane crashed at ${multiplier}x!`,
       variant: "destructive"
     });
     
-    // Reset game state
     setGameOver(true);
     setIsFlying(false);
     setHasPlacedBet(false);
     
-    // Add to history
     multiplierHistoryRef.current = [multiplier, ...multiplierHistoryRef.current].slice(0, 23);
   };
 
@@ -191,7 +171,6 @@ const AviatorGame = () => {
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
-      {/* Multiplier History */}
       <div className="bg-black text-green-500 p-2 flex overflow-x-auto gap-2">
         {multiplierHistoryRef.current.map((m, i) => {
           let textColor = "text-blue-400";
@@ -207,19 +186,15 @@ const AviatorGame = () => {
         })}
       </div>
 
-      {/* Fun Mode Banner */}
       <div className="bg-orange-500 text-center text-white py-2 font-bold">
         FUN MODE
       </div>
 
-      {/* Game Area */}
       <div className="flex-1 bg-gradient-radial from-gray-800 to-black relative overflow-hidden">
-        {/* Multiplier Display */}
         <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-7xl font-bold z-10">
           {multiplier.toFixed(2)}x
         </div>
 
-        {/* Admin Control Button - Only visible to admins */}
         {user?.role === 'admin' && (
           <button 
             onClick={goToControlPanel}
@@ -229,7 +204,6 @@ const AviatorGame = () => {
           </button>
         )}
 
-        {/* Animated Plane */}
         <div className="absolute bottom-0 left-0 h-full w-full">
           <motion.div 
             ref={planeRef}
@@ -243,7 +217,6 @@ const AviatorGame = () => {
             transition={{ duration: 20, ease: "easeInOut" }}
           >
             <div className="relative">
-              {/* Plane Trail */}
               {isFlying && (
                 <motion.div
                   className="absolute left-0 bottom-0 h-1.5 bg-red-600"
@@ -255,20 +228,16 @@ const AviatorGame = () => {
                 />
               )}
               
-              {/* Enhanced Plane Design */}
               <div className="text-red-600">
                 <svg width="64" height="40" viewBox="0 0 64 40">
-                  {/* Main body */}
                   <path 
                     d="M55,20 L40,13 L10,13 L0,20 L10,27 L40,27 L55,20 Z" 
                     fill="currentColor" 
                   />
-                  {/* Tail */}
                   <path 
                     d="M48,20 L48,10 L55,8 L55,20 L48,20 Z" 
                     fill="currentColor" 
                   />
-                  {/* Propeller */}
                   <circle cx="55" cy="20" r="2" fill="#FFF" />
                   <path 
                     d="M54,15 L56,15 L57,10 L53,10 L54,15 Z" 
@@ -276,7 +245,6 @@ const AviatorGame = () => {
                     className="animate-spin"
                     style={{ transformOrigin: "55px 15px", animationDuration: "0.2s" }}
                   />
-                  {/* Windows */}
                   <circle cx="25" cy="20" r="2" fill="#BBF" />
                   <circle cx="32" cy="20" r="2" fill="#BBF" />
                   <circle cx="39" cy="20" r="2" fill="#BBF" />
@@ -287,7 +255,6 @@ const AviatorGame = () => {
         </div>
       </div>
 
-      {/* Controls */}
       <div className="bg-gray-900 text-white p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="border border-gray-700 rounded-lg p-4">
           <div className="flex justify-between mb-4">

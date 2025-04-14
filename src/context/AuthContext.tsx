@@ -17,6 +17,7 @@ interface User {
   email?: string;
   phone?: string;
   balance: number;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -57,14 +58,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          const userBalance = await getUserBalance(firebaseUser.uid);
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
+          const userRole = userDoc.exists() ? userDoc.data().role : undefined;
           
           const userData = {
             id: firebaseUser.uid,
             username: firebaseUser.displayName || 'User',
             email: firebaseUser.email || undefined,
             phone: firebaseUser.phoneNumber || undefined,
-            balance: userBalance
+            balance: userBalance,
+            role: userRole
           };
           
           setUser(userData);
