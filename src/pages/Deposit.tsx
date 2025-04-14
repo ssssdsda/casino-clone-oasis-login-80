@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -7,8 +7,8 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, CreditCard, CheckCircle, Wallet, PlusCircle } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ArrowLeft, CreditCard, CheckCircle, Wallet, PlusCircle, Clock } from 'lucide-react';
+import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
 
@@ -35,6 +35,9 @@ const Deposit = () => {
   const [selectedMethod, setSelectedMethod] = useState<string>('bkash');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isComplete, setIsComplete] = useState<boolean>(false);
+  const [depositId, setDepositId] = useState<string | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [depositStatus, setDepositStatus] = useState<string>('');
   
   // Handle amount selection
   const handleAmountSelect = (amt: number) => {
@@ -60,6 +63,65 @@ const Deposit = () => {
     setSelectedMethod(methodId);
   };
   
+  // Track elapsed time for pending deposits
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    
+    if (depositStatus === 'pending' && !isComplete) {
+      timer = setInterval(() => {
+        setElapsedTime(prev => prev + 1);
+      }, 1000);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [depositStatus, isComplete]);
+  
+  // Listen for deposit status changes
+  useEffect(() => {
+    if (!depositId) return;
+    
+    const unsubscribe = onSnapshot(doc(firestore, "deposits", depositId), (doc) => {
+      if (doc.exists()) {
+        const status = doc.data().status;
+        setDepositStatus(status);
+        
+        if (status === 'approved') {
+          setIsProcessing(false);
+          setIsComplete(true);
+          
+          // Update user balance
+          if (updateUserBalance && user) {
+            updateUserBalance(user.balance + amount);
+          }
+          
+          toast({
+            title: "Deposit Approved",
+            description: `${amount}৳ has been added to your account`,
+            variant: "default",
+            className: "bg-green-600 text-white",
+          });
+          
+          // Redirect back to home after 3 seconds
+          setTimeout(() => {
+            navigate('/');
+          }, 3000);
+        } else if (status === 'rejected') {
+          setIsProcessing(false);
+          
+          toast({
+            title: "Deposit Rejected",
+            description: "Your deposit request was rejected",
+            variant: "destructive",
+          });
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [depositId, amount, navigate, toast, updateUserBalance, user]);
+  
   // Handle deposit submission
   const handleSubmit = async () => {
     if (amount <= 0) {
@@ -72,10 +134,11 @@ const Deposit = () => {
     }
     
     setIsProcessing(true);
+    setElapsedTime(0);
     
     try {
       // Create deposit record in Firebase
-      await addDoc(collection(firestore, "deposits"), {
+      const docRef = await addDoc(collection(firestore, "deposits"), {
         userId: user?.id || "anonymous",
         amount,
         paymentMethod: selectedMethod,
@@ -83,28 +146,15 @@ const Deposit = () => {
         timestamp: serverTimestamp()
       });
       
-      // Simulate processing time
-      setTimeout(() => {
-        // Update user balance
-        if (updateUserBalance) {
-          updateUserBalance(user?.balance + amount);
-        }
-        
-        setIsProcessing(false);
-        setIsComplete(true);
-        
-        toast({
-          title: "Deposit Successful",
-          description: `${amount}৳ has been added to your account`,
-          variant: "default",
-          className: "bg-green-600 text-white",
-        });
-        
-        // Redirect back to home after 3 seconds
-        setTimeout(() => {
-          navigate('/');
-        }, 3000);
-      }, 2000);
+      setDepositId(docRef.id);
+      setDepositStatus('pending');
+      
+      toast({
+        title: "Deposit Request Sent",
+        description: "Your deposit request is being processed",
+        variant: "default",
+      });
+      
     } catch (error) {
       console.error("Error processing deposit:", error);
       setIsProcessing(false);
@@ -115,6 +165,13 @@ const Deposit = () => {
         variant: "destructive",
       });
     }
+  };
+  
+  // Format elapsed time
+  const formatElapsedTime = () => {
+    const minutes = Math.floor(elapsedTime / 60);
+    const seconds = elapsedTime % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
   return (
@@ -163,6 +220,33 @@ const Deposit = () => {
             </p>
             <div className="text-sm text-gray-400">
               You will be redirected back to the games...
+            </div>
+          </motion.div>
+        ) : depositStatus === 'pending' ? (
+          // Pending Screen
+          <motion.div 
+            className="bg-gray-800 rounded-xl p-6 flex flex-col items-center text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="mb-4"
+            >
+              <Clock className="h-20 w-20 text-yellow-500" />
+            </motion.div>
+            <h2 className="text-2xl font-bold text-white mb-2">Deposit Processing</h2>
+            <p className="text-gray-300 mb-4">
+              Your deposit of {amount}৳ is being processed.
+            </p>
+            <div className="bg-gray-900 px-4 py-2 rounded-lg mb-4">
+              <div className="text-sm text-gray-400">Elapsed Time</div>
+              <div className="text-xl font-mono text-yellow-400">{formatElapsedTime()}</div>
+            </div>
+            <div className="text-sm text-gray-400">
+              Please wait while we process your transaction. You will be notified once completed.
             </div>
           </motion.div>
         ) : (

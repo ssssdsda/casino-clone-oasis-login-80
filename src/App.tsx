@@ -24,6 +24,8 @@ import BoxingKingGame from "./pages/BoxingKingGame";
 import FortuneGemsGame from "./pages/FortuneGemsGame";
 import CoinUpGame from "./pages/CoinUpGame";
 import GoldenBasinGame from "./pages/GoldenBasinGame";
+import Bonus from "./pages/Bonus";
+import BonusControl from "./pages/BonusControl";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "./context/LanguageContext";
 
@@ -53,6 +55,8 @@ const App = () => (
               <Route path="/game/golden-basin" element={<GoldenBasinGame />} />
               <Route path="/withdrawal" element={<Withdrawal />} />
               <Route path="/deposit" element={<Deposit />} />
+              <Route path="/bonus" element={<Bonus />} />
+              <Route path="/admin/bonus-control" element={<BonusControl />} />
               <Route path="/game/live-cricket" element={<LiveCricket />} />
               <Route path="/game/live-football" element={<LiveFootball />} />
               <Route path="/game/super-ace" element={<SuperAce />} />

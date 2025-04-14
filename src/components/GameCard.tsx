@@ -2,6 +2,7 @@
 import React from 'react';
 import { Heart } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface GameCardProps {
   id: string;
@@ -14,12 +15,13 @@ interface GameCardProps {
 
 const GameCard = ({ title, image, multiplier, isNew, onClick }: GameCardProps) => {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   
   return (
     <div 
       className="relative rounded-lg overflow-hidden cursor-pointer game-card transition-transform hover:scale-105"
       onClick={onClick}
-      style={{ maxWidth: '80px' }}
+      style={{ maxWidth: isMobile ? '70px' : '100px' }}
     >
       {/* Game image */}
       <div className="aspect-[3/4] relative">
@@ -27,6 +29,7 @@ const GameCard = ({ title, image, multiplier, isNew, onClick }: GameCardProps) =
           src={image} 
           alt={title} 
           className="w-full h-full object-cover"
+          loading="lazy"
         />
         
         {/* Overlay gradient */}
@@ -34,9 +37,11 @@ const GameCard = ({ title, image, multiplier, isNew, onClick }: GameCardProps) =
         
         {/* Game title and info */}
         <div className="absolute bottom-0 left-0 right-0 p-1">
-          <h3 className="text-[9px] font-medium text-white truncate">{title}</h3>
+          <h3 className={`${isMobile ? 'text-[8px]' : 'text-[9px] md:text-xs'} font-medium text-white truncate`}>
+            {title}
+          </h3>
           {multiplier && (
-            <div className="text-[7px] text-casino-accent font-bold">
+            <div className={`${isMobile ? 'text-[7px]' : 'text-[8px] md:text-xs'} text-casino-accent font-bold`}>
               {t('currency')}{multiplier}
             </div>
           )}
@@ -44,12 +49,12 @@ const GameCard = ({ title, image, multiplier, isNew, onClick }: GameCardProps) =
         
         {/* Favorite button */}
         <button className="absolute top-1 right-1 text-white opacity-0 transition-opacity favorite-icon">
-          <Heart className="h-2 w-2" />
+          <Heart className="h-2 w-2 md:h-3 md:w-3" />
         </button>
         
         {/* New tag */}
         {isNew && (
-          <div className="absolute top-1 left-1 bg-casino-accent text-[7px] font-bold text-black px-0.5 rounded">
+          <div className="absolute top-1 left-1 bg-casino-accent text-[7px] md:text-[8px] font-bold text-black px-0.5 rounded">
             NEW
           </div>
         )}

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -15,7 +16,7 @@ const featuredGames = [
   {
     id: 'aviator',
     title: 'Aviator',
-    image: '/lovable-uploads/a3e90a5f-a0a6-4d9b-934d-a112e6c58a1e.png',
+    image: '/lovable-uploads/ba327bc8-d695-4ebf-a7f8-0d4ae1540fdc.png',
     multiplier: '100000',
     isNew: true,
     path: '/game/aviator'

@@ -3,6 +3,7 @@ import React from 'react';
 import GameCard from './GameCard';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Game {
   id: string;
@@ -21,6 +22,7 @@ interface GameSectionProps {
 const GameSection = ({ title, games }: GameSectionProps) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   const handleGameClick = (game: Game) => {
     if (game.path) {
@@ -39,7 +41,7 @@ const GameSection = ({ title, games }: GameSectionProps) => {
         </button>
       </div>
       
-      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1.5">
+      <div className={`grid ${isMobile ? 'grid-cols-4 gap-1' : 'grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-10 gap-1.5'}`}>
         {games.map((game) => (
           <GameCard 
             key={game.id}
