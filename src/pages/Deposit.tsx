@@ -17,8 +17,8 @@ import { useLanguage } from '@/context/LanguageContext';
 
 const firestore = getFirestore(app);
 
-// Preset deposit amounts
-const DEPOSIT_AMOUNTS = [100, 200, 300, 500, 600, 800, 1000, 1200, 1500, 2000];
+// Updated preset deposit amounts (min 200, max 1000)
+const DEPOSIT_AMOUNTS = [200, 300, 500, 600, 800, 1000];
 
 const Deposit = () => {
   const navigate = useNavigate();
@@ -69,7 +69,7 @@ const Deposit = () => {
           setIsProcessing(false);
           setIsComplete(true);
           
-          // Update user balance
+          // Update user balance only when deposit is approved
           if (updateUserBalance && user) {
             updateUserBalance(user.balance + amount);
           }
@@ -102,10 +102,10 @@ const Deposit = () => {
   
   // Handle deposit submission
   const handleSubmit = async () => {
-    if (amount <= 0) {
+    if (amount < 200 || amount > 1000) {
       toast({
         title: "Invalid Amount",
-        description: "Please enter a valid deposit amount",
+        description: "Please enter an amount between 200৳ and 1000৳",
         variant: "destructive",
       });
       return;
@@ -121,9 +121,7 @@ const Deposit = () => {
     }
     
     // Set payment URL based on selected amount
-    if (amount === 100) {
-      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt100/OO0xWr');
-    } else if (amount === 200) {
+    if (amount === 200) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt200/cAVSkv');
     } else if (amount === 500) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt500/2taUT3');
@@ -250,18 +248,19 @@ const Deposit = () => {
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-bold text-white mb-4">{t('selectAmount')}</h2>
               
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {DEPOSIT_AMOUNTS.map((amt) => (
                   <Button
                     key={amt}
                     variant={amount === amt ? "default" : "outline"}
-                    className={`${amount === amt ? 'bg-green-600 hover:bg-green-700' : 'border-green-700 text-green-500'} text-sm md:text-lg font-bold h-12`}
+                    className={`${amount === amt ? 'bg-gray-900 hover:bg-gray-800' : 'border-gray-700'} text-white text-sm md:text-lg font-bold h-12`}
                     onClick={() => handleAmountSelect(amt)}
                   >
                     {amt}{t('currency')}
                   </Button>
                 ))}
               </div>
+              <p className="text-xs text-yellow-400 mt-2">Min: 200৳ - Max: 1000৳</p>
             </div>
             
             {/* Payment Method - bKash Only */}
@@ -288,9 +287,9 @@ const Deposit = () => {
             
             {/* Deposit Button */}
             <Button
-              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-6 text-lg font-bold"
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-6 text-lg font-bold"
               onClick={handleSubmit}
-              disabled={isProcessing || amount <= 0}
+              disabled={isProcessing || amount < 200 || amount > 1000}
             >
               {isProcessing ? (
                 <>
@@ -339,7 +338,7 @@ const Deposit = () => {
               <Button 
                 onClick={() => {
                   window.open(paymentURL, "_blank");
-                  // Record the deposit in Firebase
+                  // Record the deposit in Firebase without updating balance immediately
                   addDoc(collection(firestore, "deposits"), {
                     userId: user?.id || "anonymous",
                     amount,
