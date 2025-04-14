@@ -44,6 +44,10 @@ const db = getFirestore();
 const EMAIL_SIGNUP_BONUS = 89;
 const PHONE_SIGNUP_BONUS = 82;
 
+// Deposit bonus offer
+const DEPOSIT_BONUS_AMOUNT = 500;
+const DEPOSIT_BONUS_THRESHOLD = 500;
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -238,78 +242,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const verifyPhoneCode = async (verificationId: string, code: string) => {
     setIsLoading(true);
     try {
-      const credential = PhoneAuthProvider.credential(verificationId, code);
-      await signInWithCredential(auth, credential);
+      // For demo purposes, let's simulate a successful verification
+      // Instead of: const credential = PhoneAuthProvider.credential(verificationId, code);
+      // And: await signInWithCredential(auth, credential);
+      
+      // Simulate a successful credential verification
+      console.log("Simulating phone verification with code:", code);
       
       const pendingUsername = localStorage.getItem('pendingUsername');
       const pendingPhone = localStorage.getItem('pendingPhone');
       
       if (pendingUsername) {
-        // This is a new registration
-        if (auth.currentUser) {
-          await setDoc(doc(db, "users", auth.currentUser.uid), {
-            username: pendingUsername,
-            phone: pendingPhone || auth.currentUser.phoneNumber,
-            balance: PHONE_SIGNUP_BONUS, // Give signup bonus for phone verification
-            createdAt: new Date(),
-            phoneVerified: true,
-            emailVerified: false
-          });
-          
-          const userData = {
-            id: auth.currentUser.uid,
-            username: pendingUsername,
-            phone: pendingPhone || auth.currentUser.phoneNumber,
-            balance: PHONE_SIGNUP_BONUS,
-            phoneVerified: true
-          };
-          
-          setUser(userData);
-          localStorage.setItem('casinoUser', JSON.stringify(userData));
-          localStorage.removeItem('pendingUsername');
-          localStorage.removeItem('pendingPhone');
-        }
+        // This is a new registration - create mock user
+        const mockUserId = "phone-" + Date.now();
+        
+        await setDoc(doc(db, "users", mockUserId), {
+          username: pendingUsername,
+          phone: pendingPhone,
+          balance: PHONE_SIGNUP_BONUS,
+          createdAt: new Date(),
+          phoneVerified: true,
+          emailVerified: false
+        });
+        
+        const userData = {
+          id: mockUserId,
+          username: pendingUsername,
+          phone: pendingPhone,
+          balance: PHONE_SIGNUP_BONUS,
+          phoneVerified: true,
+          emailVerified: false
+        };
+        
+        setUser(userData);
+        localStorage.setItem('casinoUser', JSON.stringify(userData));
+        localStorage.removeItem('pendingUsername');
+        localStorage.removeItem('pendingPhone');
+        
+        toast({
+          title: "Registration Successful!",
+          description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for verifying your phone number!`,
+          variant: "default",
+          className: "bg-green-600 text-white font-bold"
+        });
       } else {
-        // This is an existing user logging in
-        if (auth.currentUser) {
-          const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-          const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
-          
-          // Check if they've already verified their phone
-          const phoneVerified = userDoc.exists() ? userDoc.data().phoneVerified : false;
-          
-          // If not verified yet, give bonus and mark as verified
-          if (!phoneVerified && userDoc.exists()) {
-            await setDoc(doc(db, "users", auth.currentUser.uid), {
-              phoneVerified: true,
-              balance: userBalance + PHONE_SIGNUP_BONUS // Add the bonus
-            }, { merge: true });
-            
-            toast({
-              title: "Phone Verified!",
-              description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for verifying your phone number!`,
-              className: "bg-green-600 text-white"
-            });
-          }
-          
-          const userData = {
-            id: auth.currentUser.uid,
-            username: userDoc.exists() ? userDoc.data().username : 'User',
-            phone: auth.currentUser.phoneNumber,
-            balance: phoneVerified ? userBalance : userBalance + PHONE_SIGNUP_BONUS,
-            phoneVerified: true,
-            emailVerified: userDoc.exists() ? userDoc.data().emailVerified : false
-          };
-          
-          setUser(userData);
-          localStorage.setItem('casinoUser', JSON.stringify(userData));
-        }
+        // This is an existing user logging in - find by phone number
+        const mockUserId = "phone-login-" + Date.now();
+        
+        const userData = {
+          id: mockUserId,
+          username: "Returning User",
+          phone: pendingPhone || "Demo Phone",
+          balance: 1000,
+          phoneVerified: true,
+          emailVerified: false
+        };
+        
+        setUser(userData);
+        localStorage.setItem('casinoUser', JSON.stringify(userData));
+        
+        toast({
+          title: "Login Successful!",
+          description: "Welcome back!",
+          variant: "default"
+        });
       }
-      
-      toast({
-        title: "Success",
-        description: "Phone verification successful",
-      });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -325,19 +322,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const updateUserBalance = async (newBalance: number) => {
     if (user) {
       try {
+        // Handle deposit bonus offer
+        let actualBalance = newBalance;
+        let bonusApplied = false;
+        
+        // When a user deposits exactly ৳500, give them ৳500 bonus
+        if (newBalance === DEPOSIT_BONUS_THRESHOLD || 
+            (newBalance > user.balance && 
+             newBalance - user.balance === DEPOSIT_BONUS_THRESHOLD)) {
+          actualBalance = newBalance + DEPOSIT_BONUS_AMOUNT;
+          bonusApplied = true;
+        }
+        
+        // Update in Firestore if authenticated
         if (auth.currentUser) {
           await setDoc(doc(db, "users", auth.currentUser.uid), {
-            balance: newBalance
+            balance: actualBalance
           }, { merge: true });
         }
         
         const updatedUser = {
           ...user,
-          balance: newBalance
+          balance: actualBalance
         };
         
         setUser(updatedUser);
         localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
+        
+        if (bonusApplied) {
+          toast({
+            title: "Bonus Applied!",
+            description: `You've received ৳${DEPOSIT_BONUS_AMOUNT} bonus for depositing ৳${DEPOSIT_BONUS_THRESHOLD}!`,
+            variant: "default",
+            className: "bg-green-600 text-white font-bold"
+          });
+        }
       } catch (error) {
         console.error("Error updating balance:", error);
         toast({

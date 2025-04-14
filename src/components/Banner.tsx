@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const bannerImages = [
+  '/lovable-uploads/c982af9d-eacd-44b7-b243-b543609f5eb4.png', // Added the Plinko game image
   '/lovable-uploads/d63bf1f6-ac8d-40d6-a419-67c3915f5333.png',
   '/lovable-uploads/20b5cda9-f61f-4024-bbb6-1cfee6353614.png',
   '/lovable-uploads/dec17aad-46e5-47a3-a4b1-7f0b72c530f0.png', 
@@ -86,22 +87,62 @@ const Banner: React.FC = () => {
         ))}
       </div>
       
-      {/* Promotional text */}
+      {/* Promotional text with new offer for Plinko */}
       <motion.div
         className="absolute left-6 bottom-10 z-20 max-w-xs"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        <motion.div 
-          className="bg-yellow-500/90 text-black px-3 py-1 rounded-md inline-block font-bold mb-2"
-          animate={{ scale: [1, 1.05, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          NEW USERS
-        </motion.div>
-        <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">Get ৳82 Bonus</h2>
-        <p className="text-white/90 text-sm drop-shadow-md">Register and verify your phone number</p>
+        {currentIndex === 0 ? (
+          <>
+            <motion.div 
+              className="bg-yellow-500/90 text-black px-3 py-1 rounded-md inline-block font-bold mb-2"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              NEW GAME
+            </motion.div>
+            <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">PLINKO</h2>
+            <p className="text-white/90 text-sm drop-shadow-md">Drop the ball and win big multipliers!</p>
+          </>
+        ) : currentIndex === 1 ? (
+          <>
+            <motion.div 
+              className="bg-yellow-500/90 text-black px-3 py-1 rounded-md inline-block font-bold mb-2"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              NEW USERS
+            </motion.div>
+            <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">Get ৳82 Bonus</h2>
+            <p className="text-white/90 text-sm drop-shadow-md">Register and verify your phone number</p>
+          </>
+        ) : currentIndex === 2 ? (
+          <>
+            <motion.div 
+              className="bg-green-500/90 text-black px-3 py-1 rounded-md inline-block font-bold mb-2"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              SPECIAL OFFER
+            </motion.div>
+            <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">Deposit ৳500</h2>
+            <p className="text-white/90 text-sm drop-shadow-md">Get ৳500 free bonus instantly!</p>
+          </>
+        ) : (
+          <>
+            <motion.div 
+              className="bg-blue-500/90 text-white px-3 py-1 rounded-md inline-block font-bold mb-2"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              FEATURED
+            </motion.div>
+            <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">{currentIndex === 3 ? "Aviator Game" : "Cricket Betting"}</h2>
+            <p className="text-white/90 text-sm drop-shadow-md">Play now and win big rewards!</p>
+          </>
+        )}
       </motion.div>
     </div>
   );

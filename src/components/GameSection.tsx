@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import GameCard from './GameCard';
 import { useLanguage } from '@/context/LanguageContext';
@@ -154,6 +153,7 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
               isNew={game.isNew}
               onClick={() => handleGameClick(game)}
               onEditClick={isAdmin ? () => handleEditClick(game) : undefined}
+              requiresLogin={!isAuthenticated && !game.path?.includes('admin')}
             />
           ))}
         </div>

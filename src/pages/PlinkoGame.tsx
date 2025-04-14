@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Loader2, Play, Pause, RotateCcw, History } from 'lucide-react';
@@ -13,6 +14,8 @@ import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const firestore = getFirestore(app);
 
@@ -20,7 +23,7 @@ const firestore = getFirestore(app);
 const GRAVITY = 0.7;
 const BOUNCE_FACTOR = 0.6;
 const FRICTION = 0.97;
-const RANDOM_FACTOR = 0.8; // Increased for more randomness
+const RANDOM_FACTOR = 0.8;
 
 // Pin generation settings
 const PIN_ROWS_MIN = 8;
@@ -33,22 +36,22 @@ const PIN_OFFSET_EVEN = HORIZONTAL_SPACING / 2;
 // Multipliers for the game
 const MULTIPLIERS = {
   low: [
-    { value: '1.0x', color: 'bg-blue-400' },
-    { value: '1.1x', color: 'bg-blue-500' },
+    { value: '0.1x', color: 'bg-red-500' },
+    { value: '0.2x', color: 'bg-red-600' },
+    { value: '0.3x', color: 'bg-orange-500' },
+    { value: '0.5x', color: 'bg-orange-400' },
+    { value: '0.7x', color: 'bg-yellow-500' },
+    { value: '1x', color: 'bg-yellow-400' },
     { value: '1.2x', color: 'bg-green-400' },
     { value: '1.3x', color: 'bg-green-500' },
-    { value: '1.5x', color: 'bg-yellow-500' },
-    { value: '1.7x', color: 'bg-orange-400' },
-    { value: '2.0x', color: 'bg-orange-500' },
-    { value: '2.2x', color: 'bg-purple-500' },
-    { value: '2.5x', color: 'bg-pink-500' },
-    { value: '3.0x', color: 'bg-red-500' },
-    { value: '5.0x', color: 'bg-red-600' },
-    { value: '10.0x', color: 'bg-red-700' },
-    { value: '15.0x', color: 'bg-red-800' },
-    { value: '20.0x', color: 'bg-rose-900' },
-    { value: '45.0x', color: 'bg-rose-950' },
-    { value: '100.0x', color: 'bg-black' },
+    { value: '1.5x', color: 'bg-blue-500' },
+    { value: '1.7x', color: 'bg-blue-400' },
+    { value: '2x', color: 'bg-purple-500' },
+    { value: '3x', color: 'bg-purple-400' },
+    { value: '5x', color: 'bg-pink-500' },
+    { value: '10x', color: 'bg-pink-400' },
+    { value: '20x', color: 'bg-gray-700' },
+    { value: '45x', color: 'bg-black' },
   ],
   medium: [
     { value: '0.2x', color: 'bg-red-500' },
@@ -101,7 +104,8 @@ interface BetRecord {
 
 const PlinkoGame = () => {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const canvasRef = useRef<HTMLDivElement>(null);
   const ballsContainerRef = useRef<HTMLDivElement>(null);
@@ -133,13 +137,26 @@ const PlinkoGame = () => {
     multiplier: string | null;
     color: string;
     scale: number;
+    rotation: number;
   }[]>([]);
+
+  // Check for authentication on mount
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please login to play Plinko game",
+        variant: "destructive",
+      });
+      setTimeout(() => navigate('/'), 2000);
+    }
+  }, [isAuthenticated, navigate]);
 
   // Loading animation
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2000);
+    }, 1500);
     
     return () => clearTimeout(timer);
   }, []);
@@ -199,6 +216,15 @@ const PlinkoGame = () => {
   
   // Drop ball
   const dropBall = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please login to play games",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (isPlaying || autoPlayActive) return;
     
     if (balance < betAmount) {
@@ -232,11 +258,11 @@ const PlinkoGame = () => {
     
     // Add initial ball with a slight random x velocity
     const ballColors = [
-      'bg-gradient-to-br from-white to-blue-100',
-      'bg-gradient-to-br from-white to-yellow-100',
-      'bg-gradient-to-br from-white to-green-100',
-      'bg-gradient-to-br from-white to-purple-100',
-      'bg-gradient-to-br from-white to-red-100'
+      'bg-gradient-to-br from-white to-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.6)]',
+      'bg-gradient-to-br from-white to-yellow-300 shadow-[0_0_15px_rgba(252,211,77,0.6)]',
+      'bg-gradient-to-br from-white to-green-300 shadow-[0_0_15px_rgba(74,222,128,0.6)]',
+      'bg-gradient-to-br from-white to-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.6)]',
+      'bg-gradient-to-br from-white to-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.6)]'
     ];
     
     const randomColorIndex = Math.floor(Math.random() * ballColors.length);
@@ -245,12 +271,13 @@ const PlinkoGame = () => {
       id: ballId,
       x: startX,
       y: startY,
-      velocityX: (Math.random() - 0.5) * 4, // Increased random initial velocity for more randomness
+      velocityX: (Math.random() - 0.5) * 4,
       velocityY: 0,
       isMoving: true,
       multiplier: null,
       color: ballColors[randomColorIndex],
-      scale: 1
+      scale: 1,
+      rotation: 0
     }]);
     
     // Start the physics simulation after a short delay
@@ -261,6 +288,15 @@ const PlinkoGame = () => {
   
   // Start auto play
   const startAutoPlay = (count: number = 5) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please login to play games",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (autoPlayActive) return;
     setAutoPlayActive(true);
     setRemainingBalls(count);
@@ -296,21 +332,22 @@ const PlinkoGame = () => {
     setRemainingBalls(0);
   };
   
-  // Simulate physics for the ball drop with improved animation
+  // Simulate physics for the ball drop with improved animation and 3D effect
   const simulateBallDrop = (ballId: string, startX: number, startY: number, ballColor: string) => {
     let x = startX;
     let y = startY;
-    let vx = (Math.random() - 0.5) * 5; // Increased for more randomness
+    let vx = (Math.random() - 0.5) * 5;
     let vy = 0;
     let isMoving = true;
     let lastUpdateTime = performance.now();
+    let rotation = 0;
     
     // Physics simulation loop with time-based updates for smoother animation
     const updatePhysics = (currentTime: number) => {
       if (!isMoving || !canvasRef.current || !ballsContainerRef.current) return;
       
       // Calculate time delta for smooth physics regardless of frame rate
-      const deltaTime = (currentTime - lastUpdateTime) / 16; // Normalize to ~60fps
+      const deltaTime = (currentTime - lastUpdateTime) / 16;
       lastUpdateTime = currentTime;
       
       // Apply gravity with time scaling
@@ -320,24 +357,63 @@ const PlinkoGame = () => {
       x += vx * deltaTime;
       y += vy * deltaTime;
       
+      // Update rotation based on velocity for realistic rolling effect
+      rotation += vx * 5 * deltaTime;
+      
       // Get container dimensions
       const containerWidth = canvasRef.current.clientWidth;
       const containerHeight = canvasRef.current.clientHeight;
       
-      // Bounce off walls with improved physics
+      // Bounce off walls with improved physics and 3D effect
       if (x - PIN_RADIUS < 0) {
         x = PIN_RADIUS;
         vx = -vx * BOUNCE_FACTOR;
         // Add some vertical movement when bouncing off walls
         vy += (Math.random() - 0.5) * 2;
+        
+        // Visual feedback - squish effect
+        setActiveBalls(prev => prev.map(ball => {
+          if (ball.id === ballId) {
+            return { ...ball, scale: 0.85 };
+          }
+          return ball;
+        }));
+        
+        // Reset scale after a short delay
+        setTimeout(() => {
+          setActiveBalls(prev => prev.map(ball => {
+            if (ball.id === ballId) {
+              return { ...ball, scale: 1 };
+            }
+            return ball;
+          }));
+        }, 50);
       } else if (x + PIN_RADIUS > containerWidth) {
         x = containerWidth - PIN_RADIUS;
         vx = -vx * BOUNCE_FACTOR;
         // Add some vertical movement when bouncing off walls
         vy += (Math.random() - 0.5) * 2;
+        
+        // Visual feedback - squish effect
+        setActiveBalls(prev => prev.map(ball => {
+          if (ball.id === ballId) {
+            return { ...ball, scale: 0.85 };
+          }
+          return ball;
+        }));
+        
+        // Reset scale after a short delay
+        setTimeout(() => {
+          setActiveBalls(prev => prev.map(ball => {
+            if (ball.id === ballId) {
+              return { ...ball, scale: 1 };
+            }
+            return ball;
+          }));
+        }, 50);
       }
       
-      // Check for collision with pins - improved collision detection
+      // Check for collision with pins - improved collision detection with 3D effect
       pins.forEach(pin => {
         const dx = pin.x - x;
         const dy = pin.y - y;
@@ -362,19 +438,19 @@ const PlinkoGame = () => {
             
             // Move ball outside of collision
             const overlap = PIN_RADIUS * 2 - distance;
-            x -= overlap * nx * 1.01; // Move slightly more to prevent sticking
+            x -= overlap * nx * 1.01;
             y -= overlap * ny * 1.01;
             
             // Add randomness to make the game more interesting - INCREASED RANDOMNESS
             vx += (Math.random() - 0.5) * RANDOM_FACTOR * 1.5;
             vy += (Math.random() - 0.5) * RANDOM_FACTOR * 1.5;
             
-            // Visual feedback for collision - update ball state
+            // Visual feedback for collision - squish effect
             setActiveBalls(prev => prev.map(ball => {
               if (ball.id === ballId) {
                 return { 
                   ...ball, 
-                  scale: 0.9, // Squish effect on collision
+                  scale: 0.9,
                 };
               }
               return ball;
@@ -427,7 +503,8 @@ const PlinkoGame = () => {
               velocityY: vy, 
               isMoving: false, 
               multiplier: multiplierText,
-              scale: 1.2 // Grow effect when landing
+              scale: 1.2,
+              rotation
             };
           }
           return ball;
@@ -453,21 +530,21 @@ const PlinkoGame = () => {
         if (multiplierValue >= 10) {
           toast({
             title: "BIG WIN!",
-            description: `${winAmount.toFixed(2)}€`,
+            description: `${winAmount.toFixed(2)}৳`,
             variant: "default",
             className: "bg-green-600 text-white font-bold animate-bounce"
           });
         } else if (multiplierValue >= 2) {
           toast({
             title: t('youWon'),
-            description: `${winAmount.toFixed(2)}€`,
+            description: `${winAmount.toFixed(2)}৳`,
             variant: "default",
             className: "bg-green-500 text-white font-bold"
           });
         } else {
           toast({
             title: winAmount > betAmount ? t('youWon') : "Try again",
-            description: `${winAmount.toFixed(2)}€`,
+            description: `${winAmount.toFixed(2)}৳`,
             variant: "default",
             className: winAmount > betAmount ? "bg-green-500 text-white" : "bg-gray-700 text-white"
           });
@@ -496,7 +573,7 @@ const PlinkoGame = () => {
       // Update ball position
       setActiveBalls(prev => prev.map(ball => {
         if (ball.id === ballId) {
-          return { ...ball, x, y, velocityX: vx, velocityY: vy, isMoving };
+          return { ...ball, x, y, velocityX: vx, velocityY: vy, isMoving, rotation };
         }
         return ball;
       }));
@@ -514,7 +591,7 @@ const PlinkoGame = () => {
   // Loading screen
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-indigo-950 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-b from-indigo-950 to-indigo-900 flex flex-col">
         <Header />
         <div className="flex-1 flex flex-col items-center justify-center">
           <motion.div
@@ -563,7 +640,7 @@ const PlinkoGame = () => {
   }
   
   return (
-    <div className="min-h-screen bg-indigo-950 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-950 to-indigo-900 flex flex-col">
       <Header />
       <main className="flex-1 flex">
         {/* Left control panel */}
@@ -574,7 +651,7 @@ const PlinkoGame = () => {
                 onClick={() => setGameMode('manual')}
                 className={cn(
                   "flex-1 py-2 text-center text-sm",
-                  gameMode === 'manual' ? "bg-indigo-500 text-white font-bold" : "bg-transparent"
+                  gameMode === 'manual' ? "bg-green-600 text-white font-bold" : "bg-transparent"
                 )}
               >
                 Manual
@@ -583,7 +660,7 @@ const PlinkoGame = () => {
                 onClick={() => setGameMode('auto')}
                 className={cn(
                   "flex-1 py-2 text-center text-sm",
-                  gameMode === 'auto' ? "bg-indigo-500 text-white font-bold" : "bg-transparent"
+                  gameMode === 'auto' ? "bg-green-600 text-white font-bold" : "bg-transparent"
                 )}
               >
                 Auto
@@ -598,7 +675,7 @@ const PlinkoGame = () => {
                 onClick={() => setRiskLevel('low')}
                 className={cn(
                   "flex-1 py-2 text-center text-sm rounded-md",
-                  riskLevel === 'low' ? "bg-indigo-500 text-white font-bold" : "bg-gray-700"
+                  riskLevel === 'low' ? "bg-green-600 text-white font-bold" : "bg-gray-700"
                 )}
               >
                 LOW
@@ -607,7 +684,7 @@ const PlinkoGame = () => {
                 onClick={() => setRiskLevel('medium')}
                 className={cn(
                   "flex-1 py-2 text-center text-sm rounded-md",
-                  riskLevel === 'medium' ? "bg-indigo-500 text-white font-bold" : "bg-gray-700"
+                  riskLevel === 'medium' ? "bg-green-600 text-white font-bold" : "bg-gray-700"
                 )}
               >
                 MEDIUM
@@ -616,7 +693,7 @@ const PlinkoGame = () => {
                 onClick={() => setRiskLevel('high')}
                 className={cn(
                   "flex-1 py-2 text-center text-sm rounded-md",
-                  riskLevel === 'high' ? "bg-indigo-500 text-white font-bold" : "bg-gray-700"
+                  riskLevel === 'high' ? "bg-green-600 text-white font-bold" : "bg-gray-700"
                 )}
               >
                 HIGH
@@ -635,7 +712,7 @@ const PlinkoGame = () => {
                 className="my-4"
                 onValueChange={(value) => setRows(value[0])}
               />
-              <div className="text-center font-bold text-indigo-300">{rows} ROWS</div>
+              <div className="text-center font-bold text-green-400">{rows} ROWS</div>
             </div>
           </div>
           
@@ -649,7 +726,7 @@ const PlinkoGame = () => {
                 <ChevronDown size={20} />
               </button>
               <div className="flex-1 text-center font-bold text-yellow-400">
-                €{betAmount.toFixed(2)}
+                ৳{betAmount.toFixed(2)}
               </div>
               <button
                 onClick={() => updateBetAmount(0.1)}
@@ -663,12 +740,12 @@ const PlinkoGame = () => {
           {gameMode === 'manual' ? (
             <button
               onClick={dropBall}
-              disabled={isPlaying || balance < betAmount}
+              disabled={isPlaying || balance < betAmount || !isAuthenticated}
               className={cn(
                 "w-full py-3 rounded-full text-center font-bold mb-4",
-                isPlaying || balance < betAmount 
+                isPlaying || balance < betAmount || !isAuthenticated 
                   ? "bg-gray-600 text-gray-400" 
-                  : "bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
+                  : "bg-green-600 text-white hover:bg-green-700 transition-colors"
               )}
             >
               {isPlaying ? (
@@ -682,24 +759,24 @@ const PlinkoGame = () => {
             <div className="space-y-2 mb-4">
               <button
                 onClick={() => startAutoPlay(5)}
-                disabled={autoPlayActive || balance < betAmount}
+                disabled={autoPlayActive || balance < betAmount || !isAuthenticated}
                 className={cn(
                   "w-full py-2 rounded-full text-center font-bold text-sm",
-                  autoPlayActive || balance < betAmount 
+                  autoPlayActive || balance < betAmount || !isAuthenticated 
                     ? "bg-gray-600 text-gray-400" 
-                    : "bg-indigo-500 text-white hover:bg-indigo-600"
+                    : "bg-green-600 text-white hover:bg-green-700"
                 )}
               >
                 5 DROPS
               </button>
               <button
                 onClick={() => startAutoPlay(10)}
-                disabled={autoPlayActive || balance < betAmount}
+                disabled={autoPlayActive || balance < betAmount || !isAuthenticated}
                 className={cn(
                   "w-full py-2 rounded-full text-center font-bold text-sm",
-                  autoPlayActive || balance < betAmount 
+                  autoPlayActive || balance < betAmount || !isAuthenticated 
                     ? "bg-gray-600 text-gray-400" 
-                    : "bg-indigo-500 text-white hover:bg-indigo-600"
+                    : "bg-green-600 text-white hover:bg-green-700"
                 )}
               >
                 10 DROPS
@@ -727,10 +804,10 @@ const PlinkoGame = () => {
                     >
                       <div className="flex flex-col">
                         <span className="text-gray-400">{bet.timestamp}</span>
-                        <span>€{bet.betAmount.toFixed(2)} × {bet.multiplier}</span>
+                        <span>৳{bet.betAmount.toFixed(2)} × {bet.multiplier}</span>
                       </div>
                       <span className={bet.winAmount > bet.betAmount ? "text-green-400" : "text-red-400"}>
-                        €{bet.winAmount.toFixed(2)}
+                        ৳{bet.winAmount.toFixed(2)}
                       </span>
                     </div>
                   ))
@@ -744,13 +821,14 @@ const PlinkoGame = () => {
           </div>
           
           <div className="absolute bottom-0 left-0 right-0 p-2 bg-gray-800">
-            <div className="text-xs text-center mb-1 text-gray-400">DEMO BALANCE</div>
-            <div className="text-center text-yellow-400 font-bold mb-1">€{Math.floor(balance)}</div>
+            <div className="text-xs text-center mb-1 text-gray-400">BALANCE</div>
+            <div className="text-center text-yellow-400 font-bold mb-1">৳{Math.floor(balance)}</div>
             <div className="flex justify-center gap-2 mt-2">
               <Button size="sm" variant="outline" className="bg-gray-700 hover:bg-gray-600 w-8 h-8 p-0">
                 <RotateCcw size={14} />
               </Button>
-              <Button size="sm" variant="outline" className="bg-gray-700 hover:bg-gray-600 w-8 h-8 p-0">
+              <Button size="sm" variant="outline" className="bg-gray-700 hover:bg-gray-600 w-8 h-8 p-0" 
+                onClick={() => navigate('/deposit')}>
                 <History size={14} />
               </Button>
             </div>
@@ -762,14 +840,14 @@ const PlinkoGame = () => {
           {/* Header */}
           <div className="h-12 bg-indigo-950 flex items-center justify-between px-4 border-b border-indigo-900">
             <div className="text-sm text-gray-400">Plinko Game</div>
-            <div className="text-4xl font-bold tracking-widest text-white">PLINKO</div>
+            <div className="text-4xl font-bold tracking-wider text-white">PLINKO</div>
             {lastWin !== null && (
               <motion.div 
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className="text-yellow-400 font-bold"
               >
-                LAST WIN: €{lastWin.toFixed(2)}
+                LAST WIN: ৳{lastWin.toFixed(2)}
               </motion.div>
             )}
           </div>
@@ -796,7 +874,7 @@ const PlinkoGame = () => {
               ))}
             </div>
             
-            {/* Pins with glow effect - ALWAYS VISIBLE now */}
+            {/* Pins with enhanced 3D glow effect */}
             {pins.map((pin, index) => (
               <motion.div 
                 key={index}
@@ -805,7 +883,7 @@ const PlinkoGame = () => {
                   left: `${pin.x}px`,
                   top: `${pin.y}px`,
                   transform: 'translate(-50%, -50%)',
-                  boxShadow: '0 0 8px rgba(255, 255, 255, 0.8), 0 0 4px rgba(99, 102, 241, 0.6)'
+                  boxShadow: '0 0 10px rgba(255, 255, 255, 0.9), 0 0 20px rgba(99, 102, 241, 0.7)'
                 }}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ 
@@ -820,7 +898,7 @@ const PlinkoGame = () => {
               />
             ))}
             
-            {/* Balls container with improved animation */}
+            {/* Balls container with improved animation and 3D effects */}
             <div ref={ballsContainerRef} className="absolute inset-0">
               <AnimatePresence>
                 {activeBalls.map(ball => (
@@ -830,8 +908,8 @@ const PlinkoGame = () => {
                     style={{
                       left: `${ball.x}px`,
                       top: `${ball.y}px`,
-                      transform: `translate(-50%, -50%) scale(${ball.scale})`,
-                      boxShadow: '0 0 10px rgba(255, 255, 255, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.8)'
+                      transform: `translate(-50%, -50%) scale(${ball.scale}) rotate(${ball.rotation}deg)`,
+                      boxShadow: '0 0 15px rgba(255, 255, 255, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.9)'
                     }}
                     initial={{ scale: 0 }}
                     animate={{ scale: ball.scale }}
@@ -842,6 +920,10 @@ const PlinkoGame = () => {
                       damping: 30
                     }}
                   >
+                    {/* 3D effect inner highlight */}
+                    <div className="absolute inset-1 rounded-full bg-white/30 blur-sm"></div>
+                    
+                    {/* Multiplier text */}
                     {ball.multiplier && (
                       <motion.span
                         className="absolute inset-0 flex items-center justify-center text-xs font-bold"
@@ -857,29 +939,41 @@ const PlinkoGame = () => {
               </AnimatePresence>
             </div>
             
-            {/* Path tracer effect - shows ball's possible paths */}
+            {/* Path tracer effect with improved glow */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none">
               <defs>
                 <linearGradient id="pathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
                   <stop offset="100%" stopColor="rgba(255,255,255,0)" />
                 </linearGradient>
+                
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
               </defs>
-              {/* Show more path guides to indicate randomness */}
-              {Array.from({length: pins.length / 2}).map((_, i) => {
+              
+              {/* Show more path guides with glow */}
+              {Array.from({length: 10}).map((_, i) => {
                 const startX = canvasRef.current ? canvasRef.current.clientWidth / 2 : 0;
                 const startY = 20;
-                const endX = startX + (Math.random() * 300 - 150); // More spread
+                const endX = startX + (Math.random() * 300 - 150);
                 const endY = canvasRef.current ? canvasRef.current.clientHeight - 50 : 400;
+                const controlX = startX + (Math.random() * 100 - 50);
+                const controlY = (startY + endY) / 2;
                 
                 return (
                   <motion.path
                     key={`path-${i}`}
-                    d={`M ${startX} ${startY} Q ${startX + (Math.random() * 200 - 100)} ${(startY + endY) / 2}, ${endX} ${endY}`}
+                    d={`M ${startX} ${startY} Q ${controlX} ${controlY}, ${endX} ${endY}`}
                     stroke="url(#pathGradient)"
                     strokeWidth="1"
                     fill="none"
                     strokeDasharray="3,3"
+                    filter="url(#glow)"
                     initial={{ pathLength: 0, opacity: 0 }}
                     animate={{ 
                       pathLength: 1, 
