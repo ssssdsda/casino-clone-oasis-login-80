@@ -125,10 +125,14 @@ const Deposit = () => {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt100/OO0xWr');
     } else if (amount === 200) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt200/cAVSkv');
+    } else if (amount === 300) {
+      setPaymentURL('89d238df-a6ab-48f3-b04c-2c788248f0d0');
     } else if (amount === 500) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt500/2taUT3');
     } else if (amount === 1000) {
       setPaymentURL('b7a39122-0062-4d4a-b799-11908caf422b');
+    } else if (amount === 1500) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt1500/BktX0l');
     } else {
       // For other amounts, use the generic format
       setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);

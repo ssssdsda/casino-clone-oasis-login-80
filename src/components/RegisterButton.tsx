@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone, User, Lock } from 'lucide-react';
+import { Mail, Phone, User, Lock, Gift } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export function RegisterButton() {
@@ -110,6 +110,16 @@ export function RegisterButton() {
               Create a new account to start playing.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="bg-yellow-600/20 border border-yellow-500/30 rounded-lg p-3 mb-4">
+            <div className="flex items-start space-x-2">
+              <Gift className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-yellow-300 font-medium text-sm">Sign up bonus!</p>
+                <p className="text-gray-300 text-xs">Get ৳89 free when you register and verify your email.</p>
+              </div>
+            </div>
+          </div>
           
           <Tabs defaultValue="email" value={registerMethod} onValueChange={(v) => setRegisterMethod(v as 'email' | 'phone')}>
             <TabsList className="grid grid-cols-2 mb-4">
@@ -149,6 +159,7 @@ export function RegisterButton() {
                     className="bg-casino-dark border-gray-700 text-white"
                     placeholder="Your email address"
                   />
+                  <p className="text-xs text-blue-400">A verification link will be sent to this email.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="register-password" className="text-white flex items-center gap-2">

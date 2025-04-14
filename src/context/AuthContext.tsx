@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -5,7 +6,8 @@ import {
   PhoneAuthProvider,
   signOut,
   onAuthStateChanged,
-  signInWithCredential
+  signInWithCredential,
+  sendEmailVerification
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +20,7 @@ interface User {
   phone?: string;
   balance: number;
   role?: string;
+  emailVerified?: boolean;
 }
 
 interface AuthContextType {
@@ -35,6 +38,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const db = getFirestore();
+
+// Signup bonus amount
+const SIGNUP_BONUS = 89;
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -68,7 +74,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             email: firebaseUser.email || undefined,
             phone: firebaseUser.phoneNumber || undefined,
             balance: userBalance,
-            role: userRole
+            role: userRole,
+            emailVerified: firebaseUser.emailVerified
           };
           
           setUser(userData);
@@ -100,10 +107,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
+      // Send email verification
+      await sendEmailVerification(userCredential.user);
+      
+      // Add signup bonus for new registrations
       await setDoc(doc(db, "users", userCredential.user.uid), {
         username,
         email,
-        balance: 0,
+        balance: SIGNUP_BONUS, // Give signup bonus
         createdAt: new Date()
       });
       
@@ -111,15 +122,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         id: userCredential.user.uid,
         username,
         email,
-        balance: 0
+        balance: SIGNUP_BONUS,
+        emailVerified: false
       };
       
       setUser(newUser);
       localStorage.setItem('casinoUser', JSON.stringify(newUser));
       
       toast({
-        title: "Success",
-        description: "Registration successful",
+        title: "Registration successful!",
+        description: "Please verify your email to complete registration. A verification link has been sent to your email address. You've received ৳89 as a signup bonus!",
       });
     } catch (error: any) {
       toast({
