@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Upload, Image, Edit, Trash2 } from 'lucide-react';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import app from '@/lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -231,6 +231,26 @@ const GridChanger = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please select an image file",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Image size should be less than 5MB",
+      });
+      return;
+    }
+
     setSelectedFile(file);
     
     // Create a preview URL for the selected file
@@ -246,6 +266,21 @@ const GridChanger = () => {
     setGamePath(game.path || '');
     setPreviewImage(null);
     setSelectedFile(null);
+  };
+
+  // Function to delete old image from Firebase Storage
+  const deleteOldImage = async (imageUrl: string) => {
+    try {
+      // Only delete if it's a Firebase Storage URL
+      if (imageUrl.includes('firebasestorage.googleapis.com')) {
+        const storageRef = ref(storage, imageUrl);
+        await deleteObject(storageRef);
+        console.log('Old image deleted successfully');
+      }
+    } catch (error) {
+      console.error("Error deleting old image:", error);
+      // Continue with the process even if delete fails
+    }
   };
 
   const uploadImageToFirebase = async (file: File): Promise<string> => {
@@ -276,6 +311,10 @@ const GridChanger = () => {
 
       // If a new file was selected, upload it to Firebase Storage
       if (selectedFile) {
+        // Delete the old image if it exists and is from Firebase
+        await deleteOldImage(selectedGame.image);
+        
+        // Upload new image
         imageUrl = await uploadImageToFirebase(selectedFile);
       }
 
@@ -414,10 +453,19 @@ const GridChanger = () => {
     }
   };
 
-  const handleDeleteGame = (gameId: string) => {
+  const handleDeleteGame = async (gameId: string) => {
     try {
       const updatedGames = {...games};
       const categoryGames = updatedGames[currentCategory] || [];
+      
+      // Find the game to delete for image cleanup
+      const gameToDelete = categoryGames.find(game => game.id === gameId);
+      
+      if (gameToDelete && gameToDelete.image) {
+        // Delete the image from Firebase Storage if it's a Firebase URL
+        await deleteOldImage(gameToDelete.image);
+      }
+      
       updatedGames[currentCategory] = categoryGames.filter(game => game.id !== gameId);
       
       setGames(updatedGames);
@@ -473,9 +521,9 @@ const GridChanger = () => {
                 />
               </div>
               
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6 justify-items-center">
                 {(games[category.id] || []).map((game) => (
-                  <div key={game.id} className="bg-gray-800 rounded-lg p-4 flex items-center gap-4">
+                  <div key={game.id} className="bg-gray-800 rounded-lg p-4 flex items-center gap-4 w-full max-w-md">
                     <img 
                       src={game.image} 
                       alt={game.title} 
@@ -511,7 +559,7 @@ const GridChanger = () => {
                 
                 <Button 
                   variant="outline" 
-                  className="h-32 border-dashed border-gray-700 hover:border-casino-accent"
+                  className="h-32 border-dashed border-gray-700 hover:border-casino-accent w-full max-w-md"
                   onClick={() => {
                     setSelectedGame(null);
                     setGameTitle('');
@@ -537,7 +585,7 @@ const GridChanger = () => {
                 </Button>
               </div>
 
-              <Card id="edit-form">
+              <Card id="edit-form" className="max-w-2xl mx-auto">
                 <CardHeader>
                   <CardTitle>{selectedGame ? 'Edit Game' : 'Add New Game'}</CardTitle>
                   <CardDescription>
