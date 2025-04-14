@@ -1,80 +1,66 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import Index from "./pages/Index";
-import ImagesChanger from "./pages/ImagesChanger";
-import SpinGame from "./pages/SpinGame";
-import SpinControl from "./pages/SpinControl";
-import MegaSpin from "./pages/MegaSpin";
-import MegaSpinControl from "./pages/MegaSpinControl";
-import PlinkoGame from "./pages/PlinkoGame";
-import Withdrawal from "./pages/Withdrawal";
-import Deposit from "./pages/Deposit";
-import LiveCricket from "./pages/LiveCricket";
-import LiveFootball from "./pages/LiveFootball";
-import SuperAce from "./pages/SuperAce";
-import CoinsGame from "./pages/CoinsGame";
-import MoneyGram from "./pages/MoneyGram";
-import AviatorGame from "./pages/AviatorGame";
-import BoxingKingGame from "./pages/BoxingKingGame";
-import FortuneGemsGame from "./pages/FortuneGemsGame";
-import CoinUpGame from "./pages/CoinUpGame";
-import GoldenBasinGame from "./pages/GoldenBasinGame";
-import Bonus from "./pages/Bonus";
-import BonusControl from "./pages/BonusControl";
-import GridChanger from "./pages/GridChanger";
-import NotFound from "./pages/NotFound";
-import { LanguageProvider } from "./context/LanguageContext";
-import AviatorControl from "./pages/AviatorControl";
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Index from '@/pages/Index';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import NotFound from '@/pages/NotFound';
+import { AuthProvider } from '@/context/AuthContext';
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toaster"
+import AviatorGame from '@/pages/AviatorGame';
+import BoxingKingGame from '@/pages/BoxingKingGame';
+import SpinGame from '@/pages/SpinGame';
+import MegaSpin from '@/pages/MegaSpin';
+import CoinUpGame from '@/pages/CoinUpGame';
+import GoldenBasin from '@/pages/GoldenBasin';
+import SuperAce from '@/pages/SuperAce';
+import FortuneGems from '@/pages/FortuneGems';
+import MoneyGram from '@/pages/MoneyGram';
+import LiveCricket from '@/pages/LiveCricket';
+import LiveFootball from '@/pages/LiveFootball';
+import SevenCoins from '@/pages/SevenCoins';
+import AviatorControl from '@/pages/AviatorControl';
 
-const queryClient = new QueryClient();
+function App() {
+  const [isLoading, setIsLoading] = useState(true);
 
-const routes = [
-  <Route path="/" element={<Index />} />,
-  <Route path="/admin/images" element={<ImagesChanger />} />,
-  <Route path="/admin/grid-changer" element={<GridChanger />} />,
-  <Route path="/game/spin" element={<SpinGame />} />,
-  <Route path="/admin/spin-control" element={<SpinControl />} />,
-  <Route path="/game/megaspin" element={<MegaSpin />} />,
-  <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />,
-  <Route path="/game/plinko" element={<PlinkoGame />} />,
-  <Route path="/game/moneygram" element={<MoneyGram />} />,
-  <Route path="/game/aviator" element={<AviatorGame />} />,
-  <Route path="/game/aviator-control" element={<AviatorControl />} />,
-  <Route path="/game/boxing-king" element={<BoxingKingGame />} />,
-  <Route path="/game/fortune-gems" element={<FortuneGemsGame />} />,
-  <Route path="/game/coin-up" element={<CoinUpGame />} />,
-  <Route path="/game/golden-basin" element={<GoldenBasinGame />} />,
-  <Route path="/withdrawal" element={<Withdrawal />} />,
-  <Route path="/deposit" element={<Deposit />} />,
-  <Route path="/bonus" element={<Bonus />} />,
-  <Route path="/admin/bonus-control" element={<BonusControl />} />,
-  <Route path="/game/live-cricket" element={<LiveCricket />} />,
-  <Route path="/game/live-football" element={<LiveFootball />} />,
-  <Route path="/game/super-ace" element={<SuperAce />} />,
-  <Route path="/game/777coins" element={<CoinsGame />} />,
-  <Route path="*" element={<NotFound />} />
-];
+  useEffect(() => {
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+  }, []);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <LanguageProvider>
-        <TooltipProvider>
+  return (
+    <Router>
+      <AuthProvider>
+        <ThemeProvider
+          defaultTheme="dark"
+          storageKey="casino-theme"
+        >
           <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {routes}
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </LanguageProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/game/aviator" element={<AviatorGame />} />
+            <Route path="/game/boxing-king" element={<BoxingKingGame />} />
+            <Route path="/game/spin" element={<SpinGame />} />
+            <Route path="/game/megaspin" element={<MegaSpin />} />
+            <Route path="/game/coin-up" element={<CoinUpGame />} />
+            <Route path="/game/golden-basin" element={<GoldenBasin />} />
+            <Route path="/game/super-ace" element={<SuperAce />} />
+            <Route path="/game/fortune-gems" element={<FortuneGems />} />
+            <Route path="/game/moneygram" element={<MoneyGram />} />
+            <Route path="/game/live-cricket" element={<LiveCricket />} />
+            <Route path="/game/live-football" element={<LiveFootball />} />
+            <Route path="/game/777coins" element={<SevenCoins />} />
+            <Route path="/game/aviator-control" element={<AviatorControl />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ThemeProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
 
 export default App;

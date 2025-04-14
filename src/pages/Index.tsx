@@ -23,7 +23,7 @@ const featuredGames = [
   {
     id: 'boxing-king',
     title: 'Boxing King',
-    image: '/lovable-uploads/23ba5110-65e1-4f2e-8330-95f1a62d130d.png',
+    image: '/lovable-uploads/5e74a510-40f4-4987-8011-5d4569b5aa7c.png',
     multiplier: '50000',
     isNew: true,
     path: '/game/boxing-king'
@@ -31,7 +31,7 @@ const featuredGames = [
   {
     id: 'casino-win-spin',
     title: 'Casino Win Spin',
-    image: '/lovable-uploads/92fab6e1-76fd-48ee-b9ea-819c8f10fef0.png',
+    image: '/lovable-uploads/da68ee0a-2bd5-45b4-9054-079d162553d5.png',
     multiplier: '20000',
     isNew: true,
     path: '/game/spin'
@@ -39,7 +39,7 @@ const featuredGames = [
   {
     id: 'mega-spin',
     title: 'Mega Spin',
-    image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
+    image: '/lovable-uploads/700ecf21-9025-4468-ad55-9ac9e464d922.png',
     multiplier: '40000',
     isNew: true,
     path: '/game/megaspin'
@@ -243,7 +243,7 @@ const gameCategories: Record<string, any[]> = {
   slots: slotGames,
   liveGames,
   tableGames: casinoGames,
-  sports: [],  // Empty array for now but can be populated later
+  sports: [],
   fishing: [],
   arcade: []
 };
