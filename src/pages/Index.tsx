@@ -36,7 +36,7 @@ const featuredGames = [
   {
     id: 'mega-spin',
     title: 'Mega Tilt Spin',
-    image: '/lovable-uploads/60a4d162-c8e1-4253-bd9c-50266479e10f.png',
+    image: '/lovable-uploads/1d04069d-e915-4604-8d23-5d2144c3fd5f.png',
     isNew: true,
     path: '/game/megaspin'
   },

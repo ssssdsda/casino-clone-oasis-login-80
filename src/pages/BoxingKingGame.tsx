@@ -1,13 +1,20 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, ArrowLeft, Volume2, VolumeX, RefreshCw } from 'lucide-react';
+import { Settings, ArrowLeft, Volume2, VolumeX, RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Define symbols for the reels
 const symbols = [
@@ -48,6 +55,7 @@ const BoxingKingGame = () => {
   const [winAmount, setWinAmount] = useState(0);
   const [reels, setReels] = useState(createInitialReels());
   const [winLines, setWinLines] = useState([]);
+  const [showRules, setShowRules] = useState(false);
   const spinSound = useRef(null);
   const winSound = useRef(null);
   
@@ -267,8 +275,11 @@ const BoxingKingGame = () => {
           >
             {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
           </button>
-          <button className="text-yellow-500">
-            <Settings className="h-6 w-6" />
+          <button 
+            className="text-yellow-500"
+            onClick={() => setShowRules(true)}
+          >
+            <Info className="h-6 w-6" />
           </button>
         </div>
       </div>
@@ -315,18 +326,23 @@ const BoxingKingGame = () => {
                 {/* Reel content */}
                 <div className="w-full h-full relative">
                   {/* Symbols in the reel */}
-                  <div className={`flex flex-col h-full transition-transform duration-300 ${spinning ? 'animate-slide-reel' : ''}`}>
+                  <div className={`flex flex-col h-full`}>
                     {reel.map((symbol, symbolIndex) => (
                       <motion.div 
                         key={`symbol-${reelIndex}-${symbolIndex}`}
                         className="h-1/3 p-1 relative"
-                        animate={spinning ? { y: [0, 10, -10, 0] } : {}}
-                        transition={{ 
-                          duration: 0.3, 
-                          delay: reelIndex * 0.1,
-                          repeat: spinning ? Infinity : 0,
-                          repeatType: "reverse" 
-                        }}
+                        animate={
+                          spinning && reels[reelIndex] !== reel 
+                            ? { 
+                                y: [0, -30, 30, 0],
+                                transition: { 
+                                  repeat: Infinity,
+                                  duration: 0.3,
+                                  ease: "linear"
+                                }
+                              }
+                            : {}
+                        }
                       >
                         {/* Symbol background with glow effect */}
                         <div className="absolute inset-0 m-1 rounded-md bg-gradient-to-b from-indigo-700 to-indigo-900" />
@@ -442,6 +458,98 @@ const BoxingKingGame = () => {
           </ScrollArea>
         </div>
       </div>
+      
+      {/* Game Rules Dialog */}
+      <Dialog open={showRules} onOpenChange={setShowRules}>
+        <DialogContent className="max-w-md bg-indigo-950 text-white border border-indigo-700">
+          <DialogHeader>
+            <DialogTitle className="text-yellow-400 text-xl">Boxing King Rules</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Learn how to play and win at Boxing King Slots!
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="h-[60vh] pr-4">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-yellow-400 text-lg font-bold">How to Play</h3>
+                <p className="text-gray-300 mt-1">
+                  1. Set your bet amount using the + and - buttons<br/>
+                  2. Click the spin button to start the game<br/>
+                  3. Wait for all 5 reels to stop spinning<br/>
+                  4. If you have a winning combination, you'll receive your prize!
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-yellow-400 text-lg font-bold">Winning Combinations</h3>
+                <p className="text-gray-300 mt-1">
+                  Winning combinations are formed by matching 3 or more identical symbols on a payline, starting from the leftmost reel.
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-yellow-400 text-lg font-bold">Special Symbols</h3>
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-indigo-900 rounded flex items-center justify-center">
+                      <img src="/lovable-uploads/0f329ed3-3056-46a0-9a41-2fb408e8cbff.png" alt="Wild" className="w-8 h-8 object-contain" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-yellow-300">Wild Symbol</p>
+                      <p className="text-sm text-gray-300">Substitutes for any symbol except Scatter to form winning combinations.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-indigo-900 rounded flex items-center justify-center">
+                      <img src="/lovable-uploads/a7972c95-1dbd-4394-8102-016b0b210e5f.png" alt="Scatter" className="w-8 h-8 object-contain" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-yellow-300">Scatter Symbol</p>
+                      <p className="text-sm text-gray-300">3 or more scatter symbols anywhere on the reels award scatter wins multiplied by your total bet.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-yellow-400 text-lg font-bold">Payouts</h3>
+                <p className="text-gray-300 mt-1">
+                  • 3 matching symbols: Symbol Value × Bet<br/>
+                  • 4 matching symbols: Symbol Value × Bet × 2<br/>
+                  • 5 matching symbols: Symbol Value × Bet × 4<br/>
+                  • 3 or more scatters: 5 × Number of Scatters × Bet
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-yellow-400 text-lg font-bold">Symbol Values</h3>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {symbols.map((symbol) => (
+                    <div key={symbol.id} className="flex items-center gap-2 bg-indigo-900 bg-opacity-50 p-2 rounded">
+                      <img src={symbol.image} alt={symbol.name} className="w-8 h-8 object-contain" />
+                      <div>
+                        <p className="text-sm text-white">{symbol.name}</p>
+                        <p className="text-xs text-yellow-400">{symbol.value}× multiplier</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+          
+          <div className="flex justify-center mt-4">
+            <Button 
+              onClick={() => setShowRules(false)}
+              className="bg-yellow-500 text-black hover:bg-yellow-400"
+            >
+              Got it!
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <style>{`
         @keyframes slide-reel {
