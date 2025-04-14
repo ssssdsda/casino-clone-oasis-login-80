@@ -19,8 +19,11 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
   const isMobile = useIsMobile();
   const [imageError, setImageError] = useState(false);
   
-  // Remove random query parameter to prevent image caching issues
-  const imageUrl = image;
+  // Handle image load error
+  const handleImageError = () => {
+    console.error(`Failed to load image: ${image}`);
+    setImageError(true);
+  };
   
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent clicking the card if the edit button is clicked
@@ -30,6 +33,16 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
     
     if (onClick) onClick();
   };
+  
+  // Preload image to prevent rendering delay
+  React.useEffect(() => {
+    if (image) {
+      const img = new Image();
+      img.src = image;
+      img.onload = () => setImageError(false);
+      img.onerror = handleImageError;
+    }
+  }, [image]);
   
   return (
     <div 
@@ -55,15 +68,11 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
           </div>
         ) : (
           <img 
-            src={imageUrl} 
+            src={image} 
             alt={title} 
             className="w-full h-full object-cover"
             loading="lazy"
-            onError={(e) => {
-              console.error(`Failed to load image: ${image}`);
-              // Set a fallback image or display game title
-              setImageError(true);
-            }}
+            onError={handleImageError}
           />
         )}
         
@@ -108,6 +117,9 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
       <style>
         {`
           .game-card:hover .edit-button {
+            opacity: 1;
+          }
+          .game-card:hover .favorite-icon {
             opacity: 1;
           }
         `}

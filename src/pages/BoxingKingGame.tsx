@@ -1,389 +1,349 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { motion } from 'framer-motion';
-import { Minus, Plus, Settings, RefreshCw, Zap, Wifi } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Volume2, VolumeX, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-
-// Define slot symbols with optimized loading strategy
-const symbols = {
-  A: '/lovable-uploads/a1ddbca9-01d0-433e-89e5-5299a6741bbd.png',
-  K: '/lovable-uploads/f3cc67b3-6063-43a6-841f-f4a23037d206.png',
-  Q: 'https://placehold.co/100/blue/white?text=Q',
-  J: 'https://placehold.co/100/green/white?text=J',
-  BLUE_FIST: 'https://placehold.co/100/blue/white?text=FIST',
-  RED_FIST: 'https://placehold.co/100/red/white?text=FIST',
-  BOXER: 'https://placehold.co/100/purple/white?text=BOXER',
-  GLOVE: 'https://placehold.co/100/orange/white?text=GLOVE',
-  SHORTS: 'https://placehold.co/100/cyan/white?text=SHORTS'
-};
-
-// Preload images in a separate component to avoid blocking the main rendering
-const ImagePreloader = () => {
-  useEffect(() => {
-    // Preload all symbol images
-    Object.values(symbols).forEach(src => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, []);
-  
-  return null;
-};
-
-// Define paylines
-const paylines = [
-  // Horizontal lines
-  [0, 1, 2, 3, 4], // Top row
-  [5, 6, 7, 8, 9], // Middle row
-  [10, 11, 12, 13, 14], // Bottom row
-  
-  // V shapes
-  [0, 6, 12, 8, 4],
-  [10, 6, 2, 8, 14],
-  
-  // Zigzag
-  [0, 6, 2, 8, 4],
-  [10, 6, 12, 8, 14]
-];
-
-// Define symbol weights
-const symbolWeights = {
-  A: 20,
-  K: 15,
-  Q: 20,
-  J: 20,
-  BLUE_FIST: 8,
-  RED_FIST: 8,
-  BOXER: 5,
-  GLOVE: 10,
-  SHORTS: 15
-};
-
-// Define symbol payouts
-const symbolPayouts = {
-  A: [1, 2, 5],
-  K: [1, 2, 5],
-  Q: [0.5, 1, 2.5],
-  J: [0.5, 1, 2.5],
-  BLUE_FIST: [2, 5, 15],
-  RED_FIST: [2, 5, 15],
-  BOXER: [5, 15, 50],
-  GLOVE: [2, 5, 10],
-  SHORTS: [1, 3, 8]
-};
+import { useToast } from '@/hooks/use-toast';
+import { motion } from 'framer-motion';
 
 const BoxingKingGame = () => {
+  const navigate = useNavigate();
   const { user, updateUserBalance } = useAuth();
-  const [betAmount, setBetAmount] = useState(3);
-  const [reels, setReels] = useState(Array(15).fill('A')); // Initial state with just one symbol type
-  const [spinning, setSpinning] = useState(false);
-  const [autoplay, setAutoplay] = useState(false);
-  const [winAmount, setWinAmount] = useState(0);
-  const [winningLines, setWinningLines] = useState<number[][]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const spinSound = useRef(new Audio('/sounds/spin.mp3'));
-  const winSound = useRef(new Audio('/sounds/win.mp3'));
-
+  const { toast } = useToast();
+  
+  const [loading, setLoading] = useState(true);
+  const [muted, setMuted] = useState(true);
+  const [bet, setBet] = useState(5);
+  const [winnings, setWinnings] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [boxerHealth, setBoxerHealth] = useState(100);
+  const [opponentHealth, setOpponentHealth] = useState(100);
+  const [round, setRound] = useState(1);
+  const [message, setMessage] = useState('Get ready to fight!');
+  
   // Initialize the game
   useEffect(() => {
-    const initialization = async () => {
-      // Load sounds without awaiting them
-      spinSound.current.load();
-      winSound.current.load();
-      
-      // Generate random reels
-      generateRandomReels();
-      
-      // Simulate quick loading
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setIsLoading(false);
-    };
-    
-    initialization();
-    
-    // Create audio element
-    audioRef.current = new Audio('/sounds/boxing-theme.mp3');
-    audioRef.current.preload = 'none'; // Only load on demand
+    setTimeout(() => setLoading(false), 2000);
     
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      // Clean up any resources or event listeners
     };
   }, []);
-
-  // Helper function to get random symbol based on weights
-  const getRandomSymbol = () => {
-    // Create weighted array
-    const weightedSymbols: string[] = [];
-    Object.entries(symbolWeights).forEach(([symbol, weight]) => {
-      for (let i = 0; i < weight; i++) {
-        weightedSymbols.push(symbol);
-      }
-    });
-    
-    // Pick random symbol from weighted array
-    const randomIndex = Math.floor(Math.random() * weightedSymbols.length);
-    return weightedSymbols[randomIndex];
+  
+  // Handle betting amount change
+  const changeBet = (amount: number) => {
+    if (isPlaying) return;
+    setBet(Math.max(1, Math.min(100, bet + amount)));
   };
-
-  // Generate random symbols for all reels
-  const generateRandomReels = () => {
-    const newReels = Array(15).fill('').map(() => getRandomSymbol());
-    setReels(newReels);
-  };
-
-  // Calculate wins - memoize to avoid recalculation
-  const calculateWins = React.useCallback((currentReels: string[]) => {
-    let totalWin = 0;
-    const winLines: number[][] = [];
-    
-    paylines.forEach((line, lineIndex) => {
-      const lineSymbols = line.map(position => currentReels[position]);
-      const firstSymbol = lineSymbols[0];
-      
-      // Count consecutive matching symbols from left
-      let matchCount = 1;
-      for (let i = 1; i < lineSymbols.length; i++) {
-        if (lineSymbols[i] === firstSymbol) {
-          matchCount++;
-        } else {
-          break;
-        }
-      }
-      
-      // Calculate win if 3 or more matches
-      if (matchCount >= 3) {
-        const payoutIndex = matchCount - 3; // 0 for 3 matches, 1 for 4, 2 for 5
-        const symbolPayout = symbolPayouts[firstSymbol as keyof typeof symbolPayouts][payoutIndex];
-        const lineWin = betAmount * symbolPayout;
-        totalWin += lineWin;
-        
-        winLines.push(line.slice(0, matchCount));
-      }
-    });
-    
-    return { totalWin, winLines };
-  }, [betAmount]);
-
-  // Spin the reels
-  const spin = async () => {
-    if (spinning) return;
-    
+  
+  // Start the boxing match
+  const startFight = () => {
     if (!user) {
       toast({
-        title: "Error",
+        title: "Login Required",
         description: "Please login to play",
         variant: "destructive"
       });
       return;
     }
-
-    if (user.balance < betAmount) {
+    
+    if (user.balance < bet) {
       toast({
         title: "Insufficient Balance",
-        description: "Please deposit funds to continue",
+        description: "Please deposit more funds to play",
         variant: "destructive"
       });
       return;
     }
-
-    // Play spin sound
-    spinSound.current.play().catch(e => console.log("Audio play error:", e));
-
-    // Deduct bet amount
-    if (user && updateUserBalance) {
-      updateUserBalance(user.balance - betAmount);
-    }
     
-    setSpinning(true);
-    setWinningLines([]);
-    setWinAmount(0);
+    // Deduct bet from balance
+    updateUserBalance(user.balance - bet);
     
-    // Animate spinning - optimized for performance
-    generateRandomReels();
-    await new Promise(resolve => setTimeout(resolve, 300));
-    generateRandomReels();
+    setIsPlaying(true);
+    setBoxerHealth(100);
+    setOpponentHealth(100);
+    setRound(1);
+    setMessage('Round 1 - FIGHT!');
+    setWinnings(0);
     
-    // Final reel state
-    const finalReels = Array(15).fill('').map(() => getRandomSymbol());
-    setReels(finalReels);
-    
-    // Calculate wins
-    const { totalWin, winLines } = calculateWins(finalReels);
-    
-    // Short delay to show final reels before showing wins
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    if (totalWin > 0) {
-      // Play win sound
-      winSound.current.play().catch(e => console.log("Audio play error:", e));
-      
-      setWinAmount(totalWin);
-      setWinningLines(winLines);
-      
-      // Add win to balance
-      if (user && updateUserBalance) {
-        updateUserBalance(user.balance + totalWin);
-      }
-    }
-    
-    setSpinning(false);
-    
-    // Continue autoplay if enabled
-    if (autoplay) {
-      setTimeout(spin, 2000);
-    }
-  };
-
-  const toggleMusic = () => {
-    if (audioRef.current) {
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(e => console.log("Audio play error:", e));
-      } else {
-        audioRef.current.pause();
-      }
-    }
+    // Simulate the boxing match
+    simulateFight();
   };
   
-  if (isLoading) {
+  // Simulate the boxing match
+  const simulateFight = () => {
+    let currentRound = 1;
+    let currentBoxerHealth = 100;
+    let currentOpponentHealth = 100;
+    let fightResult = null;
+    
+    const roundInterval = setInterval(() => {
+      // Generate random damage values
+      const boxerAttack = Math.floor(Math.random() * 20) + 5;
+      const opponentAttack = Math.floor(Math.random() * 15) + 5;
+      
+      // Update health values
+      currentOpponentHealth = Math.max(0, currentOpponentHealth - boxerAttack);
+      setOpponentHealth(currentOpponentHealth);
+      
+      setTimeout(() => {
+        if (currentOpponentHealth > 0) {
+          currentBoxerHealth = Math.max(0, currentBoxerHealth - opponentAttack);
+          setBoxerHealth(currentBoxerHealth);
+        }
+        
+        // Check if the round is over
+        if (currentBoxerHealth === 0 || currentOpponentHealth === 0) {
+          fightResult = currentOpponentHealth === 0 ? 'win' : 'lose';
+          clearInterval(roundInterval);
+          endFight(fightResult);
+        } else if (currentRound >= 3) {
+          // Decide winner based on health if reached max rounds
+          fightResult = currentBoxerHealth > currentOpponentHealth ? 'win' : 'lose';
+          clearInterval(roundInterval);
+          endFight(fightResult);
+        } else if (currentBoxerHealth > 0 && currentOpponentHealth > 0) {
+          // Move to next round
+          currentRound++;
+          setRound(currentRound);
+          setMessage(`Round ${currentRound} - FIGHT!`);
+        }
+      }, 1500);
+      
+    }, 3000);
+  };
+  
+  // End the fight and calculate winnings
+  const endFight = (result: string) => {
+    setTimeout(() => {
+      if (result === 'win') {
+        const winAmount = bet * (round + 1);
+        setWinnings(winAmount);
+        
+        // Update user balance
+        if (user) {
+          updateUserBalance(user.balance - bet + winAmount);
+        }
+        
+        setMessage('KNOCKOUT! YOU WIN!');
+        toast({
+          title: "Victory!",
+          description: `You won ${winAmount}!`,
+          variant: "default",
+          className: "bg-green-600 text-white"
+        });
+      } else {
+        setMessage('YOU LOST!');
+        toast({
+          title: "Defeat",
+          description: "Better luck next time!",
+          variant: "default",
+          className: "bg-red-600 text-white"
+        });
+      }
+      
+      setTimeout(() => {
+        setIsPlaying(false);
+      }, 2000);
+    }, 1000);
+  };
+  
+  if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-yellow-500">Boxing King</h2>
-          <p className="text-gray-400 mt-2">Loading game...</p>
-        </div>
-        <ImagePreloader />
+      <div className="min-h-screen bg-gradient-to-b from-red-900 to-gray-900 flex flex-col items-center justify-center p-4">
+        <motion.h1 
+          className="text-4xl font-bold text-white mb-6"
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          Boxing King
+        </motion.h1>
+        <motion.div 
+          className="w-32 h-32 border-8 border-red-500 border-t-transparent rounded-full"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        />
+        <p className="text-white mt-6">Loading game...</p>
       </div>
     );
   }
-
+  
   return (
-    <div className="min-h-screen bg-black flex flex-col">
-      {/* Game header with branding */}
-      <div className="bg-gradient-to-r from-purple-900 to-red-900 p-2 flex justify-between items-center">
-        <div className="text-yellow-500 text-2xl font-bold">Boxing King</div>
-        <div className="text-yellow-500"></div>
+    <div className="min-h-screen bg-gradient-to-b from-red-900 to-gray-900 flex flex-col">
+      {/* Game header */}
+      <div className="bg-black bg-opacity-50 p-4 flex justify-between items-center">
+        <button 
+          className="text-white"
+          onClick={() => navigate('/')}
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </button>
+        <h1 className="text-xl md:text-3xl font-bold text-white">Boxing King</h1>
+        <button 
+          className="text-white"
+          onClick={() => setMuted(!muted)}
+        >
+          {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+        </button>
       </div>
-
-      {/* Main game area */}
-      <div className="flex-1 relative bg-gradient-to-b from-purple-900 to-black p-4 flex items-center justify-center">
-        {/* Boxing ring background */}
-        <div className="absolute inset-0 z-0">
-          <div className="w-full h-full bg-[url('https://placehold.co/1200x800/330033/440044')]"></div>
-          <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-red-900/50 to-transparent"></div>
-          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-red-900/50 to-transparent"></div>
-          <div className="absolute top-0 left-0 bottom-0 w-20 bg-gradient-to-r from-blue-900/50 to-transparent"></div>
-          <div className="absolute top-0 right-0 bottom-0 w-20 bg-gradient-to-l from-blue-900/50 to-transparent"></div>
-        </div>
-
-        {/* Slot grid - optimized rendering */}
-        <div className="relative z-10 bg-gray-900/80 border-4 border-gray-700 rounded-lg p-2 shadow-2xl">
-          <div className="grid grid-cols-5 grid-rows-3 gap-1">
-            {reels.map((symbol, index) => (
-              <motion.div
-                key={index}
-                className={`bg-purple-900 border-2 ${
-                  winningLines.some(line => line.includes(index))
-                    ? 'border-yellow-400 animate-pulse'
-                    : 'border-purple-700'
-                } rounded overflow-hidden flex items-center justify-center`}
-                initial={{ opacity: 0.8 }}
-                animate={{ 
-                  opacity: 1, 
-                  scale: winningLines.some(line => line.includes(index)) ? [1, 1.05, 1] : 1 
-                }}
-                transition={{ 
-                  duration: 0.2, 
-                  scale: { repeat: winningLines.some(line => line.includes(index)) ? Infinity : 0, duration: 0.5 } 
-                }}
-              >
-                <img 
-                  src={symbols[symbol as keyof typeof symbols]} 
-                  alt={symbol} 
-                  className="w-20 h-20 object-contain"
-                  loading="eager"
+      
+      {/* Game content */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4 relative">
+        {/* Boxing ring */}
+        <div className="relative w-full max-w-lg aspect-[4/3] bg-red-800 rounded-xl border-8 border-yellow-500 shadow-2xl mb-6 overflow-hidden">
+          {/* Ring floor */}
+          <div className="absolute inset-0 bg-gradient-to-b from-red-700 to-red-900">
+            <div className="absolute inset-0 grid grid-cols-8 grid-rows-6">
+              {Array.from({ length: 48 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`border border-red-600 ${i % 2 === 0 ? 'bg-red-800' : 'bg-red-700'}`}
                 />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Controls */}
-      <div className="bg-gray-900 text-white p-4">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center">
-            <Settings className="text-gray-400 mr-2" size={24} />
-            <div>
-              <div className="text-yellow-500 font-bold">Balance</div>
-              <div className="text-2xl">{user?.balance.toFixed(2) || '0.00'}</div>
+              ))}
             </div>
           </div>
-
-          <div className="flex items-center">
-            <div className="bg-gray-800 px-4 py-1 rounded-full flex items-center">
-              <div className="text-gray-400 mr-2">Bet</div>
-              <div className="text-xl">{betAmount}</div>
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <div>
-              <div className="text-yellow-500 font-bold text-right">WIN</div>
-              <div className="text-2xl">{winAmount.toFixed(2)}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-between mt-4 mb-8">
-          <button onClick={toggleMusic} className="bg-gray-800 p-2 rounded-full">
-            <Wifi className="text-gray-400" size={24} />
-          </button>
           
-          <motion.button
-            onClick={spin}
-            disabled={spinning}
-            className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-full w-20 h-20 flex items-center justify-center shadow-lg"
-            whileTap={{ scale: 0.9 }}
-            animate={spinning ? { rotate: 360 } : {}}
-            transition={{ duration: spinning ? 1 : 0.1, repeat: spinning ? Infinity : 0 }}
-          >
-            <span className="text-3xl">SPIN</span>
-          </motion.button>
+          {/* Ring ropes */}
+          <div className="absolute top-0 left-0 right-0 h-2 bg-blue-500" />
+          <div className="absolute bottom-0 left-0 right-0 h-2 bg-blue-500" />
+          <div className="absolute left-0 top-0 bottom-0 w-2 bg-blue-500" />
+          <div className="absolute right-0 top-0 bottom-0 w-2 bg-blue-500" />
           
-          <button 
-            onClick={() => setAutoplay(!autoplay)}
-            className={`p-2 rounded-full ${autoplay ? 'bg-yellow-600' : 'bg-gray-800'}`}
+          {/* Boxer character */}
+          <motion.div 
+            className="absolute bottom-4 left-8 w-24 h-40 flex flex-col items-center"
+            animate={isPlaying ? { x: [0, 10, -10, 0] } : {}}
+            transition={{ duration: 0.5, repeat: isPlaying ? Infinity : 0 }}
           >
-            <RefreshCw className={`${autoplay ? 'text-white' : 'text-gray-400'}`} size={24} />
-          </button>
+            <img 
+              src="/lovable-uploads/dec17aad-46e5-47a3-a4b1-7f0b72c530f0.png" 
+              alt="Player Boxer" 
+              className="w-full h-full object-contain"
+            />
+            {/* Health bar */}
+            <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
+              <motion.div 
+                className="bg-green-600 h-2.5 rounded-full" 
+                style={{ width: `${boxerHealth}%` }}
+                animate={{ backgroundColor: boxerHealth < 30 ? '#ef4444' : '#22c55e' }}
+              />
+            </div>
+            <div className="text-white text-xs mt-1">You</div>
+          </motion.div>
+          
+          {/* Opponent character */}
+          <motion.div 
+            className="absolute bottom-4 right-8 w-24 h-40 flex flex-col items-center"
+            animate={isPlaying ? { x: [0, -10, 10, 0] } : {}}
+            transition={{ duration: 0.5, repeat: isPlaying ? Infinity : 0 }}
+          >
+            <img 
+              src="/lovable-uploads/20b5cda9-f61f-4024-bbb6-1cfee6353614.png" 
+              alt="Opponent Boxer" 
+              className="w-full h-full object-contain transform scale-x-[-1]"
+            />
+            {/* Health bar */}
+            <div className="w-full bg-gray-700 rounded-full h-2.5 mt-2">
+              <motion.div 
+                className="bg-red-600 h-2.5 rounded-full" 
+                style={{ width: `${opponentHealth}%` }}
+                animate={{ backgroundColor: opponentHealth < 30 ? '#ef4444' : '#dc2626' }}
+              />
+            </div>
+            <div className="text-white text-xs mt-1">Opponent</div>
+          </motion.div>
+          
+          {/* Round indicator */}
+          <div className="absolute top-4 left-0 right-0 flex justify-center">
+            <div className="bg-black bg-opacity-70 px-4 py-1 rounded-full">
+              <div className="text-yellow-400 font-bold text-lg">Round {round}/3</div>
+            </div>
+          </div>
+          
+          {/* Game message */}
+          {message && (
+            <motion.div 
+              className="absolute bottom-16 left-0 right-0 flex justify-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="bg-black bg-opacity-70 px-6 py-2 rounded-lg">
+                <div className={`font-bold text-lg ${
+                  message.includes('WIN') ? 'text-green-400' : 
+                  message.includes('LOST') ? 'text-red-400' : 'text-white'
+                }`}>
+                  {message}
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
+          {/* Win amount */}
+          {winnings > 0 && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <div className="bg-black bg-opacity-80 p-6 rounded-xl text-center">
+                <div className="text-yellow-400 font-bold text-lg mb-1">YOU WON</div>
+                <div className="text-green-400 font-bold text-4xl">{winnings.toFixed(2)}৳</div>
+              </div>
+            </motion.div>
+          )}
         </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          <button 
-            onClick={() => !spinning && setBetAmount(Math.max(1, betAmount - 1))}
-            className="bg-gray-800 py-2 px-4 rounded-lg"
-            disabled={spinning}
-          >
-            <Minus size={18} />
-          </button>
-          <button 
-            onClick={() => !spinning && setBetAmount(3)}
-            className="bg-green-700 py-2 px-4 rounded-lg"
-            disabled={spinning}
-          >
-            Bet 3
-          </button>
-          <button 
-            onClick={() => !spinning && setBetAmount(Math.min(10, betAmount + 1))}
-            className="bg-gray-800 py-2 px-4 rounded-lg"
-            disabled={spinning}
-          >
-            <Plus size={18} />
-          </button>
+        
+        {/* Game controls */}
+        <div className="w-full max-w-lg bg-black bg-opacity-50 p-4 rounded-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-400">Balance</div>
+              <div className="text-white font-bold">{user?.balance.toFixed(2) || '0.00'}৳</div>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="flex items-center mb-2">
+                <button 
+                  className="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-l flex items-center justify-center"
+                  onClick={() => changeBet(-5)}
+                  disabled={isPlaying || bet <= 5}
+                >
+                  -
+                </button>
+                <div className="bg-gray-800 text-yellow-400 font-bold px-4 py-1 w-20 text-center">
+                  {bet}৳
+                </div>
+                <button 
+                  className="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-r flex items-center justify-center"
+                  onClick={() => changeBet(5)}
+                  disabled={isPlaying || bet >= 100}
+                >
+                  +
+                </button>
+              </div>
+              <Button
+                className={`px-6 py-2 ${
+                  isPlaying ? 'bg-gray-700' : 'bg-red-600 hover:bg-red-700'
+                } text-white font-bold rounded-full`}
+                disabled={isPlaying || !user || (user && user.balance < bet)}
+                onClick={startFight}
+              >
+                {isPlaying ? (
+                  <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  'FIGHT!'
+                )}
+              </Button>
+            </div>
+            
+            <div>
+              <div className="text-sm text-gray-400">Potential Win</div>
+              <div className="text-green-400 font-bold">{(bet * 4).toFixed(2)}৳</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

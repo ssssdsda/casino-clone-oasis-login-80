@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Headphones, Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -10,22 +10,30 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 
-// Define symbol types with better graphics
+// Define symbol types with the new images
 const symbols = [
-  { id: 'cherry', image: '/lovable-uploads/7ee869ea-c4ce-4db7-9031-a09bbd8ad5fd.png', value: 3 },
-  { id: 'lemon', image: '/lovable-uploads/0fe41380-0ce3-42f3-a0f4-491bb537c704.png', value: 2 },
-  { id: 'orange', image: '/lovable-uploads/2c773f0b-62a0-42ff-92e3-93c14f438654.png', value: 2 },
-  { id: 'plum', image: '/lovable-uploads/adbc8de0-0c80-42d3-a1f0-e39550742fc6.png', value: 2 },
+  { id: 'cherry', image: '/lovable-uploads/d63bf1f6-ac8d-40d6-a419-67c3915f5333.png', value: 5 },
+  { id: 'lemon', image: '/lovable-uploads/20b5cda9-f61f-4024-bbb6-1cfee6353614.png', value: 3 },
+  { id: 'orange', image: '/lovable-uploads/dec17aad-46e5-47a3-a4b1-7f0b72c530f0.png', value: 4 },
+  { id: 'plum', image: '/lovable-uploads/dec17aad-46e5-47a3-a4b1-7f0b72c530f0.png', value: 4 },
   { id: 'coin', image: '/lovable-uploads/672f03a3-2462-487d-a60a-df1660da9fb7.png', value: 15 },
-  { id: 'heart', image: '/public/lovable-uploads/a023c13d-3432-4f56-abd9-5bcdbbd30602.png', value: 1 },
-  { id: 'club', image: '/public/lovable-uploads/d10fd039-e61a-4e50-8145-a1efe284ada2.png', value: 1 },
-  { id: 'spade', image: '/public/lovable-uploads/7e03f44f-1482-4424-8f8c-40ab158dba36.png', value: 1 },
-  { id: 'wild', image: '/public/lovable-uploads/6fc263a6-a7b2-4cf2-afe5-9fb0b99fdd91.png', value: 15 },
+  { id: 'heart', image: '/lovable-uploads/a023c13d-3432-4f56-abd9-5bcdbbd30602.png', value: 2 },
+  { id: 'club', image: '/lovable-uploads/d63bf1f6-ac8d-40d6-a419-67c3915f5333.png', value: 2 },
+  { id: 'spade', image: '/lovable-uploads/20b5cda9-f61f-4024-bbb6-1cfee6353614.png', value: 2 },
+  { id: 'wild', image: '/lovable-uploads/6fc263a6-a7b2-4cf2-afe5-9fb0b99fdd91.png', value: 15 },
 ];
+
+// Load images before game starts to prevent lag
+const preloadImages = () => {
+  symbols.forEach(symbol => {
+    const img = new Image();
+    img.src = symbol.image;
+  });
+};
 
 const SpinGame = () => {
   const { t } = useLanguage();
-  const { user, isAuthenticated } = useAuth();
+  const { user, updateUserBalance } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -39,32 +47,34 @@ const SpinGame = () => {
   const [spinning, setSpinning] = useState(false);
   const [bet, setBet] = useState(2);
   const [win, setWin] = useState(0);
-  const [balance, setBalance] = useState(user?.balance || 1000);
   const [muted, setMuted] = useState(true);
   const [loading, setLoading] = useState(true);
   const [showContinue, setShowContinue] = useState(false);
+  const [preloaded, setPreloaded] = useState(false);
   
   const reelRefs = useRef<HTMLDivElement[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   
   useEffect(() => {
-    // Show loading for 3 seconds, then display continue button
+    // Preload images to prevent rendering lag
+    if (!preloaded) {
+      preloadImages();
+      setPreloaded(true);
+    }
+    
+    // Show loading for 2 seconds, then display continue button
     const timer = setTimeout(() => {
       setLoading(false);
       setShowContinue(true);
-    }, 3000);
-    
-    if (user) {
-      setBalance(user.balance);
-    }
+    }, 2000);
     
     // Create audio elements
-    audioRef.current = new Audio('/public/placeholder.svg'); // Replace with actual spin sound
-    winAudioRef.current = new Audio('/public/placeholder.svg'); // Replace with actual win sound
+    audioRef.current = new Audio('/sounds/spin.mp3'); 
+    winAudioRef.current = new Audio('/sounds/win.mp3'); 
     
     return () => clearTimeout(timer);
-  }, [user]);
+  }, []);
   
   const handleContinue = () => {
     setShowContinue(false);
@@ -73,7 +83,16 @@ const SpinGame = () => {
   const handleSpin = () => {
     if (spinning) return;
     
-    if (balance < bet) {
+    if (!user) {
+      toast({
+        title: t('loginRequired'),
+        description: t('pleaseLoginToPlay'),
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (user.balance < bet) {
       toast({
         title: t('insufficientFunds'),
         description: t('pleaseDepositMore'),
@@ -82,31 +101,38 @@ const SpinGame = () => {
       return;
     }
     
-    setBalance(prev => prev - bet);
+    // Deduct bet from balance
+    updateUserBalance(user.balance - bet);
     setSpinning(true);
     setWin(0);
     
     if (!muted && audioRef.current) {
-      audioRef.current.play();
+      audioRef.current.play().catch(err => console.error("Audio play error:", err));
     }
     
+    // Create staggered spin durations for each reel for realistic effect
     const spinDurations = [1500, 1700, 1900, 2100, 2300];
     
+    // Generate new random symbols for each position
     const newReels = reels.map(reel => {
       return reel.map(() => Math.floor(Math.random() * symbols.length));
     });
     
     setReels(newReels);
     
+    // Calculate win after all reels have stopped
     setTimeout(() => {
+      // Check middle row for matches
       const middleRow = newReels.map(reel => reel[2]);
       let winAmount = 0;
       
+      // Count occurrences of each symbol
       const counts: {[key: number]: number} = {};
       middleRow.forEach(symbolIndex => {
         counts[symbolIndex] = (counts[symbolIndex] || 0) + 1;
       });
       
+      // Find max matching symbols and determine win
       let maxCount = 0;
       let maxValue = 0;
       Object.entries(counts).forEach(([symbolIndex, count]) => {
@@ -118,12 +144,16 @@ const SpinGame = () => {
       
       if (maxCount >= 3) {
         winAmount = bet * maxValue * (maxCount - 2);
-        setBalance(prev => prev + winAmount);
+        
+        // Add winnings to balance
+        if (user) {
+          updateUserBalance(user.balance - bet + winAmount);
+        }
         
         setWin(winAmount);
         
         if (!muted && winAudioRef.current) {
-          winAudioRef.current.play();
+          winAudioRef.current.play().catch(err => console.error("Win audio play error:", err));
         }
         
         if (winAmount > bet * 10) {
@@ -178,7 +208,7 @@ const SpinGame = () => {
             <motion.div 
               className="w-24 h-24 border-8 border-yellow-500 border-t-transparent rounded-full mx-auto mb-6"
               animate={{ rotate: 360 }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             />
             <motion.p 
               className="text-white text-lg"
@@ -186,7 +216,7 @@ const SpinGame = () => {
                 opacity: [1, 0.5, 1] 
               }}
               transition={{ 
-                duration: 1.5, 
+                duration: 1, 
                 repeat: Infinity,
                 repeatType: "reverse" 
               }}
@@ -248,7 +278,31 @@ const SpinGame = () => {
               </div>
             </div>
             
-            <p className="text-white mb-6 text-lg">Experience the thrill of our high-stakes slot machine with stunning 3D graphics and incredible win potential!</p>
+            <div className="flex justify-center space-x-4 mb-6">
+              <motion.img
+                src="/lovable-uploads/dec17aad-46e5-47a3-a4b1-7f0b72c530f0.png"
+                alt="Orange"
+                className="w-16 h-16 object-contain"
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+              <motion.img
+                src="/lovable-uploads/20b5cda9-f61f-4024-bbb6-1cfee6353614.png"
+                alt="Lemon"
+                className="w-16 h-16 object-contain"
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+              <motion.img
+                src="/lovable-uploads/d63bf1f6-ac8d-40d6-a419-67c3915f5333.png"
+                alt="Cherry"
+                className="w-16 h-16 object-contain"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              />
+            </div>
+            
+            <p className="text-white mb-6 text-lg">Experience the thrill of our high-stakes slot machine with stunning graphics and incredible win potential!</p>
             
             <motion.button 
               className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-8 rounded-full text-xl flex items-center justify-center mx-auto shadow-lg"
@@ -401,43 +455,29 @@ const SpinGame = () => {
                   perspective: "1000px",
                   backgroundImage: "linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.05))"
                 }}
-                animate={
-                  spinning ? {
-                    rotateX: [0, 1800, 3600],
-                    transition: {
-                      rotateX: {
-                        duration: 2 + reelIndex * 0.2,
-                        ease: "easeInOut",
-                      }
-                    }
-                  } : {}
-                }
               >
                 {/* Reel shadow effects */}
                 <div className="absolute inset-0 shadow-[inset_0_0_10px_rgba(0,0,0,0.7)]" />
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black opacity-20" />
                 
-                <div className="absolute inset-0 flex flex-col items-center transform-style-3d">
+                <div className="absolute inset-0 flex flex-col items-center">
                   {reels[reelIndex].map((symbolIndex, symbolPosition) => (
                     <motion.div
                       key={`${reelIndex}-${symbolPosition}`}
                       className="w-full h-[55px] flex items-center justify-center p-1"
-                      initial={{ rotateX: 0 }}
                       animate={
                         spinning ? { 
-                          rotateX: [0, -360],
-                          z: [0, -100, 0],
+                          y: [0, -500, 0],
+                          transition: {
+                            y: {
+                              duration: 1 + (reelIndex * 0.2),
+                              ease: [0.25, 0.1, 0.25, 1],
+                              repeat: 6 - reelIndex,
+                              repeatType: "loop",
+                            }
+                          }
                         } : {}
                       }
-                      transition={{ 
-                        duration: 2 + reelIndex * 0.2, 
-                        ease: "easeInOut",
-                        delay: symbolPosition * 0.05
-                      }}
-                      style={{
-                        transformStyle: "preserve-3d",
-                        backfaceVisibility: "hidden"
-                      }}
                     >
                       <div className="relative w-full h-full flex items-center justify-center">
                         {/* Symbol Glow Effect */}
@@ -447,6 +487,7 @@ const SpinGame = () => {
                           src={symbols[symbolIndex].image}
                           alt={symbols[symbolIndex].id}
                           className="max-w-full max-h-full object-contain z-10 drop-shadow-lg"
+                          style={{ width: "40px", height: "40px" }}
                         />
                       </div>
                     </motion.div>
@@ -553,9 +594,11 @@ const SpinGame = () => {
                   variant="outline" 
                   size="icon"
                   className="bg-gray-800 h-12 w-12 rounded-full border-gray-600"
-                  onClick={() => navigate('/admin/spin-control')}
+                  onClick={() => navigate('/')}
                 >
-                  <Star className="h-5 w-5 text-yellow-400" />
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
                 </Button>
               </motion.div>
               
@@ -626,7 +669,7 @@ const SpinGame = () => {
               >
                 <Button
                   className={`bg-gradient-to-r ${spinning ? 'from-gray-600 to-gray-700' : 'from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'} text-white font-bold rounded-full h-14 w-14 shadow-lg`}
-                  disabled={spinning || balance < bet}
+                  disabled={spinning || !user || (user && user.balance < bet)}
                   onClick={handleSpin}
                 >
                   {spinning ? (
@@ -657,7 +700,7 @@ const SpinGame = () => {
                     repeatType: "reverse"
                   }}
                 >
-                  {t('currency')}{balance.toFixed(2)}
+                  {t('currency')}{user ? user.balance.toFixed(2) : '0.00'}
                 </motion.div>
               </div>
             </div>

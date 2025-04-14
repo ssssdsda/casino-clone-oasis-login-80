@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import GameCard from './GameCard';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -28,16 +28,52 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
   const [games, setGames] = useState<Game[]>(propGames);
   const [visibleGames, setVisibleGames] = useState<Game[]>([]);
   const [showAll, setShowAll] = useState(false);
+  const [imagesPreloaded, setImagesPreloaded] = useState(false);
+  
+  // Preload all game images to improve performance
+  const preloadImages = useCallback(() => {
+    if (imagesPreloaded || !games.length) return;
+    
+    const imagePromises = games.map(game => {
+      return new Promise((resolve, reject) => {
+        if (!game.image) {
+          resolve(null);
+          return;
+        }
+        
+        const img = new Image();
+        img.src = game.image;
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+          console.error(`Failed to preload image: ${game.image}`);
+          resolve(null);
+        };
+      });
+    });
+    
+    Promise.all(imagePromises).then(() => {
+      setImagesPreloaded(true);
+    });
+  }, [games, imagesPreloaded]);
   
   // Update games when propGames changes
   useEffect(() => {
     setGames(propGames);
     
-    // Only show first 8 games initially for better performance
-    const initialGameCount = isMobile ? 3 : 8;
+    // Only show first few games initially for better performance
+    const initialGameCount = isMobile ? 6 : 8;
     setVisibleGames(propGames.slice(0, initialGameCount));
     setShowAll(propGames.length <= initialGameCount);
-  }, [propGames, isMobile]);
+    
+    // Reset preloaded state when games change
+    setImagesPreloaded(false);
+    
+    // Start preloading images
+    requestIdleCallback(() => preloadImages());
+    
+    // Fallback for browsers that don't support requestIdleCallback
+    return () => {};
+  }, [propGames, isMobile, preloadImages]);
   
   const handleGameClick = (game: Game) => {
     if (game.path) {
