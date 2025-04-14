@@ -38,7 +38,6 @@ const WithdrawalManager = () => {
   const fetchWithdrawalRequests = async () => {
     setLoading(true);
     try {
-      console.log("Fetching withdrawal requests...");
       const q = query(
         collection(db, "withdrawals"), 
         orderBy("createdAt", "desc")
@@ -52,17 +51,16 @@ const WithdrawalManager = () => {
         requests.push({
           id: doc.id,
           userId: data.userId,
-          username: data.username || 'Unknown User',
+          username: data.username,
           amount: data.amount,
           accountNumber: data.accountNumber,
           paymentMethod: data.paymentMethod,
           status: data.status,
-          createdAt: data.createdAt?.toDate() || new Date(),
+          createdAt: data.createdAt.toDate(),
           completedAt: data.completedAt ? data.completedAt.toDate() : undefined,
         });
       });
       
-      console.log("Fetched withdrawal requests:", requests);
       setWithdrawalRequests(requests);
     } catch (error) {
       console.error("Error fetching withdrawal requests:", error);

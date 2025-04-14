@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -79,7 +80,6 @@ const Withdrawal = () => {
       });
       
       setWithdrawalHistory(history);
-      console.log("Fetched withdrawal history:", history);
     } catch (error) {
       console.error("Error fetching withdrawal history:", error);
     } finally {
@@ -153,9 +153,11 @@ const Withdrawal = () => {
     setProcessing(true);
     
     try {
+      // Deduct amount from user balance
       await updateUserBalance(user.balance - amount);
       
-      const withdrawalData = {
+      // Create withdrawal request in Firestore
+      await addDoc(collection(db, "withdrawals"), {
         userId: user.id,
         username: user.username,
         amount: amount,
@@ -163,13 +165,7 @@ const Withdrawal = () => {
         accountNumber: accountNumber,
         status: "pending",
         createdAt: serverTimestamp()
-      };
-      
-      console.log("Saving withdrawal data:", withdrawalData);
-      
-      const docRef = await addDoc(collection(db, "withdrawals"), withdrawalData);
-      
-      console.log("Document written with ID: ", docRef.id);
+      });
       
       toast({
         title: "Success",
@@ -178,12 +174,12 @@ const Withdrawal = () => {
           : "উত্তোলন অনুরোধ সফলভাবে জমা দেওয়া হয়েছে"
       });
       
+      // Reset form
       setCustomAmount('');
       setAccountNumber('');
       
-      setTimeout(() => {
-        fetchWithdrawalHistory();
-      }, 1000);
+      // Refresh withdrawal history
+      fetchWithdrawalHistory();
     } catch (error) {
       console.error("Withdrawal error:", error);
       toast({
@@ -194,6 +190,7 @@ const Withdrawal = () => {
         variant: "destructive"
       });
       
+      // Restore user balance in case of error
       if (user) {
         updateUserBalance(user.balance);
       }
@@ -360,6 +357,7 @@ const Withdrawal = () => {
           </CardContent>
         </Card>
         
+        {/* Withdrawal History */}
         <Card className="bg-casino border border-gray-700">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">
