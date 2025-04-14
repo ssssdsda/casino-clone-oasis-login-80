@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw, Info, Plus, Minus } from 'lucide-react';
@@ -104,7 +103,6 @@ const SpinGame = () => {
       return;
     }
     
-    // Deduct bet from balance immediately
     updateUserBalance(user.balance - totalBet);
     setSpinning(true);
     setWin(0);
@@ -114,43 +112,31 @@ const SpinGame = () => {
       audioRef.current.play().catch(err => console.error("Audio play error:", err));
     }
     
-    // Check if this bet should win based on our betting system
-    const shouldWin = shouldBetWin(user.uid);
+    const shouldWin = shouldBetWin(user.id);
     
-    // Create new reels with random symbols
     let newFinalSymbols: number[] = [];
     
     if (shouldWin) {
-      // If the player should win, create a winning pattern
-      // Choose a random symbol to be the winning one
       const winningSymbolIndex = Math.floor(Math.random() * fruitSymbols.length);
-      
-      // Decide if it's going to be 3 or 4 matching symbols
-      const matchCount = Math.random() > 0.2 ? 3 : 4; // 20% chance for 4 matches
-      
-      // Create the winning row with matching symbols
+      const matchCount = Math.random() > 0.2 ? 3 : 4;
       newFinalSymbols = Array(REEL_COUNT).fill(0).map((_, i) => 
         i < matchCount ? winningSymbolIndex : Math.floor(Math.random() * fruitSymbols.length)
       );
       
-      // Shuffle to make it not always at the beginning
       if (matchCount === 3) {
         const skipIndex = Math.floor(Math.random() * REEL_COUNT);
-        if (skipIndex < 3) { // Make sure we still have 3 in a row somewhere
+        if (skipIndex < 3) {
           newFinalSymbols[skipIndex] = (winningSymbolIndex + 1) % fruitSymbols.length;
         }
       }
     } else {
-      // If the player should lose, ensure no more than 2 matching symbols
       newFinalSymbols = Array(REEL_COUNT).fill(0).map(() => 
         Math.floor(Math.random() * fruitSymbols.length)
       );
       
-      // Ensure no more than 2 of any symbol
       const counts: Record<number, number> = {};
       newFinalSymbols.forEach((sym, i) => {
         counts[sym] = (counts[sym] || 0) + 1;
-        // If we have more than 2 of this symbol, change it
         if (counts[sym] > 2) {
           let newSym;
           do {
@@ -164,29 +150,23 @@ const SpinGame = () => {
     
     setFinalSymbols(newFinalSymbols);
     
-    // Generate new full reels that will end with our final symbols
     const newReels = reels.map((_, reelIndex) => {
-      const reelLength = 20; // Length of the spinning reel
+      const reelLength = 20;
       const finalSymbol = newFinalSymbols[reelIndex];
       
-      // Generate random symbols for the reel, with the final symbol at the end
       return Array(reelLength).fill(0).map((_, i) => 
         i === reelLength - 1 ? finalSymbol : Math.floor(Math.random() * fruitSymbols.length)
       );
     });
     
-    // Start the spinning animation
     setReels(newReels);
     
-    // Stop the reels after a delay
     const stopReels = () => {
-      // Count matching symbols
       const counts: Record<number, number> = {};
       newFinalSymbols.forEach(sym => {
         counts[sym] = (counts[sym] || 0) + 1;
       });
       
-      // Find the symbol with the most matches
       let maxCount = 0;
       let maxSymbol = -1;
       Object.entries(counts).forEach(([symbol, count]) => {
@@ -196,10 +176,8 @@ const SpinGame = () => {
         }
       });
       
-      // Determine if player won
       let winAmount = 0;
       if (maxCount >= 3) {
-        // Highlight winning symbols
         const winningIndices: number[] = [];
         newFinalSymbols.forEach((sym, i) => {
           if (sym === maxSymbol) {
@@ -211,7 +189,6 @@ const SpinGame = () => {
         const symbolValue = fruitSymbols[maxSymbol].value;
         winAmount = totalBet * symbolValue * (maxCount === 4 ? 2 : 1);
         
-        // Update user balance with winnings
         updateUserBalance(user.balance - totalBet + winAmount);
         
         setWin(winAmount);
@@ -234,7 +211,6 @@ const SpinGame = () => {
       setSpinning(false);
     };
     
-    // Stagger the stopping of each reel
     setTimeout(stopReels, 2000);
   };
   
