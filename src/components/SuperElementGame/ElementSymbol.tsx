@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 
 // Define the symbol types
 type SymbolShape = 'circle' | 'triangle' | 'diamond' | 'hexagon' | 'star';
@@ -140,16 +139,18 @@ const ElementSymbol = ({ element, shape, color, size = 60, isActive = false, isS
     }
   };
 
-  // Animation variants - fixed to use specific string literals for repeatType
-  const variants = {
-    idle: { scale: 1 },
+  // Animation variants - properly typed for framer-motion
+  const variants: Variants = {
+    idle: { 
+      scale: 1 
+    },
     active: { 
       scale: [1, 1.1, 1], 
       rotate: [0, 5, -5, 0],
       transition: { 
         duration: 1, 
         repeat: Infinity,
-        repeatType: "reverse" // Using a valid literal value
+        repeatType: "reverse" as const // Explicitly typed as a const literal
       } 
     },
     spinning: {
