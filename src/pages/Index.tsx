@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -59,6 +60,22 @@ const featuredGames = [
     multiplier: '25000',
     isNew: true,
     path: '/game/super-ace'
+  },
+  {
+    id: 'fortune-gems-feat',
+    title: 'Fortune Gems',
+    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
+    multiplier: '35000',
+    isNew: true,
+    path: '/game/fortune-gems'
+  },
+  {
+    id: 'golden-basin-feat',
+    title: 'Golden Basin',
+    image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
+    multiplier: '45000',
+    isNew: true,
+    path: '/game/golden-basin'
   }
 ];
 
@@ -110,6 +127,13 @@ const popularGames = [
     multiplier: '3200',
     path: '/game/777coins'
   },
+  {
+    id: 'mega-spin-pop',
+    title: 'Mega Spin',
+    image: '/lovable-uploads/ba454bb5-ce73-43cb-a2ee-68e5e0fd715f.png',
+    multiplier: '4000',
+    path: '/game/megaspin'
+  },
 ];
 
 const slotGames = [
@@ -159,6 +183,13 @@ const slotGames = [
     multiplier: '4500',
     isNew: true,
     path: '/game/golden-basin'
+  },
+  {
+    id: '777coins-slot',
+    title: '777 Coins',
+    image: 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?auto=format&fit=crop&w=300&h=400',
+    multiplier: '3200',
+    path: '/game/777coins'
   },
 ];
 

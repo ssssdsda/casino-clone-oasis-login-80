@@ -87,7 +87,7 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
       <div className="flex justify-center w-full">
         <div className={`grid ${isMobile 
           ? 'grid-cols-3 gap-2' 
-          : 'grid-cols-5 sm:grid-cols-6 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-4'} justify-items-center`}>
+          : 'grid-cols-6 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-8 gap-4'} justify-items-center`}>
           {games.map((game) => (
             <GameCard 
               key={game.id}

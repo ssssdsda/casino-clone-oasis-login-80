@@ -1,10 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, CreditCard, CheckCircle, Wallet, PlusCircle, Clock } from 'lucide-react';
@@ -15,11 +17,11 @@ import app from '@/lib/firebase';
 const firestore = getFirestore(app);
 
 // Preset deposit amounts
-const DEPOSIT_AMOUNTS = [200, 500, 1000, 2000];
+const DEPOSIT_AMOUNTS = [100, 200, 300, 500, 600, 800, 1000, 1200, 1500, 2000];
 
 // Payment method options
 const PAYMENT_METHODS = [
-  { id: 'bkash', name: 'bKash', icon: '/lovable-uploads/6fc263a6-a7b2-4cf2-afe5-9fb0b99fdd91.png', color: 'bg-pink-700' },
+  { id: 'bkash', name: 'bKash', icon: '/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png', color: 'bg-pink-700' },
   { id: 'nagad', name: 'Nagad', icon: '/lovable-uploads/7e03f44f-1482-4424-8f8c-40ab158dba36.png', color: 'bg-orange-600' },
   { id: 'rocket', name: 'Rocket', icon: '/lovable-uploads/a023c13d-3432-4f56-abd9-5bcdbbd30602.png', color: 'bg-purple-600' },
   { id: 'card', name: 'Card', icon: '', color: 'bg-blue-700' }
@@ -38,6 +40,9 @@ const Deposit = () => {
   const [depositId, setDepositId] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [depositStatus, setDepositStatus] = useState<string>('');
+  const [walletNumber, setWalletNumber] = useState<string>('');
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState<boolean>(false);
+  const [paymentURL, setPaymentURL] = useState<string>('');
   
   // Handle amount selection
   const handleAmountSelect = (amt: number) => {
@@ -132,6 +137,23 @@ const Deposit = () => {
       });
       return;
     }
+
+    if (!walletNumber && selectedMethod === 'bkash') {
+      toast({
+        title: "Wallet Number Required",
+        description: "Please enter your bKash wallet number",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (selectedMethod === 'bkash') {
+      // For bKash, open the payment link in a popup/dialog
+      // Using shop.bkash.com URL format as requested
+      setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
+      setPaymentDialogOpen(true);
+      return;
+    }
     
     setIsProcessing(true);
     setElapsedTime(0);
@@ -142,6 +164,7 @@ const Deposit = () => {
         userId: user?.id || "anonymous",
         amount,
         paymentMethod: selectedMethod,
+        walletNumber: walletNumber || null,
         status: "pending",
         timestamp: serverTimestamp()
       });
@@ -172,6 +195,14 @@ const Deposit = () => {
     const minutes = Math.floor(elapsedTime / 60);
     const seconds = elapsedTime % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+  
+  // Handle wallet number change
+  const handleWalletNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setWalletNumber(value);
+    }
   };
   
   return (
@@ -266,12 +297,12 @@ const Deposit = () => {
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-bold text-white mb-4">Select Amount</h2>
               
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="grid grid-cols-5 gap-2 mb-4">
                 {DEPOSIT_AMOUNTS.map((amt) => (
                   <Button
                     key={amt}
                     variant={amount === amt ? "default" : "outline"}
-                    className={`${amount === amt ? 'bg-green-600 hover:bg-green-700' : 'border-green-700 text-green-500'} text-lg font-bold h-16`}
+                    className={`${amount === amt ? 'bg-green-600 hover:bg-green-700' : 'border-green-700 text-green-500'} text-sm md:text-lg font-bold h-12`}
                     onClick={() => handleAmountSelect(amt)}
                   >
                     {amt}৳
@@ -293,7 +324,7 @@ const Deposit = () => {
             
             {/* Payment Methods */}
             <div className="bg-gray-800 rounded-xl p-4">
-              <h2 className="text-lg font-bold text-white mb-4">bKash Payment Method</h2>
+              <h2 className="text-lg font-bold text-white mb-4">Payment Method</h2>
               
               <div className="grid grid-cols-2 gap-3">
                 {PAYMENT_METHODS.map((method) => (
@@ -312,6 +343,20 @@ const Deposit = () => {
                   </Button>
                 ))}
               </div>
+              
+              {/* Wallet Number Input - only for mobile payments */}
+              {selectedMethod === 'bkash' && (
+                <div className="mt-4">
+                  <label className="text-sm text-gray-300 mb-1 block">bKash Wallet Number</label>
+                  <Input
+                    type="text"
+                    value={walletNumber}
+                    onChange={handleWalletNumberChange}
+                    placeholder="e.g. 01712345678"
+                    className="bg-gray-900 border-gray-700 text-white"
+                  />
+                </div>
+              )}
             </div>
             
             {/* Deposit Button */}
@@ -345,6 +390,48 @@ const Deposit = () => {
         )}
       </main>
       <Footer />
+      
+      {/* bKash Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle>bKash Payment</DialogTitle>
+          <DialogDescription>
+            Complete your payment of {amount}৳ via bKash
+          </DialogDescription>
+          <div className="flex flex-col items-center justify-center p-4 space-y-4">
+            <img src="/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png" alt="bKash" className="w-16 h-16" />
+            <p className="text-center text-sm text-gray-500">
+              You will be redirected to bKash to complete your payment. After successful payment, your account will be credited automatically.
+            </p>
+            <div className="flex space-x-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setPaymentDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  window.open(paymentURL, "_blank");
+                  // Record the deposit in Firebase
+                  addDoc(collection(firestore, "deposits"), {
+                    userId: user?.id || "anonymous",
+                    amount,
+                    paymentMethod: selectedMethod,
+                    walletNumber: walletNumber || null,
+                    status: "pending", // Will be updated once payment is confirmed
+                    timestamp: serverTimestamp()
+                  }).then((docRef) => {
+                    setDepositId(docRef.id);
+                    setDepositStatus('pending');
+                    setPaymentDialogOpen(false);
+                  });
+                }}>
+                Proceed to Payment
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
