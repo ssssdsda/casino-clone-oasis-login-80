@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import GameCard from './GameCard';
 import { useLanguage } from '@/context/LanguageContext';
@@ -139,7 +140,6 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
               id={game.id}
               title={game.title}
               image={game.image}
-              multiplier={game.multiplier}
               isNew={game.isNew}
               onClick={() => handleGameClick(game)}
               onEditClick={isAdmin ? () => handleEditClick(game) : undefined}

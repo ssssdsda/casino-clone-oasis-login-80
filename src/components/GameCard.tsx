@@ -14,7 +14,7 @@ interface GameCardProps {
   onEditClick?: (e: React.MouseEvent) => void;
 }
 
-const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: GameCardProps) => {
+const GameCard = ({ title, image, isNew, onClick, onEditClick }: GameCardProps) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [imageError, setImageError] = useState(false);
@@ -112,16 +112,11 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
         {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
         
-        {/* Game title and info */}
+        {/* Game title */}
         <div className="absolute bottom-0 left-0 right-0 p-1.5">
           <h3 className={`${isMobile ? 'text-[10px]' : 'text-xs md:text-sm'} font-medium text-white truncate`}>
             {title}
           </h3>
-          {multiplier && (
-            <div className={`${isMobile ? 'text-[9px]' : 'text-[10px] md:text-xs'} text-orange-500 font-bold`}>
-              {t('currency')}{multiplier}
-            </div>
-          )}
         </div>
         
         {/* Favorite button */}
