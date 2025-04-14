@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -23,7 +24,7 @@ const featuredGames = [
   {
     id: 'boxing-king',
     title: 'Boxing King',
-    image: '/lovable-uploads/23ba5110-65e1-4f2e-8330-95f1a62d130d.png',
+    image: '/lovable-uploads/433bf174-e919-4799-843c-f8c595b47f2a.png', // Updated image here
     multiplier: '50000',
     isNew: true,
     path: '/game/boxing-king'
