@@ -16,6 +16,7 @@ import MoneyGram from '@/pages/MoneyGram';
 import LiveCricket from '@/pages/LiveCricket';
 import LiveFootball from '@/pages/LiveFootball';
 import AviatorControl from '@/pages/AviatorControl';
+import { LanguageProvider } from '@/context/LanguageContext';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -29,26 +30,28 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <ThemeProvider
-          defaultTheme="dark"
-          storageKey="casino-theme"
-        >
-          <Toaster />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/game/aviator" element={<AviatorGame />} />
-            <Route path="/game/boxing-king" element={<BoxingKingGame />} />
-            <Route path="/game/spin" element={<SpinGame />} />
-            <Route path="/game/megaspin" element={<MegaSpin />} />
-            <Route path="/game/coin-up" element={<CoinUpGame />} />
-            <Route path="/game/super-ace" element={<SuperAce />} />
-            <Route path="/game/moneygram" element={<MoneyGram />} />
-            <Route path="/game/live-cricket" element={<LiveCricket />} />
-            <Route path="/game/live-football" element={<LiveFootball />} />
-            <Route path="/game/aviator-control" element={<AviatorControl />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider
+            defaultTheme="dark"
+            storageKey="casino-theme"
+          >
+            <Toaster />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/game/aviator" element={<AviatorGame />} />
+              <Route path="/game/boxing-king" element={<BoxingKingGame />} />
+              <Route path="/game/spin" element={<SpinGame />} />
+              <Route path="/game/megaspin" element={<MegaSpin />} />
+              <Route path="/game/coin-up" element={<CoinUpGame />} />
+              <Route path="/game/super-ace" element={<SuperAce />} />
+              <Route path="/game/moneygram" element={<MoneyGram />} />
+              <Route path="/game/live-cricket" element={<LiveCricket />} />
+              <Route path="/game/live-football" element={<LiveFootball />} />
+              <Route path="/game/aviator-control" element={<AviatorControl />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ThemeProvider>
+        </LanguageProvider>
       </AuthProvider>
     </Router>
   );
