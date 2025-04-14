@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Settings, RefreshCw, Maximize2 } from 'lucide-react';
+import { shouldBetWin } from '@/utils/bettingSystem';
 
 // Multiplier values
 const multiplierOptions = [
@@ -26,6 +27,7 @@ const GoldenBasinGame = () => {
   const [winAmount, setWinAmount] = useState(0);
   const [selectedMultiplier, setSelectedMultiplier] = useState('1.10x');
   const [gameMode, setGameMode] = useState<'Manual' | 'Auto'>('Manual');
+  const [gameResult, setGameResult] = useState<'WIN' | 'LOSS' | null>(null);
   const spinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const winSound = useRef<HTMLAudioElement | null>(null);
@@ -61,6 +63,9 @@ const GoldenBasinGame = () => {
       return;
     }
     
+    // Clear previous result
+    setGameResult(null);
+    
     // Update user balance
     updateUserBalance(user.balance - betAmount);
     
@@ -77,13 +82,14 @@ const GoldenBasinGame = () => {
     if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current);
     
     spinTimeoutRef.current = setTimeout(() => {
-      const randomWin = Math.random();
-      const selectedMultiplierValue = parseFloat(selectedMultiplier.replace('x', ''));
+      const userId = user.id || 'anonymous';
+      const didWin = shouldBetWin(userId);
       
-      // Determine if the spin is a win
-      if (randomWin > 0.6) { // 40% chance to win
+      if (didWin) { // Win condition
+        const selectedMultiplierValue = parseFloat(selectedMultiplier.replace('x', ''));
         const winAmount = betAmount * selectedMultiplierValue;
         setWinAmount(Number(winAmount.toFixed(2)));
+        setGameResult('WIN');
         
         // Update user balance with winnings
         updateUserBalance(user.balance - betAmount + winAmount);
@@ -98,6 +104,8 @@ const GoldenBasinGame = () => {
           title: "Congratulations!",
           description: `You won ${winAmount.toFixed(2)}!`,
         });
+      } else { // Loss condition
+        setGameResult('LOSS');
       }
       
       setSpinning(false);
@@ -189,6 +197,16 @@ const GoldenBasinGame = () => {
                   <RefreshCw className="h-16 w-16 text-yellow-400 animate-spin" />
                 </div>
               )}
+              
+              {/* Game result text overlay */}
+              {gameResult && !spinning && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className={`text-4xl font-bold ${gameResult === 'WIN' ? 'text-green-500' : 'text-red-500'} 
+                                   bg-black/50 px-8 py-4 rounded-lg animate-bounce`}>
+                    {gameResult}
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Mode selector */}
@@ -243,38 +261,16 @@ const GoldenBasinGame = () => {
             </div>
           </div>
           
-          {/* Duplicate for layout */}
+          {/* Bet history */}
           <div className="mt-4 bg-green-900 rounded-lg p-3">
-            <div className="text-center text-sm mb-2">Bet Setting</div>
+            <div className="text-center text-sm mb-2">Bet History</div>
             
-            <div className="flex justify-between items-center">
-              <div className="w-1/3 bg-teal-800 p-3 rounded-lg text-center font-bold">
-                {betAmount}
-              </div>
-              
-              <div className="flex space-x-2 w-1/3">
-                <button 
-                  className="w-full bg-blue-600 rounded py-2 text-sm"
-                  onClick={() => changeBetAmount(0.5)}
-                >
-                  x1/2
-                </button>
-                
-                <button 
-                  className="w-full bg-blue-600 rounded py-2 text-sm"
-                  onClick={() => changeBetAmount(2)}
-                >
-                  x2
-                </button>
-              </div>
-              
-              <Button
-                onClick={handleSpin}
-                disabled={spinning || !user}
-                className="w-1/3 bg-green-600 hover:bg-green-500 text-white font-bold"
-              >
-                BET
-              </Button>
+            <div className="grid grid-cols-3 gap-2">
+              {Array(6).fill(null).map((_, index) => (
+                <div key={index} className={`h-8 rounded-full ${index % 5 === 0 ? 'bg-green-600' : 'bg-red-600'} flex items-center justify-center text-xs font-bold`}>
+                  {index % 5 === 0 ? 'WIN' : 'LOSS'}
+                </div>
+              ))}
             </div>
           </div>
         </div>
