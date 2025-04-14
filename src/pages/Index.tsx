@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -46,6 +45,22 @@ const Index = () => {
     navigate('/game/plinko');
   };
   
+  const handleCasinoWinClick = () => {
+    navigate('/game/spin');
+  };
+  
+  const handleMoneyGramClick = () => {
+    navigate('/game/moneygram');
+  };
+  
+  const handleCoinUpClick = () => {
+    navigate('/game/coin-up');
+  };
+  
+  const handleFortuneGemsClick = () => {
+    navigate('/game/fortune-gems');
+  };
+  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-casino-dark flex flex-col items-center justify-center">
@@ -64,12 +79,10 @@ const Index = () => {
         <main className={`flex-1 p-1 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
           <Banner />
           
-          {/* Game Grid Section */}
           <section className="mt-6">
             <h2 className="text-xl md:text-2xl font-bold text-orange-500 mb-4">Featured Games</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               
-              {/* Mega Spin Game Card */}
               <motion.div 
                 className="relative rounded-lg overflow-hidden bg-gradient-to-b from-purple-900 to-indigo-900 shadow-xl"
                 whileHover={{ scale: 1.03 }}
@@ -97,7 +110,6 @@ const Index = () => {
                 </div>
               </motion.div>
               
-              {/* Aviator Game Card */}
               <motion.div 
                 className="relative rounded-lg overflow-hidden bg-gradient-to-b from-red-900 to-blue-900 shadow-xl"
                 whileHover={{ scale: 1.03 }}
@@ -125,7 +137,6 @@ const Index = () => {
                 </div>
               </motion.div>
               
-              {/* Boxing King Game Card */}
               <motion.div 
                 className="relative rounded-lg overflow-hidden bg-gradient-to-b from-yellow-800 to-red-900 shadow-xl"
                 whileHover={{ scale: 1.03 }}
@@ -153,7 +164,6 @@ const Index = () => {
                 </div>
               </motion.div>
               
-              {/* Plinko Game Card */}
               <motion.div 
                 className="relative rounded-lg overflow-hidden bg-gradient-to-b from-purple-700 to-pink-800 shadow-xl"
                 whileHover={{ scale: 1.03 }}
@@ -174,6 +184,120 @@ const Index = () => {
                     
                     <button 
                       className="mt-3 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-white font-bold hover:from-pink-600 hover:to-purple-700 transition-colors"
+                    >
+                      Play Now
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </section>
+          
+          <section className="mt-6">
+            <h2 className="text-xl md:text-2xl font-bold text-orange-500 mb-4">More Exciting Games</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              
+              <motion.div 
+                className="relative rounded-lg overflow-hidden bg-gradient-to-b from-purple-700 to-pink-800 shadow-xl"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCasinoWinClick}
+              >
+                <div className="aspect-square relative overflow-hidden">
+                  <img 
+                    src="/lovable-uploads/d8f0c404-600a-4031-b9b2-c5f3c67ac79d.png" 
+                    alt="Casino Win" 
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-1">Casino Win</h3>
+                    <p className="text-yellow-400 text-sm">Spin and Win Big!</p>
+                    
+                    <button 
+                      className="mt-3 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-white font-bold hover:from-pink-600 hover:to-purple-700 transition-colors"
+                    >
+                      Play Now
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+              
+              <motion.div 
+                className="relative rounded-lg overflow-hidden bg-gradient-to-b from-green-700 to-green-900 shadow-xl"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleMoneyGramClick}
+              >
+                <div className="aspect-square relative overflow-hidden">
+                  <img 
+                    src="/lovable-uploads/5c14f8b4-466d-4d26-b33a-a4c54aa29279.png" 
+                    alt="Money Gram" 
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-1">Money Gram</h3>
+                    <p className="text-yellow-400 text-sm">Cash is Coming!</p>
+                    
+                    <button 
+                      className="mt-3 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 rounded-full text-white font-bold hover:from-green-600 hover:to-green-700 transition-colors"
+                    >
+                      Play Now
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+              
+              <motion.div 
+                className="relative rounded-lg overflow-hidden bg-gradient-to-b from-orange-600 to-red-800 shadow-xl"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCoinUpClick}
+              >
+                <div className="aspect-square relative overflow-hidden">
+                  <img 
+                    src="/lovable-uploads/254f4915-c83e-4caa-9291-4322984e94ef.png" 
+                    alt="Coin Up" 
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-1">Coin Up</h3>
+                    <p className="text-yellow-400 text-sm">Hot Fire 3x3!</p>
+                    
+                    <button 
+                      className="mt-3 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-full text-white font-bold hover:from-orange-600 hover:to-red-700 transition-colors"
+                    >
+                      Play Now
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+              
+              <motion.div 
+                className="relative rounded-lg overflow-hidden bg-gradient-to-b from-yellow-600 to-orange-800 shadow-xl"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleFortuneGemsClick}
+              >
+                <div className="aspect-square relative overflow-hidden">
+                  <img 
+                    src="/lovable-uploads/79304bde-4c37-41d8-a808-22ab451af8d7.png" 
+                    alt="Fortune Gems" 
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-1">Fortune Gems</h3>
+                    <p className="text-yellow-400 text-sm">Golden Treasures!</p>
+                    
+                    <button 
+                      className="mt-3 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-full text-white font-bold hover:from-yellow-600 hover:to-orange-700 transition-colors"
                     >
                       Play Now
                     </button>
