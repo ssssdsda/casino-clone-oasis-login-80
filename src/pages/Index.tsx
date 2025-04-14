@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
@@ -104,6 +103,13 @@ const popularGames = [
     multiplier: '4500',
     path: '/game/golden-basin'
   },
+  {
+    id: '777coins',
+    title: '777 Coins',
+    image: 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?auto=format&fit=crop&w=300&h=400',
+    multiplier: '3200',
+    path: '/game/777coins'
+  },
 ];
 
 const slotGames = [
@@ -129,6 +135,30 @@ const slotGames = [
     title: 'Diamond Rush',
     image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=300&h=400',
     multiplier: '1800',
+  },
+  {
+    id: 'fortune-gems',
+    title: 'Fortune Gems',
+    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
+    multiplier: '3500',
+    isNew: true,
+    path: '/game/fortune-gems'
+  },
+  {
+    id: 'coin-up',
+    title: 'Coin Up',
+    image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
+    multiplier: '5000',
+    isNew: true,
+    path: '/game/coin-up'
+  },
+  {
+    id: 'golden-basin',
+    title: 'Golden Basin',
+    image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
+    multiplier: '4500',
+    isNew: true,
+    path: '/game/golden-basin'
   },
 ];
 

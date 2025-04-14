@@ -162,25 +162,34 @@ const Header = () => {
         )}
       </div>
       
-      {/* Mobile deposit/withdraw buttons */}
-      {isMobile && isAuthenticated && (
-        <div className="flex justify-center space-x-4 mt-2">
-          <Button 
-            variant="outline" 
-            className="bg-green-800 hover:bg-green-700 border-green-600 text-white px-4 py-1 h-auto flex-1"
-            onClick={() => navigate('/deposit')}
-          >
-            <Wallet className="mr-1 h-4 w-4" />
-            {t('deposit')}
-          </Button>
-          <Button 
-            variant="outline" 
-            className="bg-red-800 hover:bg-red-700 border-red-600 text-white px-4 py-1 h-auto flex-1"
-            onClick={() => navigate('/withdrawal')}
-          >
-            <Wallet className="mr-1 h-4 w-4" />
-            {t('withdraw')}
-          </Button>
+      {/* Mobile deposit/withdraw/login buttons */}
+      {isMobile && (
+        <div className="flex justify-center space-x-2 mt-2">
+          {isAuthenticated ? (
+            <>
+              <Button 
+                variant="outline" 
+                className="bg-green-800 hover:bg-green-700 border-green-600 text-white px-3 py-1 h-auto flex-1 text-xs"
+                onClick={() => navigate('/deposit')}
+              >
+                <Wallet className="mr-1 h-4 w-4" />
+                {t('deposit')}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="bg-red-800 hover:bg-red-700 border-red-600 text-white px-3 py-1 h-auto flex-1 text-xs"
+                onClick={() => navigate('/withdrawal')}
+              >
+                <Wallet className="mr-1 h-4 w-4" />
+                {t('withdraw')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <LoginButton />
+              <RegisterButton />
+            </>
+          )}
         </div>
       )}
     </header>
