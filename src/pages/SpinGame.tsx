@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Headphones, Volume2, VolumeX, RotateCcw, Play, Star, ArrowRight, RefreshCw } from 'lucide-react';
@@ -11,11 +12,11 @@ import { useNavigate } from 'react-router-dom';
 
 // Define symbol types with better graphics
 const symbols = [
-  { id: 'seven', image: '/lovable-uploads/0589ec98-6814-4024-b231-39c6e8aceab7.png', value: 10 },
-  { id: 'bell', image: '/public/lovable-uploads/5115335b-c53e-4e42-b15c-54c2578c7414.png', value: 5 },
-  { id: 'cherry', image: 'https://images.unsplash.com/photo-1559181567-c3190ca9959b?auto=format&fit=crop&w=300&h=300', value: 3 },
-  { id: 'orange', image: 'https://images.unsplash.com/photo-1557800636-894a64c1696f?auto=format&fit=crop&w=300&h=300', value: 2 },
-  { id: 'lemon', image: 'https://images.unsplash.com/photo-1582087463261-ddea03f80e5d?auto=format&fit=crop&w=300&h=300', value: 2 },
+  { id: 'cherry', image: '/lovable-uploads/7ee869ea-c4ce-4db7-9031-a09bbd8ad5fd.png', value: 3 },
+  { id: 'lemon', image: '/lovable-uploads/0fe41380-0ce3-42f3-a0f4-491bb537c704.png', value: 2 },
+  { id: 'orange', image: '/lovable-uploads/2c773f0b-62a0-42ff-92e3-93c14f438654.png', value: 2 },
+  { id: 'plum', image: '/lovable-uploads/adbc8de0-0c80-42d3-a1f0-e39550742fc6.png', value: 2 },
+  { id: 'coin', image: '/lovable-uploads/672f03a3-2462-487d-a60a-df1660da9fb7.png', value: 15 },
   { id: 'heart', image: '/public/lovable-uploads/a023c13d-3432-4f56-abd9-5bcdbbd30602.png', value: 1 },
   { id: 'club', image: '/public/lovable-uploads/d10fd039-e61a-4e50-8145-a1efe284ada2.png', value: 1 },
   { id: 'spade', image: '/public/lovable-uploads/7e03f44f-1482-4424-8f8c-40ab158dba36.png', value: 1 },
@@ -135,7 +136,7 @@ const SpinGame = () => {
         } else {
           toast({
             title: t('youWon'),
-            description: `${t('currency')}${winAmount}`,
+            description: `${winAmount}৳`,
           });
         }
       }
@@ -527,7 +528,7 @@ const SpinGame = () => {
                   repeatType: "reverse" 
                 }}
               >
-                {t('currency')}{win.toFixed(2)}
+                {win.toFixed(2)}৳
               </motion.div>
             </motion.div>
           )}

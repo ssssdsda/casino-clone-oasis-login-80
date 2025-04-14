@@ -15,6 +15,7 @@ import Withdrawal from "./pages/Withdrawal";
 import LiveCricket from "./pages/LiveCricket";
 import LiveFootball from "./pages/LiveFootball";
 import SuperAce from "./pages/SuperAce";
+import CoinsGame from "./pages/CoinsGame";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "./context/LanguageContext";
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/game/live-cricket" element={<LiveCricket />} />
               <Route path="/game/live-football" element={<LiveFootball />} />
               <Route path="/game/super-ace" element={<SuperAce />} />
+              <Route path="/game/777coins" element={<CoinsGame />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

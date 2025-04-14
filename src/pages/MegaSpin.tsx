@@ -41,6 +41,13 @@ const MegaSpin = () => {
   const [muted, setMuted] = useState(true);
   const [winnings, setWinnings] = useState(0);
   const [rotationAngle, setRotationAngle] = useState(0);
+  const [spinTransition, setSpinTransition] = useState({
+    type: "spring",
+    duration: 5,
+    damping: 50,
+    stiffness: 20,
+    restDelta: 0.001
+  });
   
   const wheelRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -84,15 +91,29 @@ const MegaSpin = () => {
       audioRef.current.play();
     }
     
-    // Simulate wheel spinning
-    const spinDegrees = 2000 + Math.random() * 360; // Spin at least 5 times
+    // Enhanced wheel spinning with more realistic physics
+    // Spin between 5-10 full rotations plus a random angle for the result
+    const minSpins = 5;
+    const maxSpins = 10;
+    const randomSpins = minSpins + Math.random() * (maxSpins - minSpins);
+    const spinDegrees = randomSpins * 360 + Math.random() * 360;
+    
+    setSpinTransition({
+      type: "spring",
+      duration: 5,
+      damping: 50,
+      stiffness: 20,
+      restDelta: 0.001
+    });
+    
     setRotationAngle(prev => prev + spinDegrees);
     
     // Calculate which segment will be at the top when wheel stops
     setTimeout(() => {
-      const finalRotation = spinDegrees % 360;
+      const finalRotation = rotationAngle + spinDegrees;
+      const normalizedRotation = finalRotation % 360;
       const segmentAngle = 360 / wheelSegments.length;
-      const segmentIndex = Math.floor((360 - finalRotation) / segmentAngle) % wheelSegments.length;
+      const segmentIndex = Math.floor((360 - normalizedRotation % 360) / segmentAngle) % wheelSegments.length;
       
       const winningSegment = wheelSegments[segmentIndex];
       setResult(winningSegment.value);
@@ -108,7 +129,7 @@ const MegaSpin = () => {
       
       toast({
         title: t('youWon'),
-        description: `${t('currency')}${payout}`,
+        description: `${winningSegment.value}৳`,
         variant: "default",
         className: "bg-green-500 text-white font-bold"
       });
@@ -220,13 +241,16 @@ const MegaSpin = () => {
             <div className="absolute inset-0 rounded-full border-8 border-yellow-300 bg-gray-900 shadow-[0_0_15px_rgba(255,215,0,0.7)] z-10"></div>
             
             {/* Wheel segments */}
-            <div 
+            <motion.div 
               ref={wheelRef}
-              className="absolute inset-[20px] rounded-full overflow-hidden z-20 transition-transform duration-[5s] ease-out"
+              className="absolute inset-[20px] rounded-full overflow-hidden z-20"
               style={{ 
-                transform: `rotate(${rotationAngle}deg)`,
                 transformOrigin: 'center',
               }}
+              animate={{ 
+                rotate: rotationAngle 
+              }}
+              transition={spinTransition}
             >
               {wheelSegments.map((segment, index) => (
                 <div 
@@ -269,7 +293,7 @@ const MegaSpin = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
             
             {/* Pointer/ticker at top */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-2 z-40">
