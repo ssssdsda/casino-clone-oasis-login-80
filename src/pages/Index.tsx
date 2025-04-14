@@ -15,7 +15,7 @@ const featuredGames = [
   {
     id: 'aviator',
     title: 'Aviator',
-    image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     multiplier: '100000',
     isNew: true,
     path: '/game/aviator'
@@ -104,14 +104,14 @@ const popularGames = [
   {
     id: 'aviator-popular',
     title: 'Aviator',
-    image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     multiplier: '8000',
     path: '/game/aviator'
   },
   {
     id: '5',
     title: 'Tiger Rush',
-    image: 'https://images.unsplash.com/photo-1444492417251-9c84a5fa18e0?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     multiplier: '3000',
   },
   {
@@ -124,7 +124,7 @@ const popularGames = [
   {
     id: '777coins',
     title: '777 Coins',
-    image: 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     multiplier: '3200',
     path: '/game/777coins'
   },
@@ -147,18 +147,18 @@ const slotGames = [
   {
     id: '7',
     title: 'Lucky Heroes',
-    image: 'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     multiplier: '2600',
   },
   {
     id: '8',
     title: 'Golden Wheel',
-    image: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
   },
   {
     id: '9',
     title: 'Diamond Rush',
-    image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     multiplier: '1800',
   },
   {
@@ -188,7 +188,7 @@ const slotGames = [
   {
     id: '777coins-slot',
     title: '777 Coins',
-    image: 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     multiplier: '3200',
     path: '/game/777coins'
   },
@@ -198,21 +198,21 @@ const liveGames = [
   {
     id: '11',
     title: 'Live Cricket',
-    image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     isNew: true,
     path: '/game/live-cricket'
   },
   {
     id: '12',
     title: 'Live Football',
-    image: 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     isNew: true,
     path: '/game/live-football'
   },
   {
     id: '13',
     title: 'Live Baccarat',
-    image: 'https://images.unsplash.com/photo-1494797262163-102fae527c62?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
   },
 ];
 
@@ -220,18 +220,18 @@ const casinoGames = [
   {
     id: '16',
     title: 'Royal Poker',
-    image: 'https://images.unsplash.com/photo-1528812969535-4999fa0d1cf3?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     multiplier: '5000',
   },
   {
     id: '17',
     title: 'Blackjack Pro',
-    image: 'https://images.unsplash.com/photo-1606167668584-78701c57f90d?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
   },
   {
     id: '18',
     title: 'Roulette Master',
-    image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=300&h=400',
+    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
     isNew: true,
   },
 ];

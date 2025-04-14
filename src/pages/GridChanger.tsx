@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -52,7 +53,7 @@ const GridChanger = () => {
           {
             id: 'aviator',
             title: 'Aviator',
-            image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
             multiplier: '100000',
             isNew: true,
             path: '/game/aviator'
@@ -124,14 +125,14 @@ const GridChanger = () => {
           {
             id: 'aviator-pop',
             title: 'Aviator',
-            image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
             multiplier: '8000',
             path: '/game/aviator'
           },
           {
             id: '5',
             title: 'Tiger Rush',
-            image: 'https://images.unsplash.com/photo-1444492417251-9c84a5fa18e0?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
             multiplier: '3000',
           },
           {
@@ -152,18 +153,18 @@ const GridChanger = () => {
           {
             id: '7',
             title: 'Lucky Heroes',
-            image: 'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
             multiplier: '2600',
           },
           {
             id: '8',
             title: 'Golden Wheel',
-            image: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
           },
           {
             id: '9',
             title: 'Diamond Rush',
-            image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
             multiplier: '1800',
           },
           {
@@ -179,39 +180,39 @@ const GridChanger = () => {
           {
             id: '11',
             title: 'Live Cricket',
-            image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
             isNew: true,
             path: '/game/live-cricket'
           },
           {
             id: '12',
             title: 'Live Football',
-            image: 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
             isNew: true,
             path: '/game/live-football'
           },
           {
             id: '13',
             title: 'Live Baccarat',
-            image: 'https://images.unsplash.com/photo-1494797262163-102fae527c62?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
           },
         ],
         casinoGames: [
           {
             id: '16',
             title: 'Royal Poker',
-            image: 'https://images.unsplash.com/photo-1528812969535-4999fa0d1cf3?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
             multiplier: '5000',
           },
           {
             id: '17',
             title: 'Blackjack Pro',
-            image: 'https://images.unsplash.com/photo-1606167668584-78701c57f90d?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
           },
           {
             id: '18',
             title: 'Roulette Master',
-            image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=300&h=400',
+            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
             isNew: true,
           },
         ],
@@ -223,18 +224,28 @@ const GridChanger = () => {
         try {
           const parsedGames = JSON.parse(savedGames);
           
+          // Force update all Aviator images to use the new one
           Object.keys(parsedGames).forEach(category => {
             parsedGames[category] = parsedGames[category].map((game: GameData) => {
+              // Update aviator images
               if (game.title.toLowerCase().includes('aviator')) {
                 return {
                   ...game,
-                  image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png'
+                  image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png'
                 };
               }
+              // Update mega spin images
               if (game.title.toLowerCase().includes('mega spin') || game.title.toLowerCase().includes('megaspin')) {
                 return {
                   ...game,
                   image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png'
+                };
+              }
+              // Set default image for any missing images
+              if (!game.image || game.image.includes('unsplash')) {
+                return {
+                  ...game,
+                  image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png'
                 };
               }
               return game;
@@ -243,6 +254,7 @@ const GridChanger = () => {
           
           setGames(parsedGames);
           
+          // Save the updated games back to localStorage
           localStorage.setItem('gameGridData', JSON.stringify(parsedGames));
         } catch (error) {
           console.error("Error parsing saved games:", error);

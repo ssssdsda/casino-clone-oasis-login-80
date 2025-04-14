@@ -36,8 +36,15 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
         width: '100%' 
       }}
     >
+      {/* New tag at the top */}
+      {isNew && (
+        <div className="absolute top-1 left-1 bg-orange-500 text-[8px] md:text-xs font-bold text-black px-1 py-0.5 rounded z-10">
+          NEW
+        </div>
+      )}
+
       {/* Game image */}
-      <div className="aspect-[3/4] relative">
+      <div className="aspect-[3/4] relative bg-gray-800">
         <img 
           src={image} 
           alt={title} 
@@ -59,7 +66,7 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
             {title}
           </h3>
           {multiplier && (
-            <div className={`${isMobile ? 'text-[9px]' : 'text-[10px] md:text-xs'} text-casino-accent font-bold`}>
+            <div className={`${isMobile ? 'text-[9px]' : 'text-[10px] md:text-xs'} text-orange-500 font-bold`}>
               {t('currency')}{multiplier}
             </div>
           )}
@@ -74,7 +81,7 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
         {onEditClick && (
           <button 
             data-edit-button="true"
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-casino-accent text-black p-2 rounded-full z-10 opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity edit-button"
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-orange-500 text-black p-2 rounded-full z-10 opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity edit-button"
             onClick={(e) => {
               e.stopPropagation();
               onEditClick(e);
@@ -86,22 +93,13 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
             </svg>
           </button>
         )}
-        
-        {/* New tag */}
-        {isNew && (
-          <div className="absolute top-1 left-1 bg-casino-accent text-[8px] md:text-xs font-bold text-black px-1 py-0.5 rounded">
-            NEW
-          </div>
-        )}
       </div>
 
-      <style>
-        {`
-          .game-card:hover .edit-button {
-            opacity: 1;
-          }
-        `}
-      </style>
+      <style jsx>{`
+        .game-card:hover .edit-button {
+          opacity: 1;
+        }
+      `}</style>
     </div>
   );
 };

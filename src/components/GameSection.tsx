@@ -27,7 +27,7 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
   const isMobile = useIsMobile();
   const [games, setGames] = useState<Game[]>(propGames);
   
-  // Always use prop games and skip localStorage loading to fix image display issues
+  // Update games when propGames changes
   useEffect(() => {
     setGames(propGames);
   }, [propGames]);
@@ -55,7 +55,7 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
     <div className="space-y-3 mb-6">
       <div className="flex items-center justify-between">
         <h2 className="text-md md:text-xl font-bold text-white">{t(title)}</h2>
-        <button className="text-xs md:text-sm text-casino-accent font-semibold">
+        <button className="text-xs md:text-sm text-orange-500 font-semibold">
           View All
         </button>
       </div>
