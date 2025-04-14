@@ -34,6 +34,18 @@ const Index = () => {
     navigate('/game/megaspin');
   };
   
+  const handleAviatorClick = () => {
+    navigate('/game/aviator');
+  };
+  
+  const handleBoxingKingClick = () => {
+    navigate('/game/boxing-king');
+  };
+  
+  const handlePlinkoClick = () => {
+    navigate('/game/plinko');
+  };
+  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-casino-dark flex flex-col items-center justify-center">
@@ -78,6 +90,90 @@ const Index = () => {
                     
                     <button 
                       className="mt-3 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-white font-bold hover:from-orange-600 hover:to-orange-700 transition-colors"
+                    >
+                      Play Now
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+              
+              {/* Aviator Game Card */}
+              <motion.div 
+                className="relative rounded-lg overflow-hidden bg-gradient-to-b from-red-900 to-blue-900 shadow-xl"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleAviatorClick}
+              >
+                <div className="aspect-square relative overflow-hidden">
+                  <img 
+                    src="/lovable-uploads/8655a847-c441-4713-a94d-59b16894e9cf.png" 
+                    alt="Aviator" 
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-1">Aviator</h3>
+                    <p className="text-yellow-400 text-sm">Fly high with big wins</p>
+                    
+                    <button 
+                      className="mt-3 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 rounded-full text-white font-bold hover:from-red-600 hover:to-red-700 transition-colors"
+                    >
+                      Play Now
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+              
+              {/* Boxing King Game Card */}
+              <motion.div 
+                className="relative rounded-lg overflow-hidden bg-gradient-to-b from-yellow-800 to-red-900 shadow-xl"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleBoxingKingClick}
+              >
+                <div className="aspect-square relative overflow-hidden">
+                  <img 
+                    src="/lovable-uploads/825eedf3-7b21-488f-9f67-b765219d4b18.png" 
+                    alt="Boxing King" 
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-1">Boxing King</h3>
+                    <p className="text-yellow-400 text-sm">Fight for the championship</p>
+                    
+                    <button 
+                      className="mt-3 px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full text-white font-bold hover:from-yellow-600 hover:to-yellow-700 transition-colors"
+                    >
+                      Play Now
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+              
+              {/* Plinko Game Card */}
+              <motion.div 
+                className="relative rounded-lg overflow-hidden bg-gradient-to-b from-purple-700 to-pink-800 shadow-xl"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handlePlinkoClick}
+              >
+                <div className="aspect-square relative overflow-hidden">
+                  <img 
+                    src="/lovable-uploads/9116085e-489a-4b8b-add0-f3e1930eb5ec.png" 
+                    alt="Plinko" 
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-1">Plinko</h3>
+                    <p className="text-yellow-400 text-sm">Drop the ball for big prizes</p>
+                    
+                    <button 
+                      className="mt-3 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-white font-bold hover:from-pink-600 hover:to-purple-700 transition-colors"
                     >
                       Play Now
                     </button>
