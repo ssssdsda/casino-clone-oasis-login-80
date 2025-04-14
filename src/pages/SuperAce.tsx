@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -6,13 +7,18 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, RotateCw, Plus, Minus, RefreshCw, Heart } from 'lucide-react';
+import { ArrowLeft, RotateCw, Plus, Minus, RefreshCw, Heart, Target, Crown } from 'lucide-react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import app from '@/lib/firebase';
+
+const firestore = getFirestore(app);
 
 // Card suits and values
 const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
 const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
-// Card component
+// Card component with improved styling to match the image
 const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
   const getColor = () => {
     return ['hearts', 'diamonds'].includes(suit) ? 'text-red-600' : 'text-black';
@@ -42,9 +48,10 @@ const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
     return null;
   };
 
+  // Enhanced card design to match the image
   return (
     <motion.div 
-      className={`w-24 h-36 md:w-32 md:h-48 rounded-lg overflow-hidden ${
+      className={`w-20 h-28 md:w-24 md:h-36 rounded-lg overflow-hidden shadow-xl ${
         isHighlighted ? 'ring-4 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.7)]' : ''
       }`}
       initial={{ rotateY: isRevealed ? 0 : 180 }}
@@ -52,33 +59,75 @@ const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
       transition={{ duration: 0.6 }}
     >
       {isRevealed ? (
-        <div className="w-full h-full bg-white flex flex-col items-center justify-center p-2 shadow-xl">
-          <div className={`text-lg md:text-xl font-bold ${getColor()}`}>
+        <div className="w-full h-full bg-white flex flex-col items-center justify-center p-1 shadow-xl border-2 border-gray-300">
+          <div className={`text-base md:text-lg font-bold ${getColor()} absolute top-1 left-1`}>
             {value}
           </div>
           
           {getSuitImage() ? (
-            <div className="flex-1 flex items-center justify-center w-full p-1">
-              <img 
-                src={getSuitImage()} 
-                alt={`${value} of ${suit}`} 
-                className="max-h-full max-w-full object-contain"
-              />
+            <div className="flex-1 flex items-center justify-center w-full">
+              {value === 'A' && suit === 'spades' && (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <img 
+                    src={getSuitImage()} 
+                    alt={`${value} of ${suit}`} 
+                    className="max-h-full max-w-full object-contain"
+                  />
+                  {value === 'A' && (
+                    <div className="absolute bottom-2 text-amber-600 font-bold text-xs md:text-sm bg-yellow-100 px-1 rounded-md border border-amber-500">
+                      ACE
+                    </div>
+                  )}
+                </div>
+              )}
+              {!(value === 'A' && suit === 'spades') && (
+                <img 
+                  src={getSuitImage()} 
+                  alt={`${value} of ${suit}`} 
+                  className="max-h-full max-w-full object-contain"
+                />
+              )}
             </div>
           ) : (
-            <div className={`flex-1 flex items-center justify-center ${getColor()} text-5xl md:text-7xl`}>
-              {getSuitSymbol()}
+            <div className="flex-1 flex items-center justify-center">
+              {['K', 'Q', 'J'].includes(value) ? (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {value === 'K' && (
+                    <div className="flex flex-col items-center justify-center">
+                      <Crown className={`h-10 w-10 ${getColor()}`} />
+                      <div className="text-sm font-bold">KING</div>
+                    </div>
+                  )}
+                  {value === 'Q' && (
+                    <div className="flex flex-col items-center justify-center">
+                      <Crown className={`h-10 w-10 ${getColor()}`} />
+                      <div className="text-sm font-bold">QUEEN</div>
+                    </div>
+                  )}
+                  {value === 'J' && (
+                    <div className="flex flex-col items-center justify-center">
+                      <Crown className={`h-10 w-10 ${getColor()}`} />
+                      <div className="text-sm font-bold">JACK</div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className={`${getColor()} text-4xl md:text-5xl font-bold flex flex-col items-center`}>
+                  <div className="text-3xl">{getSuitSymbol()}</div>
+                  <div className="text-lg">{value}</div>
+                </div>
+              )}
             </div>
           )}
           
-          <div className={`text-lg md:text-xl font-bold ${getColor()} rotate-180`}>
+          <div className={`text-base md:text-lg font-bold ${getColor()} absolute bottom-1 right-1 rotate-180`}>
             {value}
           </div>
         </div>
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-purple-800 to-blue-900 flex items-center justify-center p-2 shadow-xl">
-          <div className="w-full h-full border-2 border-gold rounded-lg flex items-center justify-center">
-            <span className="text-yellow-500 text-3xl md:text-4xl font-bold">ACE</span>
+        <div className="w-full h-full bg-gradient-to-br from-red-800 to-red-950 flex items-center justify-center p-2 shadow-xl border-2 border-amber-600">
+          <div className="w-full h-full border-2 border-amber-500 rounded-lg flex items-center justify-center">
+            <span className="text-yellow-500 text-2xl md:text-3xl font-bold">ACE</span>
           </div>
         </div>
       )}
@@ -86,12 +135,54 @@ const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
   );
 };
 
+// Card slot grid to create a 5x5 layout like in the image
+const CardSlotGrid = ({ cards = [] }) => {
+  // Create a 5x5 grid of slots
+  const grid = Array(5).fill(null).map(() => Array(5).fill(null));
+  
+  // Fill grid with cards
+  cards.forEach((card, index) => {
+    const row = Math.floor(index / 5);
+    const col = index % 5;
+    if (row < 5 && col < 5) {
+      grid[row][col] = card;
+    }
+  });
+  
+  return (
+    <div className="w-full bg-white bg-opacity-20 rounded-lg p-2 mb-4">
+      {grid.map((row, rowIndex) => (
+        <div key={`row-${rowIndex}`} className="flex justify-center mb-1 gap-1">
+          {row.map((card, colIndex) => (
+            <div key={`cell-${rowIndex}-${colIndex}`} className="relative">
+              {card ? (
+                <Card 
+                  suit={card.suit} 
+                  value={card.value} 
+                  isHighlighted={card.isSpecial}
+                />
+              ) : (
+                <div className="w-20 h-28 md:w-24 md:h-36 bg-gray-200 bg-opacity-40 rounded-lg"></div>
+              )}
+              
+              {/* Show target indicator for special positions */}
+              {([7, 17].includes(rowIndex * 5 + colIndex)) && (
+                <div className="absolute -right-2 -top-2 bg-red-500 rounded-full p-1">
+                  <Target className="h-6 w-6 text-white" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // Game phases
 const PHASES = {
   BETTING: 'BETTING',
   DEALING: 'DEALING',
-  PLAYER_TURN: 'PLAYER_TURN',
-  DEALER_TURN: 'DEALER_TURN',
   RESULT: 'RESULT',
 };
 
@@ -101,13 +192,14 @@ const SuperAce = () => {
   const { user } = useAuth();
   
   const [deck, setDeck] = useState([]);
-  const [playerCards, setPlayerCards] = useState([]);
-  const [dealerCards, setDealerCards] = useState([]);
+  const [displayedCards, setDisplayedCards] = useState([]);
   const [gamePhase, setGamePhase] = useState(PHASES.BETTING);
   const [bet, setBet] = useState(50);
   const [balance, setBalance] = useState(user?.balance || 1000);
   const [result, setResult] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [winAmount, setWinAmount] = useState(0);
+  const [feature, setFeature] = useState(1); // Feature multiplier
   
   // Initialize game
   useEffect(() => {
@@ -124,10 +216,10 @@ const SuperAce = () => {
     setDeck(newDeck);
     
     // Reset cards and game state
-    setPlayerCards([]);
-    setDealerCards([]);
+    setDisplayedCards([]);
     setGamePhase(PHASES.BETTING);
     setResult(null);
+    setWinAmount(0);
   };
   
   // Create and shuffle a deck
@@ -135,7 +227,7 @@ const SuperAce = () => {
     const newDeck = [];
     for (const suit of suits) {
       for (const value of values) {
-        newDeck.push({ suit, value });
+        newDeck.push({ suit, value, isSpecial: value === 'A' || ['K', 'Q', 'J'].includes(value) });
       }
     }
     
@@ -148,33 +240,8 @@ const SuperAce = () => {
     return newDeck;
   };
   
-  // Calculate hand value
-  const calculateHandValue = (cards) => {
-    let value = 0;
-    let aces = 0;
-    
-    for (const card of cards) {
-      if (card.value === 'A') {
-        aces++;
-        value += 11;
-      } else if (['K', 'Q', 'J'].includes(card.value)) {
-        value += 10;
-      } else {
-        value += parseInt(card.value);
-      }
-    }
-    
-    // Adjust for aces if needed
-    while (value > 21 && aces > 0) {
-      value -= 10;
-      aces--;
-    }
-    
-    return value;
-  };
-  
-  // Deal initial cards
-  const startGame = () => {
+  // Deal cards
+  const startGame = async () => {
     if (balance < bet) {
       toast({
         title: "Insufficient Balance",
@@ -187,158 +254,114 @@ const SuperAce = () => {
     setBalance(prev => prev - bet);
     setGamePhase(PHASES.DEALING);
     
-    // Deal cards
-    const newDeck = [...deck];
-    const newPlayerCards = [newDeck.pop(), newDeck.pop()];
-    const newDealerCards = [newDeck.pop(), newDeck.pop()];
-    
-    setPlayerCards(newPlayerCards);
-    setDealerCards(newDealerCards);
-    setDeck(newDeck);
-    
-    // Check for blackjack
-    const playerValue = calculateHandValue(newPlayerCards);
-    const dealerValue = calculateHandValue(newDealerCards);
-    
-    if (playerValue === 21 && dealerValue === 21) {
-      // Push - both have blackjack
-      handleGameOver('PUSH');
-    } else if (playerValue === 21) {
-      // Player blackjack
-      handleGameOver('BLACKJACK');
-    } else if (dealerValue === 21) {
-      // Dealer blackjack
-      handleGameOver('LOSE');
-    } else {
-      // Continue game
-      setGamePhase(PHASES.PLAYER_TURN);
-    }
-  };
-  
-  // Player hits - draw a card
-  const handleHit = () => {
-    const newDeck = [...deck];
-    const newCard = newDeck.pop();
-    const newPlayerCards = [...playerCards, newCard];
-    
-    setPlayerCards(newPlayerCards);
-    setDeck(newDeck);
-    
-    const playerValue = calculateHandValue(newPlayerCards);
-    
-    if (playerValue > 21) {
-      // Player busts
-      handleGameOver('LOSE');
-    } else if (playerValue === 21) {
-      // Player has 21, automatically stand
-      handleStand();
-    }
-  };
-  
-  // Player stands - dealer's turn
-  const handleStand = () => {
-    setGamePhase(PHASES.DEALER_TURN);
-    
-    // Simulate dealer drawing cards
-    let newDealerCards = [...dealerCards];
-    let newDeck = [...deck];
-    let dealerValue = calculateHandValue(newDealerCards);
-    
-    // Dealer draws until 17 or higher
-    while (dealerValue < 17) {
-      const newCard = newDeck.pop();
-      newDealerCards = [...newDealerCards, newCard];
-      dealerValue = calculateHandValue(newDealerCards);
-    }
-    
-    setDealerCards(newDealerCards);
-    setDeck(newDeck);
-    
-    // Determine winner
-    const playerValue = calculateHandValue(playerCards);
-    
-    if (dealerValue > 21) {
-      // Dealer busts
-      handleGameOver('WIN');
-    } else if (dealerValue > playerValue) {
-      // Dealer wins
-      handleGameOver('LOSE');
-    } else if (dealerValue < playerValue) {
-      // Player wins
-      handleGameOver('WIN');
-    } else {
-      // Push - tie
-      handleGameOver('PUSH');
-    }
-  };
-  
-  // Double down - double bet, take one card, then stand
-  const handleDoubleDown = () => {
-    if (balance < bet) {
-      toast({
-        title: "Insufficient Balance",
-        description: "You don't have enough balance to double down",
-        variant: "destructive",
+    // Save bet to Firebase
+    try {
+      await addDoc(collection(firestore, "bets"), {
+        userId: user?.id || "anonymous",
+        betAmount: bet,
+        game: "SuperAce",
+        timestamp: serverTimestamp(),
+        userBalance: balance - bet
       });
-      return;
+    } catch (error) {
+      console.error("Error saving bet: ", error);
     }
     
-    setBalance(prev => prev - bet);
-    setBet(prev => prev * 2);
-    
+    // Deal random cards
     const newDeck = [...deck];
-    const newCard = newDeck.pop();
-    const newPlayerCards = [...playerCards, newCard];
+    const drawnCards = [];
     
-    setPlayerCards(newPlayerCards);
-    setDeck(newDeck);
-    
-    const playerValue = calculateHandValue(newPlayerCards);
-    
-    if (playerValue > 21) {
-      // Player busts
-      handleGameOver('LOSE');
-    } else {
-      // Stand after doubling down
-      handleStand();
+    // Draw 25 cards for the 5x5 grid
+    for (let i = 0; i < 25; i++) {
+      if (newDeck.length > 0) {
+        drawnCards.push(newDeck.pop());
+      }
     }
+    
+    // Add special positions (targets)
+    for (const pos of [7, 17]) {
+      if (drawnCards[pos]) {
+        drawnCards[pos].isTarget = true;
+      }
+    }
+    
+    // Display cards with animation
+    setDisplayedCards(drawnCards);
+    
+    // Check for win
+    setTimeout(() => {
+      const win = calculateWin(drawnCards);
+      handleGameResult(win);
+    }, 1500);
   };
   
-  // Handle game over and calculate winnings
-  const handleGameOver = (gameResult) => {
-    setGamePhase(PHASES.RESULT);
-    setResult(gameResult);
+  // Calculate win based on card combinations
+  const calculateWin = (cards) => {
+    // Check for Aces
+    const aces = cards.filter(card => card.value === 'A');
     
-    // Calculate and add winnings to balance
-    let winnings = 0;
+    // Check for face cards (K, Q, J)
+    const faceCards = cards.filter(card => ['K', 'Q', 'J'].includes(card.value));
     
-    switch (gameResult) {
-      case 'WIN':
-        winnings = bet * 2;
-        break;
-      case 'BLACKJACK':
-        winnings = bet * 2.5;
-        break;
-      case 'PUSH':
-        winnings = bet;
-        break;
-      default:
-        winnings = 0;
+    // Check for target positions
+    const targetAce = cards.some((card, index) => [7, 17].includes(index) && card.value === 'A');
+    
+    // Calculate win
+    let win = 0;
+    let multiplier = 1;
+    
+    // Target Ace pays 10x bet
+    if (targetAce) {
+      win += bet * 10;
+      multiplier = 10;
     }
     
-    if (winnings > 0) {
-      setBalance(prev => prev + winnings);
+    // Each Ace pays 2x bet
+    win += aces.length * bet * 2;
+    
+    // Each face card in key positions pays 1.5x bet
+    const keyPositionFaceCards = cards.filter((card, index) => 
+      [6, 8, 12, 16, 18].includes(index) && ['K', 'Q', 'J'].includes(card.value)
+    );
+    
+    win += keyPositionFaceCards.length * bet * 1.5;
+    
+    // Apply feature multiplier
+    win *= feature;
+    
+    return win;
+  };
+  
+  // Handle game result
+  const handleGameResult = (win) => {
+    setGamePhase(PHASES.RESULT);
+    setWinAmount(win);
+    
+    if (win > 0) {
+      setBalance(prev => prev + win);
+      
+      // Determine result message based on win amount
+      let resultType = 'WIN';
+      if (win >= bet * 10) {
+        resultType = 'BIG_WIN';
+      } else if (win >= bet * 5) {
+        resultType = 'GOOD_WIN';
+      }
+      
+      setResult(resultType);
       
       toast({
-        title: gameResult === 'PUSH' ? "Push" : "You Won!",
-        description: `${winnings}৳ added to your balance`,
+        title: win >= bet * 5 ? "Big Win!" : "You Won!",
+        description: `${win.toFixed(0)}৳ added to your balance`,
         variant: "default",
-        className: gameResult === 'BLACKJACK' ? "bg-yellow-600 text-white font-bold" : "bg-green-600 text-white font-bold"
+        className: win >= bet * 10 ? "bg-yellow-600 text-white font-bold" : "bg-green-600 text-white font-bold"
       });
     } else {
+      setResult('LOSE');
+      
       toast({
-        title: "You Lost",
-        description: `Better luck next time`,
+        title: "No Win",
+        description: "Try again!",
         variant: "destructive",
       });
     }
@@ -355,17 +378,23 @@ const SuperAce = () => {
     setBet(newBet);
   };
   
+  // Change feature multiplier
+  const changeFeature = () => {
+    // Toggle between 1x and 2x
+    setFeature(prev => prev === 1 ? 2 : 1);
+  };
+  
   // Get text message based on game result
   const getResultMessage = () => {
     switch (result) {
       case 'WIN':
         return 'You Won!';
-      case 'BLACKJACK':
-        return 'Blackjack!';
+      case 'BIG_WIN':
+        return 'BIG WIN!';
+      case 'GOOD_WIN':
+        return 'Good Win!';
       case 'LOSE':
-        return 'Dealer Wins';
-      case 'PUSH':
-        return 'Push - Tie';
+        return 'Try Again';
       default:
         return '';
     }
@@ -374,7 +403,7 @@ const SuperAce = () => {
   // Loading Screen
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-950 to-indigo-950 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-b from-red-800 to-red-950 flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center">
           <motion.div
@@ -403,14 +432,14 @@ const SuperAce = () => {
               transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
             >
               <div className="absolute inset-0 flex items-center justify-center">
-                <img src="/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png" className="w-24 h-36 object-contain" alt="Ace of Spades" />
+                <img src="/lovable-uploads/9a8c1448-91e1-4c94-947e-19377ca3a64b.png" className="w-full h-full object-contain" alt="Ace of Spades" />
               </div>
             </motion.div>
             <motion.button
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-full shadow-lg"
+              className="px-8 py-3 bg-gradient-to-r from-amber-600 to-red-600 text-white font-bold rounded-full shadow-lg"
               animate={{ 
                 scale: [1, 1.05, 1],
-                boxShadow: ["0 0 0px rgba(168,85,247,0.5)", "0 0 20px rgba(168,85,247,0.8)", "0 0 0px rgba(168,85,247,0.5)"]
+                boxShadow: ["0 0 0px rgba(234,88,12,0.5)", "0 0 20px rgba(234,88,12,0.8)", "0 0 0px rgba(234,88,12,0.5)"]
               }}
               transition={{ 
                 duration: 2, 
@@ -429,73 +458,23 @@ const SuperAce = () => {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-950 to-indigo-950 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-red-800 to-red-950 flex flex-col">
       <Header />
-      <main className="flex-1 p-4 max-w-6xl mx-auto">
-        <div className="mb-6 flex justify-between items-center">
-          <Button
-            variant="outline"
-            className="text-gray-300"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Games
-          </Button>
-          
-          <motion.h1 
-            className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-purple-500"
-            animate={{ 
-              textShadow: ["0 0 4px rgba(250,204,21,0.3)", "0 0 8px rgba(250,204,21,0.6)", "0 0 4px rgba(250,204,21,0.3)"]
-            }}
-            transition={{ 
-              duration: 2, 
-              repeat: Infinity,
-              repeatType: "reverse" 
-            }}
-          >
-            SUPER ACE CASINO
-          </motion.h1>
-          
-          <div className="bg-gray-900 px-4 py-2 rounded-lg border border-yellow-700">
-            <div className="text-gray-400 text-xs">Balance</div>
-            <div className="text-yellow-400 font-bold">{balance.toFixed(0)}৳</div>
+      <main className="flex-1 p-2 max-w-md mx-auto bg-[url('/lovable-uploads/9a8c1448-91e1-4c94-947e-19377ca3a64b.png')] bg-cover bg-center">
+        {/* Game Header Banner */}
+        <div className="mb-4">
+          <div className="bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 rounded-lg shadow-lg px-2 py-2 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/lovable-uploads/9a8c1448-91e1-4c94-947e-19377ca3a64b.png')] opacity-20"></div>
+            <h1 className="text-2xl font-bold text-amber-100 text-center drop-shadow-lg z-10 relative">
+              SUPER ACE FUNDS!
+            </h1>
           </div>
         </div>
         
-        {/* Game Table */}
-        <div className="relative bg-green-900 rounded-3xl p-6 shadow-xl border-4 border-yellow-900 mb-4">
-          {/* Dealer Area */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-white text-lg font-bold">Dealer</h2>
-              {gamePhase !== PHASES.BETTING && (
-                <div className="bg-gray-900 bg-opacity-70 px-3 py-1 rounded-lg">
-                  <span className="text-white font-medium">
-                    {gamePhase === PHASES.RESULT || gamePhase === PHASES.DEALER_TURN ? 
-                      calculateHandValue(dealerCards) : 
-                      calculateHandValue([dealerCards[0]])}
-                  </span>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex flex-wrap gap-2 justify-center">
-              {dealerCards.map((card, index) => (
-                <Card 
-                  key={`dealer-${index}`}
-                  suit={card.suit}
-                  value={card.value}
-                  isRevealed={index === 0 || gamePhase === PHASES.RESULT || gamePhase === PHASES.DEALER_TURN}
-                />
-              ))}
-              
-              {gamePhase === PHASES.BETTING && (
-                <>
-                  <div className="w-24 h-36 md:w-32 md:h-48 rounded-lg bg-green-800" />
-                  <div className="w-24 h-36 md:w-32 md:h-48 rounded-lg bg-green-800" />
-                </>
-              )}
-            </div>
-          </div>
+        {/* Game Board */}
+        <div className="relative w-full mb-4">
+          {/* Card Grid */}
+          <CardSlotGrid cards={displayedCards} />
           
           {/* Game Result Display */}
           <AnimatePresence>
@@ -508,10 +487,10 @@ const SuperAce = () => {
                 transition={{ type: 'spring', duration: 0.5 }}
               >
                 <div className={`px-8 py-4 rounded-lg text-white font-bold text-2xl md:text-3xl ${
-                  result === 'WIN' || result === 'BLACKJACK' 
-                    ? 'bg-gradient-to-r from-yellow-500 to-yellow-700' 
-                    : result === 'PUSH' 
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-800'
+                  result === 'BIG_WIN'
+                    ? 'bg-gradient-to-r from-yellow-500 to-amber-700 animate-pulse'
+                    : result === 'WIN' || result === 'GOOD_WIN'
+                      ? 'bg-gradient-to-r from-green-600 to-green-800'
                       : 'bg-gradient-to-r from-red-600 to-red-800'
                 }`}>
                   {getResultMessage()}
@@ -519,157 +498,84 @@ const SuperAce = () => {
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
+        
+        {/* Feature Controls */}
+        <div className="flex justify-between items-center mb-2 px-2">
+          <Button
+            variant="ghost"
+            className={`text-white bg-amber-700 border border-amber-500 rounded-full px-2 py-1 text-xs font-bold ${feature > 1 ? 'animate-pulse ring-2 ring-amber-400' : ''}`}
+            onClick={changeFeature}
+          >
+            {feature}X
+          </Button>
           
-          {/* Player Area */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-white text-lg font-bold">Your Hand</h2>
-              {gamePhase !== PHASES.BETTING && (
-                <div className="bg-gray-900 bg-opacity-70 px-3 py-1 rounded-lg">
-                  <span className="text-white font-medium">
-                    {calculateHandValue(playerCards)}
-                  </span>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex flex-wrap gap-2 justify-center">
-              {playerCards.map((card, index) => (
-                <Card 
-                  key={`player-${index}`}
-                  suit={card.suit}
-                  value={card.value}
-                  isRevealed={true}
-                  isHighlighted={card.value === 'A'}
-                />
-              ))}
-              
-              {gamePhase === PHASES.BETTING && (
-                <>
-                  <div className="w-24 h-36 md:w-32 md:h-48 rounded-lg bg-green-800" />
-                  <div className="w-24 h-36 md:w-32 md:h-48 rounded-lg bg-green-800" />
-                </>
-              )}
-            </div>
-          </div>
+          <Button
+            variant="ghost"
+            className="text-white bg-red-700 rounded-full p-1 w-6 h-6 flex items-center justify-center"
+          >
+            ?
+          </Button>
         </div>
         
         {/* Game Controls */}
-        <div className="bg-gray-900 bg-opacity-80 p-4 rounded-xl border border-gray-700 shadow-inner">
-          {gamePhase === PHASES.BETTING && (
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="flex items-center space-x-4 mb-4 md:mb-0">
-                <div>
-                  <div className="text-gray-400 text-xs">Bet Amount</div>
-                  <div className="flex items-center">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-gray-400"
-                      onClick={() => changeBet(-10)}
-                      disabled={bet <= 10}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="text-yellow-400 font-bold w-20 text-center">{bet}৳</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-gray-400"
-                      onClick={() => changeBet(10)}
-                      disabled={bet >= 500 || bet >= balance}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+        <div className="bg-gradient-to-b from-amber-900 to-amber-950 rounded-lg p-2 mb-2">
+          {/* Balance and Bet Display */}
+          <div className="flex justify-between items-center gap-2 mb-2">
+            <div className="bg-gradient-to-r from-amber-700 to-amber-800 p-1 rounded flex-1 flex items-center justify-between">
+              <div className="text-amber-200 text-xs">BALANCE</div>
+              <div className="text-cyan-400 font-bold">₮{balance.toFixed(2)}</div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-amber-700 to-amber-800 p-1 rounded flex-1 flex items-center justify-between">
+              <div className="text-amber-200 text-xs">BET</div>
+              <div className="text-cyan-400 font-bold">₮{bet}</div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-amber-700 to-amber-800 p-1 rounded flex-1 flex items-center justify-between">
+              <div className="text-amber-200 text-xs">WIN</div>
+              <div className="text-cyan-400 font-bold">₮{winAmount.toFixed(2)}</div>
+            </div>
+          </div>
+          
+          {/* Control Buttons */}
+          <div className="flex items-center justify-center gap-4 my-1">
+            <Button
+              variant="ghost"
+              className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
+            >
+              <Minus className="h-5 w-5" />
+            </Button>
+            
+            {gamePhase === PHASES.BETTING && (
+              <Button
+                onClick={startGame}
+                disabled={isLoading || balance < bet}
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-full h-16 w-16 flex items-center justify-center p-0"
+              >
+                <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full h-14 w-14 flex items-center justify-center">
+                  <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-full h-12 w-12 flex items-center justify-center border-4 border-amber-500">
                   </div>
                 </div>
-                
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline"
-                    className="border-yellow-600 text-yellow-500 hover:bg-yellow-900 hover:text-yellow-400"
-                    onClick={() => setBet(50)}
-                  >
-                    50৳
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    className="border-yellow-600 text-yellow-500 hover:bg-yellow-900 hover:text-yellow-400"
-                    onClick={() => setBet(100)}
-                  >
-                    100৳
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    className="border-yellow-600 text-yellow-500 hover:bg-yellow-900 hover:text-yellow-400"
-                    onClick={() => setBet(200)}
-                  >
-                    200৳
-                  </Button>
-                </div>
-              </div>
-              
-              <Button
-                className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white font-bold px-6 py-6 text-lg"
-                onClick={startGame}
-                disabled={balance < bet}
-              >
-                Deal Cards
               </Button>
-            </div>
-          )}
-          
-          {(gamePhase === PHASES.PLAYER_TURN) && (
-            <div className="flex justify-center space-x-4">
+            )}
+            
+            {gamePhase === PHASES.RESULT && (
               <Button
-                className="bg-green-700 hover:bg-green-800 text-white font-bold px-6"
-                onClick={handleHit}
-              >
-                Hit
-              </Button>
-              
-              <Button
-                className="bg-red-700 hover:bg-red-800 text-white font-bold px-6"
-                onClick={handleStand}
-              >
-                Stand
-              </Button>
-              
-              {playerCards.length === 2 && (
-                <Button
-                  className="bg-blue-700 hover:bg-blue-800 text-white font-bold px-6"
-                  onClick={handleDoubleDown}
-                  disabled={balance < bet}
-                >
-                  Double Down
-                </Button>
-              )}
-            </div>
-          )}
-          
-          {gamePhase === PHASES.DEALING && (
-            <div className="flex justify-center">
-              <Button
-                className="bg-gray-700 text-gray-300 cursor-not-allowed px-6"
-                disabled
-              >
-                <RefreshCw className="h-5 w-5 animate-spin mr-2" />
-                Dealing...
-              </Button>
-            </div>
-          )}
-          
-          {gamePhase === PHASES.RESULT && (
-            <div className="flex justify-center">
-              <Button
-                className="bg-gradient-to-r from-purple-600 to-pink-700 hover:from-purple-700 hover:to-pink-800 text-white font-bold px-6"
                 onClick={handleNewHand}
+                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-full h-16 w-16 flex items-center justify-center p-0"
               >
-                <RotateCw className="h-5 w-5 mr-2" />
-                New Hand
+                <RefreshCw className="h-8 w-8" />
               </Button>
-            </div>
-          )}
+            )}
+            
+            <Button
+              variant="ghost"
+              className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </main>
       <Footer />

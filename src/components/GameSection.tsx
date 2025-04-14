@@ -2,6 +2,7 @@
 import React from 'react';
 import GameCard from './GameCard';
 import { useLanguage } from '@/context/LanguageContext';
+import { useNavigate } from 'react-router-dom';
 
 interface Game {
   id: string;
@@ -19,6 +20,15 @@ interface GameSectionProps {
 
 const GameSection = ({ title, games }: GameSectionProps) => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  
+  const handleGameClick = (game: Game) => {
+    if (game.path) {
+      navigate(game.path);
+    } else {
+      console.log(`Clicked game: ${game.title}`);
+    }
+  };
   
   return (
     <div className="space-y-2 mb-4">
@@ -38,13 +48,7 @@ const GameSection = ({ title, games }: GameSectionProps) => {
             image={game.image}
             multiplier={game.multiplier}
             isNew={game.isNew}
-            onClick={() => {
-              if (game.path) {
-                window.location.href = game.path;
-              } else {
-                console.log(`Clicked game: ${game.title}`);
-              }
-            }}
+            onClick={() => handleGameClick(game)}
           />
         ))}
       </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, RotateCcw, Play, Pause, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
@@ -29,6 +30,64 @@ const SYMBOLS = [
 // Wheel values
 const WHEEL_VALUES = [50, 200, 1000, 2000, 50, 500, 100, 2000];
 
+// Scrolling reel component with improved animation
+const ScrollingReel = ({ symbols, isSpinning, finalSymbolIndex, reelIndex, spinDelay }) => {
+  return (
+    <div className="h-56 flex-1 border-r-4 border-l-4 border-amber-600 bg-green-600 mx-1 overflow-hidden relative">
+      <motion.div
+        className="flex flex-col"
+        initial={{ y: 0 }}
+        animate={{ 
+          y: isSpinning ? [0, -300 * 10] : 0 
+        }}
+        transition={{ 
+          duration: isSpinning ? 2 + (reelIndex * 0.5) : 0, 
+          ease: isSpinning ? "easeInOut" : "easeOut",
+          delay: spinDelay || 0,
+          type: "tween"
+        }}
+      >
+        {/* Repeat symbols multiple times for smooth scrolling */}
+        {[...Array(20)].map((_, repeatIndex) => (
+          <div key={`repeat-${repeatIndex}`} className="flex flex-col">
+            {symbols.map((symbol, symbolIndex) => {
+              const isSelected = !isSpinning && symbolIndex === finalSymbolIndex;
+              return (
+                <div
+                  key={`${repeatIndex}-${symbolIndex}`}
+                  className={`flex items-center justify-center h-[56px] transition-all duration-300 ${
+                    isSelected ? 'scale-110' : 'scale-100'
+                  }`}
+                >
+                  <motion.div
+                    className={`text-7xl font-bold ${symbol.color} ${
+                      isSelected ? 'text-shadow-glow' : ''
+                    }`}
+                    style={{ 
+                      textShadow: isSelected ? '0px 0px 10px rgba(255,215,0,0.8), 0px 0px 20px rgba(255,215,0,0.4)' : '3px 3px 6px rgba(0,0,0,0.5)'
+                    }}
+                    animate={{ 
+                      scale: isSelected ? [1, 1.1, 1] : 1,
+                      opacity: isSelected ? 1 : 0.8
+                    }}
+                    transition={{ 
+                      duration: isSelected ? 1 : 0, 
+                      repeat: isSelected ? Infinity : 0,
+                      repeatType: "reverse"
+                    }}
+                  >
+                    {symbol.value}
+                  </motion.div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
 const MoneyGram = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -48,7 +107,7 @@ const MoneyGram = () => {
     [0, 0, 0],
     [5, 0, 5],
   ]);
-  const [reelPositions, setReelPositions] = useState<number[]>([0, 0, 0]);
+  const [finalReelPositions, setFinalReelPositions] = useState<number[]>([0, 0, 0]);
   
   const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const wheelRef = useRef<HTMLDivElement>(null);
@@ -112,35 +171,19 @@ const MoneyGram = () => {
       console.error("Error saving bet: ", error);
     }
     
-    // Generate random reel positions
-    const randomReels = reels.map(() => 
-      Array(3).fill(0).map(() => Math.floor(Math.random() * SYMBOLS.length))
-    );
+    // Generate random final positions for each reel
+    const newFinalPositions = [
+      Math.floor(Math.random() * SYMBOLS.length),
+      Math.floor(Math.random() * SYMBOLS.length),
+      Math.floor(Math.random() * SYMBOLS.length)
+    ];
     
-    // Animate reels
-    const spinDurations = [1500, 1800, 2100]; // Different durations for each reel
+    setFinalReelPositions(newFinalPositions);
     
-    // Spin reels with staggered timing
+    // Set timeout for spin completion
     setTimeout(() => {
-      setReels([
-        [randomReels[0][0], randomReels[0][1], randomReels[0][2]],
-        reels[1]
-      ]);
-    }, 500);
-    
-    setTimeout(() => {
-      setReels([
-        [randomReels[0][0], randomReels[0][1], randomReels[0][2]],
-        [randomReels[1][0], randomReels[1][1], randomReels[1][2]],
-        reels[2]
-      ]);
-    }, 1000);
-    
-    setTimeout(() => {
-      setReels(randomReels);
-      
-      // Check for win
-      const middleRow = [randomReels[0][1], randomReels[1][1], randomReels[2][1]];
+      // Calculate result based on final positions
+      const middleRow = newFinalPositions;
       
       // Check for match on middle row
       if (middleRow.every(symbol => symbol === middleRow[0])) {
@@ -178,7 +221,7 @@ const MoneyGram = () => {
       }
       
       setIsSpinning(false);
-    }, 2200);
+    }, 3500); // Longer spin duration for smoother animation
   };
   
   // Spin the bonus wheel
@@ -323,40 +366,15 @@ const MoneyGram = () => {
           {/* Reels Area */}
           <div className="relative bg-gradient-to-b from-green-700 via-green-600 to-green-700 p-4 border-b-4 border-amber-600">
             <div className="flex h-56">
-              {reels.map((reel, reelIndex) => (
-                <div key={reelIndex} className="flex-1 border-r-4 border-l-4 border-amber-600 bg-green-600 mx-1 overflow-hidden relative">
-                  <motion.div
-                    className="flex flex-col items-center h-full"
-                    animate={{ 
-                      y: isSpinning ? [-300, 0, -300] : 0 
-                    }}
-                    transition={{ 
-                      duration: isSpinning ? 1 : 0, 
-                      repeat: isSpinning ? Infinity : 0, 
-                      ease: "linear",
-                      delay: reelIndex * 0.2
-                    }}
-                  >
-                    {reel.map((symbolId, symbolIndex) => (
-                      <div
-                        key={`${reelIndex}-${symbolIndex}`}
-                        className="flex items-center justify-center h-[33%]"
-                      >
-                        <motion.div
-                          className={`text-7xl font-bold ${SYMBOLS[symbolId].color}`}
-                          style={{ textShadow: '3px 3px 6px rgba(0,0,0,0.5), 0px 0px 15px rgba(255,255,255,0.5)' }}
-                          initial={{ scale: 0.8, opacity: 0.5 }}
-                          animate={{ 
-                            scale: symbolIndex === 1 ? 1.1 : 0.8,
-                            opacity: symbolIndex === 1 ? 1 : 0.7
-                          }}
-                        >
-                          {SYMBOLS[symbolId].value}
-                        </motion.div>
-                      </div>
-                    ))}
-                  </motion.div>
-                </div>
+              {Array(3).fill(0).map((_, index) => (
+                <ScrollingReel
+                  key={`reel-${index}`}
+                  symbols={SYMBOLS}
+                  isSpinning={isSpinning}
+                  finalSymbolIndex={finalReelPositions[index]}
+                  reelIndex={index}
+                  spinDelay={index * 0.2}
+                />
               ))}
               
               {/* Right Side Buttons */}
@@ -388,8 +406,23 @@ const MoneyGram = () => {
               <div className="text-xl font-bold text-yellow-400">Balance</div>
               <div className="text-2xl font-bold text-yellow-300">{balance.toFixed(2)}</div>
               <div className="flex items-center">
-                <div className="text-lg font-bold text-yellow-400">Bet</div>
-                <div className="text-xl font-bold text-yellow-300 ml-2">{betAmount}</div>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateBetAmount(-10)}
+                  className="p-0 h-6 text-yellow-300"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+                <div className="text-xl font-bold text-yellow-300 mx-1">{betAmount}</div>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateBetAmount(10)}
+                  className="p-0 h-6 text-yellow-300"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
               </div>
             </div>
             
@@ -398,8 +431,16 @@ const MoneyGram = () => {
               <div className="text-2xl font-bold text-yellow-300">{winAmount.toFixed(2)}</div>
             </div>
             
-            <Button variant="ghost" className="rounded-full bg-amber-600 h-12 w-12">
-              <RotateCcw className="h-6 w-6 text-yellow-300" />
+            <Button 
+              variant="ghost" 
+              className="rounded-full bg-amber-600 h-12 w-12"
+              onClick={() => setIsAutoPlay(!isAutoPlay)}
+            >
+              {isAutoPlay ? (
+                <Pause className="h-6 w-6 text-yellow-300" />
+              ) : (
+                <RotateCcw className="h-6 w-6 text-yellow-300" />
+              )}
             </Button>
             
             <Button 

@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { LoginButton } from './LoginButton';
 import { RegisterButton } from './RegisterButton';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
@@ -15,8 +15,8 @@ const Header = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const isMobile = useIsMobile();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  const navigate = useNavigate();
+  
   return (
     <header className="w-full bg-casino py-3 px-4 flex flex-col">
       <div className="flex items-center justify-between">
@@ -121,11 +121,19 @@ const Header = () => {
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
                 <div className="flex gap-2">
-                  <Button variant="outline" className="bg-green-800 hover:bg-green-700 border-green-600 text-white text-xs px-2 py-1 h-auto">
+                  <Button 
+                    variant="outline" 
+                    className="bg-green-800 hover:bg-green-700 border-green-600 text-white text-xs px-2 py-1 h-auto"
+                    onClick={() => navigate('/deposit')}
+                  >
                     <Wallet className="mr-1 h-3 w-3" />
                     {t('deposit')}
                   </Button>
-                  <Button variant="outline" className="bg-red-800 hover:bg-red-700 border-red-600 text-white text-xs px-2 py-1 h-auto">
+                  <Button 
+                    variant="outline" 
+                    className="bg-red-800 hover:bg-red-700 border-red-600 text-white text-xs px-2 py-1 h-auto"
+                    onClick={() => navigate('/withdrawal')}
+                  >
                     <Wallet className="mr-1 h-3 w-3" />
                     {t('withdraw')}
                   </Button>
@@ -157,11 +165,19 @@ const Header = () => {
       {/* Mobile deposit/withdraw buttons */}
       {isMobile && isAuthenticated && (
         <div className="flex justify-center space-x-4 mt-2">
-          <Button variant="outline" className="bg-green-800 hover:bg-green-700 border-green-600 text-white px-4 py-1 h-auto flex-1">
+          <Button 
+            variant="outline" 
+            className="bg-green-800 hover:bg-green-700 border-green-600 text-white px-4 py-1 h-auto flex-1"
+            onClick={() => navigate('/deposit')}
+          >
             <Wallet className="mr-1 h-4 w-4" />
             {t('deposit')}
           </Button>
-          <Button variant="outline" className="bg-red-800 hover:bg-red-700 border-red-600 text-white px-4 py-1 h-auto flex-1">
+          <Button 
+            variant="outline" 
+            className="bg-red-800 hover:bg-red-700 border-red-600 text-white px-4 py-1 h-auto flex-1"
+            onClick={() => navigate('/withdrawal')}
+          >
             <Wallet className="mr-1 h-4 w-4" />
             {t('withdraw')}
           </Button>

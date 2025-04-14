@@ -13,6 +13,7 @@ import MegaSpin from "./pages/MegaSpin";
 import MegaSpinControl from "./pages/MegaSpinControl";
 import PlinkoGame from "./pages/PlinkoGame";
 import Withdrawal from "./pages/Withdrawal";
+import Deposit from "./pages/Deposit";
 import LiveCricket from "./pages/LiveCricket";
 import LiveFootball from "./pages/LiveFootball";
 import SuperAce from "./pages/SuperAce";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/game/plinko" element={<PlinkoGame />} />
               <Route path="/game/moneygram" element={<MoneyGram />} />
               <Route path="/withdrawal" element={<Withdrawal />} />
+              <Route path="/deposit" element={<Deposit />} />
               <Route path="/game/live-cricket" element={<LiveCricket />} />
               <Route path="/game/live-football" element={<LiveFootball />} />
               <Route path="/game/super-ace" element={<SuperAce />} />
