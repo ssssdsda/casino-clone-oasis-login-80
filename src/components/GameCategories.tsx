@@ -1,9 +1,17 @@
 
 import React from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { 
+  Coins, 
+  Heart, 
+  Trophy, 
+  Dice5, 
+  Gamepad2, 
+  Joystick 
+} from 'lucide-react';
 
 interface CategoryProps {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   onClick: () => void;
   isSelected?: boolean;
@@ -20,7 +28,7 @@ const GameCategory = ({ icon, label, onClick, isSelected }: CategoryProps) => {
       <div className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full mb-2 ${
         isSelected ? 'bg-casino' : 'bg-casino-accent'
       }`}>
-        <img src={icon} alt={label} className="w-6 h-6 md:w-8 md:h-8" />
+        {icon}
       </div>
       <span className="text-xs md:text-sm font-medium text-white text-center">{label}</span>
     </div>
@@ -38,32 +46,32 @@ const GameCategories = ({ onCategorySelect, selectedCategory }: GameCategoriesPr
   const categories = [
     { 
       id: 'slots', 
-      icon: '/placeholder.svg', 
+      icon: <Coins className="w-6 h-6 md:w-8 md:h-8 text-white" />, 
       label: t('slots')
     },
     { 
       id: 'liveGames', 
-      icon: '/placeholder.svg', 
+      icon: <Heart className="w-6 h-6 md:w-8 md:h-8 text-white" />, 
       label: t('liveGames') 
     },
     { 
       id: 'sports', 
-      icon: '/placeholder.svg',
+      icon: <Trophy className="w-6 h-6 md:w-8 md:h-8 text-white" />, 
       label: t('sportsGames') 
     },
     {
       id: 'tableGames',
-      icon: '/placeholder.svg',
+      icon: <Dice5 className="w-6 h-6 md:w-8 md:h-8 text-white" />,
       label: t('tableGames')
     },
     {
       id: 'fishing',
-      icon: '/placeholder.svg',
+      icon: <Joystick className="w-6 h-6 md:w-8 md:h-8 text-white" />,
       label: t('fishingGames')
     },
     {
       id: 'arcade',
-      icon: '/placeholder.svg',
+      icon: <Gamepad2 className="w-6 h-6 md:w-8 md:h-8 text-white" />,
       label: t('arcadeGames')
     }
   ];

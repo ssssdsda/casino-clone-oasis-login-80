@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -14,7 +13,6 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "fire
 import app from '@/lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
 
-// Define the game data structure
 type GameData = {
   id: string;
   title: string;
@@ -24,7 +22,6 @@ type GameData = {
   path?: string;
 }
 
-// Game categories
 const CATEGORIES = [
   { id: 'featuredGames', title: 'Featured Games' },
   { id: 'popularGames', title: 'Popular Games' },
@@ -48,7 +45,6 @@ const GridChanger = () => {
   const { toast } = useToast();
   const storage = getStorage(app);
 
-  // Load initial game data from localStorage or use default data
   useEffect(() => {
     try {
       const savedGames = localStorage.getItem('gameGridData');
@@ -85,7 +81,7 @@ const GridChanger = () => {
             {
               id: 'mega-spin',
               title: 'Mega Spin',
-              image: '/lovable-uploads/ba454bb5-ce73-43cb-a2ee-68e5e0fd715f.png',
+              image: '/lovable-uploads/76f6d207-e6db-4fd4-8872-4c3c8691bfae.png',
               multiplier: '40000',
               isNew: true,
               path: '/game/megaspin'
@@ -173,6 +169,12 @@ const GridChanger = () => {
               image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=300&h=400',
               multiplier: '1800',
             },
+            {
+              id: 'mega-spin-slot',
+              title: 'Mega Spin',
+              image: '/lovable-uploads/76f6d207-e6db-4fd4-8872-4c3c8691bfae.png',
+              path: '/game/megaspin'
+            },
           ],
           liveGames: [
             {
@@ -231,7 +233,6 @@ const GridChanger = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         variant: "destructive",
@@ -241,7 +242,6 @@ const GridChanger = () => {
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         variant: "destructive",
@@ -253,7 +253,6 @@ const GridChanger = () => {
 
     setSelectedFile(file);
     
-    // Create a preview URL for the selected file
     const previewUrl = URL.createObjectURL(file);
     setPreviewImage(previewUrl);
   };
@@ -268,10 +267,8 @@ const GridChanger = () => {
     setSelectedFile(null);
   };
 
-  // Function to delete old image from Firebase Storage
   const deleteOldImage = async (imageUrl: string) => {
     try {
-      // Only delete if it's a Firebase Storage URL
       if (imageUrl.includes('firebasestorage.googleapis.com')) {
         const storageRef = ref(storage, imageUrl);
         await deleteObject(storageRef);
@@ -279,7 +276,6 @@ const GridChanger = () => {
       }
     } catch (error) {
       console.error("Error deleting old image:", error);
-      // Continue with the process even if delete fails
     }
   };
 
@@ -309,16 +305,11 @@ const GridChanger = () => {
       setIsUploading(true);
       let imageUrl = selectedGame.image;
 
-      // If a new file was selected, upload it to Firebase Storage
       if (selectedFile) {
-        // Delete the old image if it exists and is from Firebase
         await deleteOldImage(selectedGame.image);
-        
-        // Upload new image
         imageUrl = await uploadImageToFirebase(selectedFile);
       }
 
-      // Update the game in our state
       const updatedGames = {...games};
       const categoryGames = updatedGames[currentCategory] || [];
       
@@ -339,7 +330,6 @@ const GridChanger = () => {
       updatedGames[currentCategory] = updatedGamesList;
       setGames(updatedGames);
 
-      // Save to localStorage for persistence
       localStorage.setItem('gameGridData', JSON.stringify(updatedGames));
 
       toast({
@@ -347,7 +337,6 @@ const GridChanger = () => {
         description: `${gameTitle} has been updated successfully.`,
       });
 
-      // Reset selection
       setSelectedGame(null);
       setPreviewImage(null);
       setSelectedFile(null);
@@ -390,7 +379,6 @@ const GridChanger = () => {
       setIsUploading(true);
       const newGameId = `game-${Date.now()}`;
       
-      // Upload the image to Firebase Storage
       const imageUrl = await uploadImageToFirebase(selectedFile);
 
       const newGame: GameData = {
@@ -408,7 +396,6 @@ const GridChanger = () => {
       
       setGames(updatedGames);
 
-      // Save to localStorage for persistence
       localStorage.setItem('gameGridData', JSON.stringify(updatedGames));
 
       toast({
@@ -416,7 +403,6 @@ const GridChanger = () => {
         description: `${gameTitle} has been added successfully.`,
       });
 
-      // Reset form
       setGameTitle('');
       setGameMultiplier('');
       setGameIsNew(false);
@@ -446,7 +432,6 @@ const GridChanger = () => {
   const handleEditGameClick = (game: GameData) => {
     handleSelectGame(game);
     
-    // Scroll to the edit form
     const editFormElement = document.getElementById('edit-form');
     if (editFormElement) {
       editFormElement.scrollIntoView({ behavior: 'smooth' });
@@ -458,11 +443,9 @@ const GridChanger = () => {
       const updatedGames = {...games};
       const categoryGames = updatedGames[currentCategory] || [];
       
-      // Find the game to delete for image cleanup
       const gameToDelete = categoryGames.find(game => game.id === gameId);
       
       if (gameToDelete && gameToDelete.image) {
-        // Delete the image from Firebase Storage if it's a Firebase URL
         await deleteOldImage(gameToDelete.image);
       }
       
@@ -569,7 +552,6 @@ const GridChanger = () => {
                     setPreviewImage(null);
                     setSelectedFile(null);
                     
-                    // Scroll to the edit form
                     const editFormElement = document.getElementById('edit-form');
                     if (editFormElement) {
                       editFormElement.scrollIntoView({ behavior: 'smooth' });

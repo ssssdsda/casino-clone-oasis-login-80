@@ -39,7 +39,7 @@ const featuredGames = [
   {
     id: 'mega-spin',
     title: 'Mega Spin',
-    image: '/lovable-uploads/329daeeb-8f31-461c-9f1d-c0b91bf31520.png',
+    image: '/lovable-uploads/76f6d207-e6db-4fd4-8872-4c3c8691bfae.png',
     multiplier: '40000',
     isNew: true,
     path: '/game/megaspin'
@@ -139,7 +139,7 @@ const slotGames = [
   {
     id: 'mega-spin-slot',
     title: 'Mega Spin',
-    image: '/lovable-uploads/329daeeb-8f31-461c-9f1d-c0b91bf31520.png',
+    image: '/lovable-uploads/76f6d207-e6db-4fd4-8872-4c3c8691bfae.png',
     path: '/game/megaspin'
   },
   {
@@ -260,7 +260,7 @@ const Index = () => {
       <Header />
       <PromoBanner />
       <div className="flex flex-1">
-        {!isMobile && <CategorySidebar />}
+        {!isMobile && <CategorySidebar onCategorySelect={handleCategorySelect} selectedCategory={selectedCategory} />}
         <main className={`flex-1 p-1 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
           <GameCategories onCategorySelect={handleCategorySelect} selectedCategory={selectedCategory} />
           <div className="mt-2 md:mt-4 space-y-2 md:space-y-4">
