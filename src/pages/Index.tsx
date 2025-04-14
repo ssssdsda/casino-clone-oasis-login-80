@@ -15,7 +15,7 @@ const featuredGames = [
   {
     id: 'aviator',
     title: 'Aviator',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png',
     multiplier: '100000',
     isNew: true,
     path: '/game/aviator'
@@ -104,7 +104,7 @@ const popularGames = [
   {
     id: 'aviator-popular',
     title: 'Aviator',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png',
     multiplier: '8000',
     path: '/game/aviator'
   },

@@ -190,6 +190,14 @@ const AviatorGame = () => {
         FUN MODE
       </div>
 
+      <div className="flex justify-center my-4">
+        <img 
+          src="/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png"
+          alt="Aviator Game Logo"
+          className="h-16"
+        />
+      </div>
+
       <div className="flex-1 bg-gradient-radial from-gray-800 to-black relative overflow-hidden">
         <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-7xl font-bold z-10">
           {multiplier.toFixed(2)}x

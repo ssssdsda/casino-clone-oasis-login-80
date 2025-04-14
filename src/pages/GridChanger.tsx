@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -53,7 +52,7 @@ const GridChanger = () => {
           {
             id: 'aviator',
             title: 'Aviator',
-            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+            image: '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png',
             multiplier: '100000',
             isNew: true,
             path: '/game/aviator'
@@ -125,7 +124,7 @@ const GridChanger = () => {
           {
             id: 'aviator-pop',
             title: 'Aviator',
-            image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+            image: '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png',
             multiplier: '8000',
             path: '/game/aviator'
           },
@@ -224,24 +223,20 @@ const GridChanger = () => {
         try {
           const parsedGames = JSON.parse(savedGames);
           
-          // Force update all Aviator images to use the new one
           Object.keys(parsedGames).forEach(category => {
             parsedGames[category] = parsedGames[category].map((game: GameData) => {
-              // Update aviator images
               if (game.title.toLowerCase().includes('aviator')) {
                 return {
                   ...game,
-                  image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png'
+                  image: '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png'
                 };
               }
-              // Update mega spin images
               if (game.title.toLowerCase().includes('mega spin') || game.title.toLowerCase().includes('megaspin')) {
                 return {
                   ...game,
                   image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png'
                 };
               }
-              // Set default image for any missing images
               if (!game.image || game.image.includes('unsplash')) {
                 return {
                   ...game,
@@ -254,7 +249,6 @@ const GridChanger = () => {
           
           setGames(parsedGames);
           
-          // Save the updated games back to localStorage
           localStorage.setItem('gameGridData', JSON.stringify(parsedGames));
         } catch (error) {
           console.error("Error parsing saved games:", error);
