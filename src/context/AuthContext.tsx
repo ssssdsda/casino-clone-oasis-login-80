@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -29,6 +28,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+  updateUserBalance: (newBalance: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -223,6 +223,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Update user balance
+  const updateUserBalance = (newBalance: number) => {
+    if (user) {
+      const updatedUser = {
+        ...user,
+        balance: newBalance
+      };
+      setUser(updatedUser);
+      localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
+    }
+  };
+
   const logout = () => {
     signOut(auth).then(() => {
       setUser(null);
@@ -250,7 +262,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       registerWithPhone,
       logout, 
       isAuthenticated: !!user,
-      isLoading 
+      isLoading,
+      updateUserBalance
     }}>
       {children}
     </AuthContext.Provider>
