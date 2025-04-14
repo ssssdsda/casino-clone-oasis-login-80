@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Loader2, Play, Pause, RotateCcw, History } from 'lucide-react';
@@ -21,7 +20,7 @@ const firestore = getFirestore(app);
 const GRAVITY = 0.7;
 const BOUNCE_FACTOR = 0.6;
 const FRICTION = 0.97;
-const RANDOM_FACTOR = 0.4;
+const RANDOM_FACTOR = 0.8; // Increased for more randomness
 
 // Pin generation settings
 const PIN_ROWS_MIN = 8;
@@ -246,7 +245,7 @@ const PlinkoGame = () => {
       id: ballId,
       x: startX,
       y: startY,
-      velocityX: (Math.random() - 0.5) * 2, // Small random initial horizontal velocity
+      velocityX: (Math.random() - 0.5) * 4, // Increased random initial velocity for more randomness
       velocityY: 0,
       isMoving: true,
       multiplier: null,
@@ -301,7 +300,7 @@ const PlinkoGame = () => {
   const simulateBallDrop = (ballId: string, startX: number, startY: number, ballColor: string) => {
     let x = startX;
     let y = startY;
-    let vx = (Math.random() - 0.5) * 3; // Increased initial horizontal velocity for more randomness
+    let vx = (Math.random() - 0.5) * 5; // Increased for more randomness
     let vy = 0;
     let isMoving = true;
     let lastUpdateTime = performance.now();
@@ -329,9 +328,13 @@ const PlinkoGame = () => {
       if (x - PIN_RADIUS < 0) {
         x = PIN_RADIUS;
         vx = -vx * BOUNCE_FACTOR;
+        // Add some vertical movement when bouncing off walls
+        vy += (Math.random() - 0.5) * 2;
       } else if (x + PIN_RADIUS > containerWidth) {
         x = containerWidth - PIN_RADIUS;
         vx = -vx * BOUNCE_FACTOR;
+        // Add some vertical movement when bouncing off walls
+        vy += (Math.random() - 0.5) * 2;
       }
       
       // Check for collision with pins - improved collision detection
@@ -362,9 +365,9 @@ const PlinkoGame = () => {
             x -= overlap * nx * 1.01; // Move slightly more to prevent sticking
             y -= overlap * ny * 1.01;
             
-            // Add randomness to make the game more interesting
-            vx += (Math.random() - 0.5) * RANDOM_FACTOR;
-            vy += (Math.random() - 0.5) * RANDOM_FACTOR;
+            // Add randomness to make the game more interesting - INCREASED RANDOMNESS
+            vx += (Math.random() - 0.5) * RANDOM_FACTOR * 1.5;
+            vy += (Math.random() - 0.5) * RANDOM_FACTOR * 1.5;
             
             // Visual feedback for collision - update ball state
             setActiveBalls(prev => prev.map(ball => {
@@ -594,7 +597,7 @@ const PlinkoGame = () => {
               <button 
                 onClick={() => setRiskLevel('low')}
                 className={cn(
-                  "flex-1 py-2 text-center text-xs rounded-md",
+                  "flex-1 py-2 text-center text-sm rounded-md",
                   riskLevel === 'low' ? "bg-indigo-500 text-white font-bold" : "bg-gray-700"
                 )}
               >
@@ -603,7 +606,7 @@ const PlinkoGame = () => {
               <button 
                 onClick={() => setRiskLevel('medium')}
                 className={cn(
-                  "flex-1 py-2 text-center text-xs rounded-md",
+                  "flex-1 py-2 text-center text-sm rounded-md",
                   riskLevel === 'medium' ? "bg-indigo-500 text-white font-bold" : "bg-gray-700"
                 )}
               >
@@ -612,7 +615,7 @@ const PlinkoGame = () => {
               <button 
                 onClick={() => setRiskLevel('high')}
                 className={cn(
-                  "flex-1 py-2 text-center text-xs rounded-md",
+                  "flex-1 py-2 text-center text-sm rounded-md",
                   riskLevel === 'high' ? "bg-indigo-500 text-white font-bold" : "bg-gray-700"
                 )}
               >
@@ -793,7 +796,7 @@ const PlinkoGame = () => {
               ))}
             </div>
             
-            {/* Pins with glow effect */}
+            {/* Pins with glow effect - ALWAYS VISIBLE now */}
             {pins.map((pin, index) => (
               <motion.div 
                 key={index}
@@ -862,36 +865,35 @@ const PlinkoGame = () => {
                   <stop offset="100%" stopColor="rgba(255,255,255,0)" />
                 </linearGradient>
               </defs>
-              {rows > 8 && /* Only show paths for higher row counts */
-                Array.from({length: pins.length / 3}).map((_, i) => {
-                  const startX = canvasRef.current ? canvasRef.current.clientWidth / 2 : 0;
-                  const startY = 20;
-                  const endX = startX + (Math.random() * 200 - 100);
-                  const endY = canvasRef.current ? canvasRef.current.clientHeight - 50 : 400;
-                  
-                  return (
-                    <motion.path
-                      key={`path-${i}`}
-                      d={`M ${startX} ${startY} Q ${startX + (Math.random() * 100 - 50)} ${(startY + endY) / 2}, ${endX} ${endY}`}
-                      stroke="url(#pathGradient)"
-                      strokeWidth="1"
-                      fill="none"
-                      strokeDasharray="3,3"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ 
-                        pathLength: 1, 
-                        opacity: 0.3,
-                        transition: { 
-                          duration: 2, 
-                          ease: "easeInOut",
-                          repeat: Infinity,
-                          repeatType: "loop"
-                        }
-                      }}
-                    />
-                  );
-                })
-              }
+              {/* Show more path guides to indicate randomness */}
+              {Array.from({length: pins.length / 2}).map((_, i) => {
+                const startX = canvasRef.current ? canvasRef.current.clientWidth / 2 : 0;
+                const startY = 20;
+                const endX = startX + (Math.random() * 300 - 150); // More spread
+                const endY = canvasRef.current ? canvasRef.current.clientHeight - 50 : 400;
+                
+                return (
+                  <motion.path
+                    key={`path-${i}`}
+                    d={`M ${startX} ${startY} Q ${startX + (Math.random() * 200 - 100)} ${(startY + endY) / 2}, ${endX} ${endY}`}
+                    stroke="url(#pathGradient)"
+                    strokeWidth="1"
+                    fill="none"
+                    strokeDasharray="3,3"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ 
+                      pathLength: 1, 
+                      opacity: 0.3,
+                      transition: { 
+                        duration: 2, 
+                        ease: "easeInOut",
+                        repeat: Infinity,
+                        repeatType: "loop"
+                      }
+                    }}
+                  />
+                );
+              })}
             </svg>
             
             {/* Bottom multipliers with glow effect */}

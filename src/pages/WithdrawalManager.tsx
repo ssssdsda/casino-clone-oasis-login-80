@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, getDocs, doc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, updateDoc, query, where, orderBy, getDoc } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,7 +23,7 @@ interface WithdrawalRequest {
   amount: number;
   accountNumber: string;
   paymentMethod: string;
-  status: 'pending' | 'completed' | 'rejected';
+  status: 'pending' | 'active' | 'completed' | 'rejected';
   createdAt: Date;
   completedAt?: Date;
 }
@@ -78,26 +78,78 @@ const WithdrawalManager = () => {
     fetchWithdrawalRequests();
   }, []);
 
-  const updateRequestStatus = async (requestId: string, newStatus: 'completed' | 'rejected') => {
+  const updateRequestStatus = async (requestId: string, newStatus: 'active' | 'completed' | 'rejected') => {
     try {
       const withdrawalRef = doc(db, "withdrawals", requestId);
+      const withdrawalDoc = await getDoc(withdrawalRef);
       
+      if (!withdrawalDoc.exists()) {
+        toast({
+          title: "Error",
+          description: "Withdrawal request not found",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const withdrawalData = withdrawalDoc.data();
+      
+      // If changing from pending to active, deduct from user balance
+      if (withdrawalData.status === 'pending' && newStatus === 'active') {
+        // Get user document
+        const userRef = doc(db, "users", withdrawalData.userId);
+        const userDoc = await getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+          toast({
+            title: "Error",
+            description: "User not found",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Update user balance
+        const userData = userDoc.data();
+        const currentBalance = userData.balance || 0;
+        
+        if (currentBalance < withdrawalData.amount) {
+          toast({
+            title: "Error",
+            description: "User has insufficient balance",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Update user balance
+        await updateDoc(userRef, {
+          balance: currentBalance - withdrawalData.amount
+        });
+        
+        toast({
+          title: "Balance Updated",
+          description: `Deducted ${withdrawalData.amount}৳ from user balance`,
+        });
+      }
+      
+      // Update withdrawal status
       await updateDoc(withdrawalRef, {
         status: newStatus,
-        completedAt: new Date()
+        completedAt: newStatus === 'pending' ? null : new Date()
       });
 
       // Update local state
       setWithdrawalRequests(prev => 
         prev.map(req => req.id === requestId 
-          ? { ...req, status: newStatus, completedAt: new Date() } 
+          ? { ...req, status: newStatus, completedAt: newStatus === 'pending' ? undefined : new Date() } 
           : req
         )
       );
       
       toast({
         title: "Success",
-        description: `Withdrawal request ${newStatus}`,
+        description: `Withdrawal request marked as ${newStatus}`,
       });
     } catch (error) {
       console.error(`Error updating withdrawal status:`, error);
@@ -117,6 +169,8 @@ const WithdrawalManager = () => {
     switch(status) {
       case 'pending':
         return <Badge variant="outline" className="bg-yellow-600/20 text-yellow-600 border-yellow-600">Pending</Badge>;
+      case 'active':
+        return <Badge variant="outline" className="bg-blue-600/20 text-blue-600 border-blue-600">Active</Badge>;
       case 'completed':
         return <Badge variant="outline" className="bg-green-600/20 text-green-600 border-green-600">Completed</Badge>;
       case 'rejected':
@@ -127,7 +181,7 @@ const WithdrawalManager = () => {
   };
 
   return (
-    <div className="min-h-screen bg-casino p-4">
+    <div className="min-h-screen bg-casino-dark p-4">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-white mb-6">Withdrawal Requests Manager</h1>
         
@@ -148,6 +202,7 @@ const WithdrawalManager = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="active">Active</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
             <TabsTrigger value="rejected">Rejected</TabsTrigger>
             <TabsTrigger value="all">All Requests</TabsTrigger>
@@ -197,10 +252,33 @@ const WithdrawalManager = () => {
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
+                                    className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600"
+                                    onClick={() => updateRequestStatus(request.id, 'active')}
+                                    title="Activate and deduct from user balance"
+                                  >
+                                    Activate
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="bg-red-600/10 hover:bg-red-600/20 text-red-600"
+                                    onClick={() => updateRequestStatus(request.id, 'rejected')}
+                                    title="Reject without deducting balance"
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              )}
+                              
+                              {request.status === 'active' && (
+                                <div className="flex justify-end gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
                                     className="bg-green-600/10 hover:bg-green-600/20 text-green-600"
                                     onClick={() => updateRequestStatus(request.id, 'completed')}
                                   >
-                                    Approve
+                                    Complete
                                   </Button>
                                   <Button 
                                     size="sm" 
@@ -212,7 +290,8 @@ const WithdrawalManager = () => {
                                   </Button>
                                 </div>
                               )}
-                              {request.status !== 'pending' && (
+                              
+                              {(request.status === 'completed' || request.status === 'rejected') && (
                                 <span className="text-xs text-gray-500">
                                   {request.completedAt && `Processed ${formatDistanceToNow(new Date(request.completedAt), { addSuffix: true })}`}
                                 </span>

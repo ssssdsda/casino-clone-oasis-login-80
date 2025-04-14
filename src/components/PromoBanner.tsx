@@ -13,23 +13,23 @@ import {
 const banners = [
   {
     id: 1,
-    image: "/lovable-uploads/a023c13d-3432-4f56-abd9-5bcdbbd30602.png",
+    image: "/lovable-uploads/a1c08101-4964-4060-9c92-da874d8f1545.png",
     alt: "CK444 Bonus Promotion"
   },
   {
     id: 2,
-    image: "https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=1200&h=300",
-    alt: "VIP Exclusive Bonus"
+    image: "/lovable-uploads/775928d2-6812-404d-9ebb-2e620311cef9.png",
+    alt: "CK444 Golden Egg Promotion"
   },
   {
     id: 3,
-    image: "/lovable-uploads/69f38369-5885-4865-bc46-719ce5687af3.png",
-    alt: "Golden Basin Promotion"
+    image: "/lovable-uploads/092a4562-a61a-488e-b918-abdb6f27bc24.png",
+    alt: "CK444 Million Bonus Promotion"
   },
   {
     id: 4,
-    image: "/lovable-uploads/1821444d-c30d-4e0b-ac9a-49bed437fdd0.png",
-    alt: "Live Football Promotion"
+    image: "/lovable-uploads/75130282-ef0e-4d13-8a32-3048c60bc45f.png",
+    alt: "CK444 New Year Promotion"
   }
 ];
 
