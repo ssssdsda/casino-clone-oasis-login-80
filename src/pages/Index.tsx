@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
 import Banner from '@/components/Banner';
@@ -15,7 +15,7 @@ const featuredGames = [
   {
     id: 'aviator',
     title: 'Aviator',
-    image: '/lovable-uploads/babf4736-0af9-4669-ae00-f4f2c78065c0.png',
+    image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png',
     multiplier: '100000',
     isNew: true,
     path: '/game/aviator'
@@ -39,7 +39,7 @@ const featuredGames = [
   {
     id: 'mega-spin',
     title: 'Mega Spin',
-    image: '/lovable-uploads/76f6d207-e6db-4fd4-8872-4c3c8691bfae.png',
+    image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
     multiplier: '40000',
     isNew: true,
     path: '/game/megaspin'
@@ -102,9 +102,11 @@ const popularGames = [
     path: '/game/coin-up'
   },
   {
-    id: '4',
-    title: 'Wild Showdown',
-    image: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=300&h=400',
+    id: 'aviator-popular',
+    title: 'Aviator',
+    image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png',
+    multiplier: '8000',
+    path: '/game/aviator'
   },
   {
     id: '5',
@@ -129,7 +131,7 @@ const popularGames = [
   {
     id: 'mega-spin-pop',
     title: 'Mega Spin',
-    image: '/lovable-uploads/467a6111-4e8b-4892-9521-c87da94084c0.png',
+    image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
     multiplier: '4000',
     path: '/game/megaspin'
   },
@@ -139,7 +141,7 @@ const slotGames = [
   {
     id: 'mega-spin-slot',
     title: 'Mega Spin',
-    image: '/lovable-uploads/76f6d207-e6db-4fd4-8872-4c3c8691bfae.png',
+    image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
     path: '/game/megaspin'
   },
   {

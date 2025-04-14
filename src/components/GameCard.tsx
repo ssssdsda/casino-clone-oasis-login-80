@@ -43,6 +43,11 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
           alt={title} 
           className="w-full h-full object-cover"
           loading="lazy"
+          onError={(e) => {
+            console.error(`Failed to load image: ${image}`);
+            // Set a fallback image if the original image fails to load
+            (e.target as HTMLImageElement).src = '/placeholder.svg';
+          }}
         />
         
         {/* Overlay gradient */}

@@ -47,177 +47,211 @@ const GridChanger = () => {
 
   useEffect(() => {
     try {
+      const defaultGames = {
+        featuredGames: [
+          {
+            id: 'aviator',
+            title: 'Aviator',
+            image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png',
+            multiplier: '100000',
+            isNew: true,
+            path: '/game/aviator'
+          },
+          {
+            id: 'boxing-king',
+            title: 'Boxing King',
+            image: '/lovable-uploads/23ba5110-65e1-4f2e-8330-95f1a62d130d.png',
+            multiplier: '50000',
+            isNew: true,
+            path: '/game/boxing-king'
+          },
+          {
+            id: 'casino-win-spin',
+            title: 'Casino Win Spin',
+            image: '/lovable-uploads/92fab6e1-76fd-48ee-b9ea-819c8f10fef0.png',
+            multiplier: '20000',
+            isNew: true,
+            path: '/game/spin'
+          },
+          {
+            id: 'mega-spin',
+            title: 'Mega Spin',
+            image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
+            multiplier: '40000',
+            isNew: true,
+            path: '/game/megaspin'
+          },
+          {
+            id: 'money-coming',
+            title: 'Money Coming',
+            image: '/lovable-uploads/7b71f0b4-ac4b-4935-a536-cae4e563a9b4.png',
+            multiplier: '30000',
+            isNew: true,
+            path: '/game/moneygram'
+          },
+          {
+            id: 'super-ace',
+            title: 'Super Ace Casino',
+            image: '/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png',
+            multiplier: '25000',
+            isNew: true,
+            path: '/game/super-ace'
+          }
+        ],
+        popularGames: [
+          {
+            id: '1',
+            title: 'Super Ace',
+            image: '/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png',
+            multiplier: '2000',
+            path: '/game/super-ace'
+          },
+          {
+            id: 'fortune-gems',
+            title: 'Fortune Gems',
+            image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
+            multiplier: '3500',
+            path: '/game/fortune-gems'
+          },
+          {
+            id: 'coin-up',
+            title: 'Coin Up',
+            image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
+            multiplier: '5000',
+            isNew: true,
+            path: '/game/coin-up'
+          },
+          {
+            id: 'aviator-pop',
+            title: 'Aviator',
+            image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png',
+            multiplier: '8000',
+            path: '/game/aviator'
+          },
+          {
+            id: '5',
+            title: 'Tiger Rush',
+            image: 'https://images.unsplash.com/photo-1444492417251-9c84a5fa18e0?auto=format&fit=crop&w=300&h=400',
+            multiplier: '3000',
+          },
+          {
+            id: 'golden-basin',
+            title: 'Golden Basin',
+            image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
+            multiplier: '4500',
+            path: '/game/golden-basin'
+          },
+        ],
+        slotGames: [
+          {
+            id: 'mega-spin-slot',
+            title: 'Mega Spin',
+            image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png',
+            path: '/game/megaspin'
+          },
+          {
+            id: '7',
+            title: 'Lucky Heroes',
+            image: 'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=300&h=400',
+            multiplier: '2600',
+          },
+          {
+            id: '8',
+            title: 'Golden Wheel',
+            image: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?auto=format&fit=crop&w=300&h=400',
+          },
+          {
+            id: '9',
+            title: 'Diamond Rush',
+            image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=300&h=400',
+            multiplier: '1800',
+          },
+          {
+            id: 'fortune-gems',
+            title: 'Fortune Gems',
+            image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
+            multiplier: '3500',
+            isNew: true,
+            path: '/game/fortune-gems'
+          },
+        ],
+        liveGames: [
+          {
+            id: '11',
+            title: 'Live Cricket',
+            image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=300&h=400',
+            isNew: true,
+            path: '/game/live-cricket'
+          },
+          {
+            id: '12',
+            title: 'Live Football',
+            image: 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=300&h=400',
+            isNew: true,
+            path: '/game/live-football'
+          },
+          {
+            id: '13',
+            title: 'Live Baccarat',
+            image: 'https://images.unsplash.com/photo-1494797262163-102fae527c62?auto=format&fit=crop&w=300&h=400',
+          },
+        ],
+        casinoGames: [
+          {
+            id: '16',
+            title: 'Royal Poker',
+            image: 'https://images.unsplash.com/photo-1528812969535-4999fa0d1cf3?auto=format&fit=crop&w=300&h=400',
+            multiplier: '5000',
+          },
+          {
+            id: '17',
+            title: 'Blackjack Pro',
+            image: 'https://images.unsplash.com/photo-1606167668584-78701c57f90d?auto=format&fit=crop&w=300&h=400',
+          },
+          {
+            id: '18',
+            title: 'Roulette Master',
+            image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=300&h=400',
+            isNew: true,
+          },
+        ],
+      };
+      
       const savedGames = localStorage.getItem('gameGridData');
       
       if (savedGames) {
-        setGames(JSON.parse(savedGames));
+        try {
+          const parsedGames = JSON.parse(savedGames);
+          
+          Object.keys(parsedGames).forEach(category => {
+            parsedGames[category] = parsedGames[category].map((game: GameData) => {
+              if (game.title.toLowerCase().includes('aviator')) {
+                return {
+                  ...game,
+                  image: '/lovable-uploads/391455fa-cff0-4be8-9bb7-5e060a384728.png'
+                };
+              }
+              if (game.title.toLowerCase().includes('mega spin') || game.title.toLowerCase().includes('megaspin')) {
+                return {
+                  ...game,
+                  image: '/lovable-uploads/81311ba9-9029-4f01-a93f-e692e7659216.png'
+                };
+              }
+              return game;
+            });
+          });
+          
+          setGames(parsedGames);
+          
+          localStorage.setItem('gameGridData', JSON.stringify(parsedGames));
+        } catch (error) {
+          console.error("Error parsing saved games:", error);
+          setGames(defaultGames);
+          localStorage.setItem('gameGridData', JSON.stringify(defaultGames));
+        }
       } else {
-        const defaultGames = {
-          featuredGames: [
-            {
-              id: 'aviator',
-              title: 'Aviator',
-              image: '/lovable-uploads/ba327bc8-d695-4ebf-a7f8-0d4ae1540fdc.png',
-              multiplier: '100000',
-              isNew: true,
-              path: '/game/aviator'
-            },
-            {
-              id: 'boxing-king',
-              title: 'Boxing King',
-              image: '/lovable-uploads/23ba5110-65e1-4f2e-8330-95f1a62d130d.png',
-              multiplier: '50000',
-              isNew: true,
-              path: '/game/boxing-king'
-            },
-            {
-              id: 'casino-win-spin',
-              title: 'Casino Win Spin',
-              image: '/lovable-uploads/92fab6e1-76fd-48ee-b9ea-819c8f10fef0.png',
-              multiplier: '20000',
-              isNew: true,
-              path: '/game/spin'
-            },
-            {
-              id: 'mega-spin',
-              title: 'Mega Spin',
-              image: '/lovable-uploads/76f6d207-e6db-4fd4-8872-4c3c8691bfae.png',
-              multiplier: '40000',
-              isNew: true,
-              path: '/game/megaspin'
-            },
-            {
-              id: 'money-coming',
-              title: 'Money Coming',
-              image: '/lovable-uploads/7b71f0b4-ac4b-4935-a536-cae4e563a9b4.png',
-              multiplier: '30000',
-              isNew: true,
-              path: '/game/moneygram'
-            },
-            {
-              id: 'super-ace',
-              title: 'Super Ace Casino',
-              image: '/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png',
-              multiplier: '25000',
-              isNew: true,
-              path: '/game/super-ace'
-            }
-          ],
-          popularGames: [
-            {
-              id: '1',
-              title: 'Super Ace',
-              image: '/lovable-uploads/b84e6d4c-8b32-4ca7-b56a-f0c635d4faca.png',
-              multiplier: '2000',
-              path: '/game/super-ace'
-            },
-            {
-              id: 'fortune-gems',
-              title: 'Fortune Gems',
-              image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
-              multiplier: '3500',
-              path: '/game/fortune-gems'
-            },
-            {
-              id: 'coin-up',
-              title: 'Coin Up',
-              image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
-              multiplier: '5000',
-              isNew: true,
-              path: '/game/coin-up'
-            },
-            {
-              id: '4',
-              title: 'Wild Showdown',
-              image: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&w=300&h=400',
-            },
-            {
-              id: '5',
-              title: 'Tiger Rush',
-              image: 'https://images.unsplash.com/photo-1444492417251-9c84a5fa18e0?auto=format&fit=crop&w=300&h=400',
-              multiplier: '3000',
-            },
-            {
-              id: 'golden-basin',
-              title: 'Golden Basin',
-              image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
-              multiplier: '4500',
-              path: '/game/golden-basin'
-            },
-          ],
-          slotGames: [
-            {
-              id: '6',
-              title: 'Mega Spin',
-              image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=300&h=400',
-              path: '/game/megaspin'
-            },
-            {
-              id: '7',
-              title: 'Lucky Heroes',
-              image: 'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?auto=format&fit=crop&w=300&h=400',
-              multiplier: '2600',
-            },
-            {
-              id: '8',
-              title: 'Golden Wheel',
-              image: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?auto=format&fit=crop&w=300&h=400',
-            },
-            {
-              id: '9',
-              title: 'Diamond Rush',
-              image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=300&h=400',
-              multiplier: '1800',
-            },
-            {
-              id: 'mega-spin-slot',
-              title: 'Mega Spin',
-              image: '/lovable-uploads/76f6d207-e6db-4fd4-8872-4c3c8691bfae.png',
-              path: '/game/megaspin'
-            },
-          ],
-          liveGames: [
-            {
-              id: '11',
-              title: 'Live Cricket',
-              image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=300&h=400',
-              isNew: true,
-              path: '/game/live-cricket'
-            },
-            {
-              id: '12',
-              title: 'Live Football',
-              image: 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=300&h=400',
-              isNew: true,
-              path: '/game/live-football'
-            },
-            {
-              id: '13',
-              title: 'Live Baccarat',
-              image: 'https://images.unsplash.com/photo-1494797262163-102fae527c62?auto=format&fit=crop&w=300&h=400',
-            },
-          ],
-          casinoGames: [
-            {
-              id: '16',
-              title: 'Royal Poker',
-              image: 'https://images.unsplash.com/photo-1528812969535-4999fa0d1cf3?auto=format&fit=crop&w=300&h=400',
-              multiplier: '5000',
-            },
-            {
-              id: '17',
-              title: 'Blackjack Pro',
-              image: 'https://images.unsplash.com/photo-1606167668584-78701c57f90d?auto=format&fit=crop&w=300&h=400',
-            },
-            {
-              id: '18',
-              title: 'Roulette Master',
-              image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=300&h=400',
-              isNew: true,
-            },
-          ],
-        };
         setGames(defaultGames);
+        localStorage.setItem('gameGridData', JSON.stringify(defaultGames));
       }
     } catch (error) {
       console.error("Error loading game data:", error);
@@ -511,6 +545,10 @@ const GridChanger = () => {
                       src={game.image} 
                       alt={game.title} 
                       className="w-16 h-20 object-cover rounded"
+                      onError={(e) => {
+                        console.error(`Failed to load image: ${game.image}`);
+                        (e.target as HTMLImageElement).src = '/placeholder.svg';
+                      }}
                     />
                     <div className="flex-1">
                       <h3 className="text-white font-medium">{game.title}</h3>
