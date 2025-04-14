@@ -140,7 +140,7 @@ const ElementSymbol = ({ element, shape, color, size = 60, isActive = false, isS
     }
   };
 
-  // Animation variants
+  // Animation variants - fixed to use specific string literals for repeatType
   const variants = {
     idle: { scale: 1 },
     active: { 
@@ -149,7 +149,7 @@ const ElementSymbol = ({ element, shape, color, size = 60, isActive = false, isS
       transition: { 
         duration: 1, 
         repeat: Infinity,
-        repeatType: "reverse"
+        repeatType: "reverse" // Using a valid literal value
       } 
     },
     spinning: {

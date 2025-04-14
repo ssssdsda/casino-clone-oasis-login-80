@@ -99,7 +99,7 @@ const GameControls = ({
           className="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border border-green-500"
           whileHover={{ scale: 1.1, boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)' }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => !spinning && setBetAmount(minBet)}
+          onClick={() => changeBet(minBet - betAmount)}
           disabled={spinning}
         >
           <div className="font-bold">{minBet}</div>
@@ -122,7 +122,7 @@ const GameControls = ({
           className="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border border-green-500"
           whileHover={{ scale: 1.1, boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)' }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => !spinning && setBetAmount(maxBet)}
+          onClick={() => changeBet(maxBet - betAmount)}
           disabled={spinning}
         >
           <Menu size={24} />
