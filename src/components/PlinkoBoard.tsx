@@ -46,7 +46,7 @@ const PlinkoBoard: React.FC<PlinkoBoardProps> = ({
   const [balls, setBalls] = useState<Ball[]>([]);
   const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
   const [lastDropTime, setLastDropTime] = useState(0);
-  const [riskLevel, setRiskLevel] = useState<RiskLevel>(RISK_LEVELS.MEDIUM as RiskLevel);
+  const [riskLevel, setRiskLevel] = useState<RiskLevel>(RISK_LEVELS.MEDIUM);
   
   // Generate multiplier elements based on multipliers
   const multiplierElements = multipliers.map((multiplier, index) => (
