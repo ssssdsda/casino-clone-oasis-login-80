@@ -33,6 +33,8 @@ import AviatorControl from "./pages/AviatorControl";
 import PopupCustomizer from "./pages/PopupCustomizer";
 import WithdrawalManager from "./pages/WithdrawalManager";
 import ReferralProgram from "./pages/ReferralProgram";
+import PlinkoGame from "./pages/PlinkoGame";
+import FruityBonanzaGame from "./pages/FruityBonanzaGame";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +65,8 @@ const routes = [
   <Route path="/admin/popup-customizer" element={<PopupCustomizer />} />,
   <Route path="/admin/withdrawal-manager" element={<WithdrawalManager />} />,
   <Route path="/referral" element={<ReferralProgram />} />,
+  <Route path="/game/plinko" element={<PlinkoGame />} />,
+  <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />,
   <Route path="*" element={<NotFound />} />
 ];
 

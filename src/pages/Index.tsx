@@ -40,6 +40,13 @@ const Index = () => {
 
   const featuredGames = [
     {
+      id: 'fruity-bonanza',
+      title: 'Fruity Bonanza',
+      image: '/lovable-uploads/e269552a-2099-4f35-951c-73f811cc496a.png',
+      path: '/game/fruity-bonanza',
+      isNew: true
+    },
+    {
       id: 'megaspin',
       title: 'Mega Tilt Spin',
       image: '/lovable-uploads/e2cc07ef-b195-486d-8e39-25c084173a3f.png',
@@ -90,6 +97,13 @@ const Index = () => {
   ];
   
   const newGames = [
+    {
+      id: 'fruity-bonanza',
+      title: 'Fruity Bonanza',
+      image: '/lovable-uploads/e269552a-2099-4f35-951c-73f811cc496a.png',
+      path: '/game/fruity-bonanza',
+      isNew: true
+    },
     {
       id: 'goldenbasin',
       title: 'Golden Basin',

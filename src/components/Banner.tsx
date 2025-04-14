@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const bannerImages = [
-  '/lovable-uploads/c982af9d-eacd-44b7-b243-b543609f5eb4.png', // Added the Plinko game image
+  '/lovable-uploads/e269552a-2099-4f35-951c-73f811cc496a.png', // Fruity Bonanza image
+  '/lovable-uploads/9116085e-489a-4b8b-add0-f3e1930eb5ec.png', // Plinko game image
   '/lovable-uploads/d63bf1f6-ac8d-40d6-a419-67c3915f5333.png',
   '/lovable-uploads/20b5cda9-f61f-4024-bbb6-1cfee6353614.png',
   '/lovable-uploads/dec17aad-46e5-47a3-a4b1-7f0b72c530f0.png', 
@@ -87,7 +88,7 @@ const Banner: React.FC = () => {
         ))}
       </div>
       
-      {/* Promotional text with new offer for Plinko */}
+      {/* Promotional text */}
       <motion.div
         className="absolute left-6 bottom-10 z-20 max-w-xs"
         initial={{ opacity: 0, y: 20 }}
@@ -103,10 +104,22 @@ const Banner: React.FC = () => {
             >
               NEW GAME
             </motion.div>
-            <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">PLINKO</h2>
-            <p className="text-white/90 text-sm drop-shadow-md">Drop the ball and win big multipliers!</p>
+            <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">FRUITY BONANZA</h2>
+            <p className="text-white/90 text-sm drop-shadow-md">Win big with juicy fruits and jackpots!</p>
           </>
         ) : currentIndex === 1 ? (
+          <>
+            <motion.div 
+              className="bg-purple-500/90 text-white px-3 py-1 rounded-md inline-block font-bold mb-2"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              UPDATED
+            </motion.div>
+            <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">PLINKO</h2>
+            <p className="text-white/90 text-sm drop-shadow-md">Enhanced graphics and bigger rewards!</p>
+          </>
+        ) : currentIndex === 2 ? (
           <>
             <motion.div 
               className="bg-yellow-500/90 text-black px-3 py-1 rounded-md inline-block font-bold mb-2"
@@ -118,7 +131,7 @@ const Banner: React.FC = () => {
             <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">Get ৳82 Bonus</h2>
             <p className="text-white/90 text-sm drop-shadow-md">Register and verify your phone number</p>
           </>
-        ) : currentIndex === 2 ? (
+        ) : currentIndex === 3 ? (
           <>
             <motion.div 
               className="bg-green-500/90 text-black px-3 py-1 rounded-md inline-block font-bold mb-2"
@@ -139,7 +152,7 @@ const Banner: React.FC = () => {
             >
               FEATURED
             </motion.div>
-            <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">{currentIndex === 3 ? "Aviator Game" : "Cricket Betting"}</h2>
+            <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">{currentIndex === 4 ? "Aviator Game" : "Cricket Betting"}</h2>
             <p className="text-white/90 text-sm drop-shadow-md">Play now and win big rewards!</p>
           </>
         )}
