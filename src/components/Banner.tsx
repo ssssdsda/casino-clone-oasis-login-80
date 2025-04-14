@@ -100,8 +100,8 @@ const Banner: React.FC = () => {
         >
           NEW USERS
         </motion.div>
-        <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">Get ৳89 Bonus</h2>
-        <p className="text-white/90 text-sm drop-shadow-md">Sign up today and verify your email</p>
+        <h2 className="text-white text-2xl font-bold mb-1 drop-shadow-lg">Get ৳82 Bonus</h2>
+        <p className="text-white/90 text-sm drop-shadow-md">Register and verify your phone number</p>
       </motion.div>
     </div>
   );

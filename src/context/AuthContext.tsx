@@ -21,6 +21,7 @@ interface User {
   balance: number;
   role?: string;
   emailVerified?: boolean;
+  phoneVerified?: boolean;
 }
 
 interface AuthContextType {
@@ -39,8 +40,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const db = getFirestore();
 
-// Signup bonus amount
-const SIGNUP_BONUS = 89;
+// Signup bonus amounts
+const EMAIL_SIGNUP_BONUS = 89;
+const PHONE_SIGNUP_BONUS = 82;
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -67,15 +69,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
           const userRole = userDoc.exists() ? userDoc.data().role : undefined;
+          const phoneVerified = userDoc.exists() ? userDoc.data().phoneVerified : false;
           
           const userData = {
             id: firebaseUser.uid,
-            username: firebaseUser.displayName || 'User',
+            username: userDoc.exists() ? userDoc.data().username : 'User',
             email: firebaseUser.email || undefined,
             phone: firebaseUser.phoneNumber || undefined,
             balance: userBalance,
             role: userRole,
-            emailVerified: firebaseUser.emailVerified
+            emailVerified: firebaseUser.emailVerified,
+            phoneVerified: phoneVerified
           };
           
           setUser(userData);
@@ -114,16 +118,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await setDoc(doc(db, "users", userCredential.user.uid), {
         username,
         email,
-        balance: SIGNUP_BONUS, // Give signup bonus
-        createdAt: new Date()
+        balance: EMAIL_SIGNUP_BONUS, // Give signup bonus
+        createdAt: new Date(),
+        emailVerified: false,
+        phoneVerified: false
       });
       
       const newUser = {
         id: userCredential.user.uid,
         username,
         email,
-        balance: SIGNUP_BONUS,
-        emailVerified: false
+        balance: EMAIL_SIGNUP_BONUS,
+        emailVerified: false,
+        phoneVerified: false
       };
       
       setUser(newUser);
@@ -150,14 +157,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      const userBalance = await getUserBalance(userCredential.user.uid);
+      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+      const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
+      const phoneVerified = userDoc.exists() ? userDoc.data().phoneVerified : false;
       
       const userData = {
         id: userCredential.user.uid,
-        username: userCredential.user.displayName || 'User',
+        username: userDoc.exists() ? userDoc.data().username : 'User',
         email: userCredential.user.email || undefined,
         phone: userCredential.user.phoneNumber || undefined,
-        balance: userBalance
+        balance: userBalance,
+        emailVerified: userCredential.user.emailVerified,
+        phoneVerified: phoneVerified
       };
       
       setUser(userData);
@@ -183,10 +194,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     try {
       localStorage.setItem('pendingUsername', username);
+      localStorage.setItem('pendingPhone', phoneNumber);
       
       toast({
         title: "Success",
-        description: "Registration successful",
+        description: "Verification code sent to your phone",
       });
       
       return "dummy-verification-id";
@@ -207,7 +219,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       toast({
         title: "Success",
-        description: "Login successful",
+        description: "Verification code sent to your phone",
       });
       
       return "dummy-verification-id";
@@ -230,35 +242,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await signInWithCredential(auth, credential);
       
       const pendingUsername = localStorage.getItem('pendingUsername');
+      const pendingPhone = localStorage.getItem('pendingPhone');
+      
       if (pendingUsername) {
+        // This is a new registration
         if (auth.currentUser) {
           await setDoc(doc(db, "users", auth.currentUser.uid), {
             username: pendingUsername,
-            phone: auth.currentUser.phoneNumber,
-            balance: 0,
-            createdAt: new Date()
+            phone: pendingPhone || auth.currentUser.phoneNumber,
+            balance: PHONE_SIGNUP_BONUS, // Give signup bonus for phone verification
+            createdAt: new Date(),
+            phoneVerified: true,
+            emailVerified: false
           });
           
           const userData = {
             id: auth.currentUser.uid,
             username: pendingUsername,
-            phone: auth.currentUser.phoneNumber || undefined,
-            balance: 0
+            phone: pendingPhone || auth.currentUser.phoneNumber,
+            balance: PHONE_SIGNUP_BONUS,
+            phoneVerified: true
           };
           
           setUser(userData);
           localStorage.setItem('casinoUser', JSON.stringify(userData));
           localStorage.removeItem('pendingUsername');
+          localStorage.removeItem('pendingPhone');
         }
       } else {
+        // This is an existing user logging in
         if (auth.currentUser) {
-          const userBalance = await getUserBalance(auth.currentUser.uid);
+          const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+          const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
+          
+          // Check if they've already verified their phone
+          const phoneVerified = userDoc.exists() ? userDoc.data().phoneVerified : false;
+          
+          // If not verified yet, give bonus and mark as verified
+          if (!phoneVerified && userDoc.exists()) {
+            await setDoc(doc(db, "users", auth.currentUser.uid), {
+              phoneVerified: true,
+              balance: userBalance + PHONE_SIGNUP_BONUS // Add the bonus
+            }, { merge: true });
+            
+            toast({
+              title: "Phone Verified!",
+              description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for verifying your phone number!`,
+              className: "bg-green-600 text-white"
+            });
+          }
           
           const userData = {
             id: auth.currentUser.uid,
-            username: auth.currentUser.displayName || 'User',
-            phone: auth.currentUser.phoneNumber || undefined,
-            balance: userBalance
+            username: userDoc.exists() ? userDoc.data().username : 'User',
+            phone: auth.currentUser.phoneNumber,
+            balance: phoneVerified ? userBalance : userBalance + PHONE_SIGNUP_BONUS,
+            phoneVerified: true,
+            emailVerified: userDoc.exists() ? userDoc.data().emailVerified : false
           };
           
           setUser(userData);

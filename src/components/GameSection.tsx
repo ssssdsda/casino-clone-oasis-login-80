@@ -5,6 +5,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 interface Game {
   id: string;
@@ -26,6 +27,7 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
   const { t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { isAuthenticated } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
   const [visibleGames, setVisibleGames] = useState<Game[]>([]);
   const [showAll, setShowAll] = useState(false);
@@ -88,6 +90,15 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
   
   const handleGameClick = (game: Game) => {
     console.log(`Clicked game: ${game.title} with path: ${game.path}`);
+    
+    // Check if user is authenticated for playing games
+    if (!isAuthenticated && game.path && !game.path.includes('admin')) {
+      toast(`Login Required`, {
+        description: "Please login to play games",
+        position: "bottom-center"
+      });
+      return;
+    }
     
     if (game.path) {
       navigate(game.path);
