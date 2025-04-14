@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -45,7 +45,7 @@ const generateCardGrid = (): CardType[][] => {
   const grid: CardType[][] = [];
   for (let i = 0; i < 4; i++) {
     const row: CardType[] = [];
-    for (let j = 0; j < 5; j++) {
+    for (let j = 0; j < 4; j++) { // Changed from 5 to 4 columns
       row.push(generateRandomCard());
     }
     grid.push(row);
@@ -94,27 +94,27 @@ const PlayingCard = ({
 
   return (
     <div className={`
-      relative rounded-md overflow-hidden w-full pb-[145%] shadow-md transition-all duration-300
-      ${isHighlighted ? 'ring-4 ring-yellow-400 animate-pulse' : ''}
+      relative rounded-md overflow-hidden w-full pb-[125%] shadow-md transition-all duration-300
+      ${isHighlighted ? 'ring-2 ring-yellow-400 animate-pulse' : ''}
       ${isGolden ? 'bg-gradient-to-b from-yellow-300 to-yellow-600' : 'bg-white'}
       ${isSpinning ? 'animate-spin' : ''}
     `}>
       <div className={`
-        absolute inset-0 flex flex-col items-center p-2
+        absolute inset-0 flex flex-col items-center p-1
         ${isGolden ? 'bg-yellow-100/90' : 'bg-white'}
       `}>
-        <div className="absolute top-2 left-2 flex flex-col items-center">
-          <span className={`text-xl font-bold ${getSuitColor(suit)}`}>
+        <div className="absolute top-1 left-1 flex flex-col items-center">
+          <span className={`text-sm font-bold ${getSuitColor(suit)}`}>
             {value}
           </span>
-          <span className={`text-2xl ${getSuitColor(suit)}`}>
+          <span className={`text-lg ${getSuitColor(suit)}`}>
             {getSuitSymbol(suit)}
           </span>
         </div>
 
         <div className="flex-grow flex items-center justify-center">
           <span className={`
-            text-6xl transform
+            text-4xl transform
             ${getSuitColor(suit)}
             ${isScatter ? 'animate-pulse' : ''}
           `}>
@@ -122,11 +122,11 @@ const PlayingCard = ({
           </span>
         </div>
 
-        <div className="absolute bottom-2 right-2 flex flex-col items-center rotate-180">
-          <span className={`text-xl font-bold ${getSuitColor(suit)}`}>
+        <div className="absolute bottom-1 right-1 flex flex-col items-center rotate-180">
+          <span className={`text-sm font-bold ${getSuitColor(suit)}`}>
             {value}
           </span>
-          <span className={`text-2xl ${getSuitColor(suit)}`}>
+          <span className={`text-lg ${getSuitColor(suit)}`}>
             {getSuitSymbol(suit)}
           </span>
         </div>
@@ -145,7 +145,7 @@ const CardGrid = ({
   winningLines?: number[][];
 }) => {
   return (
-    <div className="grid grid-cols-5 gap-1 p-2 relative">
+    <div className="grid grid-cols-4 gap-1 p-2 relative"> {/* Changed from grid-cols-5 to grid-cols-4 */}
       {cards.map((row, rowIndex) => (
         row.map((card, colIndex) => (
           <div key={`${rowIndex}-${colIndex}`} className="relative">
@@ -155,7 +155,7 @@ const CardGrid = ({
               isGolden={card.isGolden} 
               isSpinning={isSpinning} 
               isHighlighted={winningLines.some(line => 
-                line.some(pos => pos === rowIndex * 5 + colIndex)
+                line.some(pos => pos === rowIndex * 4 + colIndex) // Changed from 5 to 4 columns
               )}
             />
           </div>
@@ -178,7 +178,8 @@ const SuperAceCasinoGame = () => {
     isSpinning: false,
     isTurboMode: false,
     winningLines: [] as number[][],
-    lastWin: 0
+    lastWin: 0,
+    betCount: 0 // Track number of bets to control wins/losses
   });
   
   const handleSpin = () => {
@@ -192,20 +193,32 @@ const SuperAceCasinoGame = () => {
       updateUserBalance(newBalance);
     }
     
+    // Increment bet count
+    const newBetCount = gameState.betCount + 1;
+    
     setGameState(prev => ({
       ...prev,
       balance: newBalance,
       isSpinning: true,
       winningLines: [],
-      lastWin: 0
+      lastWin: 0,
+      betCount: newBetCount
     }));
     
     const spinDuration = gameState.isTurboMode ? 500 : 1500;
     
     setTimeout(() => {
       const newCards = generateCardGrid();
-      // Here you can implement your own win calculation logic
-      const totalWin = Math.floor(Math.random() * 10) * gameState.bet; // Example win calculation
+      
+      // Determine if the player should win based on bet count
+      // First 2 bets always win, all subsequent bets lose
+      const shouldWin = newBetCount <= 2;
+      
+      // Calculate win amount
+      let totalWin = 0;
+      if (shouldWin) {
+        totalWin = Math.floor(Math.random() * 5 + 5) * gameState.bet; // Win between 5x and 10x bet
+      }
       
       const finalBalance = newBalance + totalWin;
       
@@ -214,16 +227,25 @@ const SuperAceCasinoGame = () => {
         updateUserBalance(finalBalance);
       }
       
+      // Create some fake winning lines if the player won
+      const fakeWinningLines = shouldWin ? [
+        [0, 1, 2, 3], // Top row
+        [4, 5, 6, 7]  // Second row
+      ] : [];
+      
       setGameState(prev => ({
         ...prev,
         cards: newCards,
         isSpinning: false,
         lastWin: totalWin,
-        balance: finalBalance
+        balance: finalBalance,
+        winningLines: fakeWinningLines
       }));
       
       if (totalWin > 0) {
         toast.success(`You won ${totalWin}!`);
+      } else if (newBetCount > 2) {
+        toast.error("Better luck next time!");
       }
     }, spinDuration);
   };
@@ -253,7 +275,7 @@ const SuperAceCasinoGame = () => {
               key={index}
               onClick={() => setGameState(prev => ({ ...prev, multiplier: index }))}
               className={`
-                px-4 py-2 rounded-full font-bold text-xl transition-all
+                px-3 py-1 rounded-full font-bold text-lg transition-all
                 ${gameState.multiplier === index 
                   ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 text-white shadow-lg transform scale-110' 
                   : 'bg-gradient-to-b from-gray-300 to-gray-500 text-gray-800 hover:from-yellow-300 hover:to-yellow-500'}

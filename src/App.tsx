@@ -11,7 +11,6 @@ import SpinGame from "./pages/SpinGame";
 import SpinControl from "./pages/SpinControl";
 import MegaSpin from "./pages/MegaSpin";
 import MegaSpinControl from "./pages/MegaSpinControl";
-import PlinkoGame from "./pages/PlinkoGame";
 import Withdrawal from "./pages/Withdrawal";
 import Deposit from "./pages/Deposit";
 import LiveCricket from "./pages/LiveCricket";
@@ -42,7 +41,6 @@ const routes = [
   <Route path="/admin/spin-control" element={<SpinControl />} />,
   <Route path="/game/megaspin" element={<MegaSpin />} />,
   <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />,
-  <Route path="/game/plinko" element={<PlinkoGame />} />,
   <Route path="/game/moneygram" element={<MoneyGram />} />,
   <Route path="/game/aviator" element={<AviatorGame />} />,
   <Route path="/game/aviator-control" element={<AviatorControl />} />,

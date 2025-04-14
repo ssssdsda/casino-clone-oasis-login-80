@@ -51,7 +51,7 @@ const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
   // Enhanced card design to match the image
   return (
     <motion.div 
-      className={`w-20 h-28 md:w-24 md:h-36 rounded-lg overflow-hidden shadow-xl ${
+      className={`w-16 h-24 md:w-20 md:h-30 rounded-lg overflow-hidden shadow-xl ${
         isHighlighted ? 'ring-4 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.7)]' : ''
       }`}
       initial={{ rotateY: isRevealed ? 0 : 180 }}
@@ -60,7 +60,7 @@ const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
     >
       {isRevealed ? (
         <div className="w-full h-full bg-white flex flex-col items-center justify-center p-1 shadow-xl border-2 border-gray-300">
-          <div className={`text-base md:text-lg font-bold ${getColor()} absolute top-1 left-1`}>
+          <div className={`text-xs md:text-sm font-bold ${getColor()} absolute top-1 left-1`}>
             {value}
           </div>
           
@@ -94,40 +94,40 @@ const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
                 <div className="relative w-full h-full flex items-center justify-center">
                   {value === 'K' && (
                     <div className="flex flex-col items-center justify-center">
-                      <Crown className={`h-10 w-10 ${getColor()}`} />
-                      <div className="text-sm font-bold">KING</div>
+                      <Crown className={`h-6 w-6 ${getColor()}`} />
+                      <div className="text-xs font-bold">KING</div>
                     </div>
                   )}
                   {value === 'Q' && (
                     <div className="flex flex-col items-center justify-center">
-                      <Crown className={`h-10 w-10 ${getColor()}`} />
-                      <div className="text-sm font-bold">QUEEN</div>
+                      <Crown className={`h-6 w-6 ${getColor()}`} />
+                      <div className="text-xs font-bold">QUEEN</div>
                     </div>
                   )}
                   {value === 'J' && (
                     <div className="flex flex-col items-center justify-center">
-                      <Crown className={`h-10 w-10 ${getColor()}`} />
-                      <div className="text-sm font-bold">JACK</div>
+                      <Crown className={`h-6 w-6 ${getColor()}`} />
+                      <div className="text-xs font-bold">JACK</div>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className={`${getColor()} text-4xl md:text-5xl font-bold flex flex-col items-center`}>
-                  <div className="text-3xl">{getSuitSymbol()}</div>
-                  <div className="text-lg">{value}</div>
+                <div className={`${getColor()} text-2xl md:text-3xl font-bold flex flex-col items-center`}>
+                  <div className="text-xl">{getSuitSymbol()}</div>
+                  <div className="text-sm">{value}</div>
                 </div>
               )}
             </div>
           )}
           
-          <div className={`text-base md:text-lg font-bold ${getColor()} absolute bottom-1 right-1 rotate-180`}>
+          <div className={`text-xs md:text-sm font-bold ${getColor()} absolute bottom-1 right-1 rotate-180`}>
             {value}
           </div>
         </div>
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-red-800 to-red-950 flex items-center justify-center p-2 shadow-xl border-2 border-amber-600">
           <div className="w-full h-full border-2 border-amber-500 rounded-lg flex items-center justify-center">
-            <span className="text-yellow-500 text-2xl md:text-3xl font-bold">ACE</span>
+            <span className="text-yellow-500 text-lg md:text-xl font-bold">ACE</span>
           </div>
         </div>
       )}
@@ -135,16 +135,16 @@ const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
   );
 };
 
-// Card slot grid to create a 5x5 layout like in the image
+// Card slot grid to create a 4x4 layout (changed from 5x5)
 const CardSlotGrid = ({ cards = [] }) => {
-  // Create a 5x5 grid of slots
-  const grid = Array(5).fill(null).map(() => Array(5).fill(null));
+  // Create a 4x4 grid of slots (changed from 5x5)
+  const grid = Array(4).fill(null).map(() => Array(4).fill(null));
   
   // Fill grid with cards
   cards.forEach((card, index) => {
-    const row = Math.floor(index / 5);
-    const col = index % 5;
-    if (row < 5 && col < 5) {
+    const row = Math.floor(index / 4); // Changed from 5 to 4
+    const col = index % 4; // Changed from 5 to 4
+    if (row < 4 && col < 4) { // Changed from 5 to 4
       grid[row][col] = card;
     }
   });
@@ -162,13 +162,13 @@ const CardSlotGrid = ({ cards = [] }) => {
                   isHighlighted={card.isSpecial}
                 />
               ) : (
-                <div className="w-20 h-28 md:w-24 md:h-36 bg-gray-200 bg-opacity-40 rounded-lg"></div>
+                <div className="w-16 h-24 md:w-20 md:h-30 bg-gray-200 bg-opacity-40 rounded-lg"></div>
               )}
               
               {/* Show target indicator for special positions */}
-              {([7, 17].includes(rowIndex * 5 + colIndex)) && (
+              {([5, 10].includes(rowIndex * 4 + colIndex)) && ( // Changed indices to match 4x4 grid
                 <div className="absolute -right-2 -top-2 bg-red-500 rounded-full p-1">
-                  <Target className="h-6 w-6 text-white" />
+                  <Target className="h-4 w-4 md:h-6 md:w-6 text-white" />
                 </div>
               )}
             </div>
@@ -271,15 +271,15 @@ const SuperAce = () => {
     const newDeck = [...deck];
     const drawnCards = [];
     
-    // Draw 25 cards for the 5x5 grid
-    for (let i = 0; i < 25; i++) {
+    // Draw 16 cards for the 4x4 grid (changed from 25 for 5x5)
+    for (let i = 0; i < 16; i++) {
       if (newDeck.length > 0) {
         drawnCards.push(newDeck.pop());
       }
     }
     
     // Add special positions (targets)
-    for (const pos of [7, 17]) {
+    for (const pos of [5, 10]) { // Changed positions for 4x4 grid
       if (drawnCards[pos]) {
         drawnCards[pos].isTarget = true;
       }
@@ -304,7 +304,7 @@ const SuperAce = () => {
     const faceCards = cards.filter(card => ['K', 'Q', 'J'].includes(card.value));
     
     // Check for target positions
-    const targetAce = cards.some((card, index) => [7, 17].includes(index) && card.value === 'A');
+    const targetAce = cards.some((card, index) => [5, 10].includes(index) && card.value === 'A'); // Changed positions
     
     // Calculate win
     let win = 0;
@@ -321,7 +321,7 @@ const SuperAce = () => {
     
     // Each face card in key positions pays 1.5x bet
     const keyPositionFaceCards = cards.filter((card, index) => 
-      [6, 8, 12, 16, 18].includes(index) && ['K', 'Q', 'J'].includes(card.value)
+      [4, 6, 9, 11].includes(index) && ['K', 'Q', 'J'].includes(card.value) // Changed positions
     );
     
     win += keyPositionFaceCards.length * bet * 1.5;
@@ -460,11 +460,10 @@ const SuperAce = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-800 to-red-950 flex flex-col">
       <Header />
-      <main className="flex-1 p-2 max-w-md mx-auto bg-[url('/lovable-uploads/9a8c1448-91e1-4c94-947e-19377ca3a64b.png')] bg-cover bg-center">
+      <main className="flex-1 p-2 max-w-md mx-auto">
         {/* Game Header Banner */}
         <div className="mb-4">
           <div className="bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 rounded-lg shadow-lg px-2 py-2 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/lovable-uploads/9a8c1448-91e1-4c94-947e-19377ca3a64b.png')] opacity-20"></div>
             <h1 className="text-2xl font-bold text-amber-100 text-center drop-shadow-lg z-10 relative">
               SUPER ACE FUNDS!
             </h1>
@@ -543,6 +542,7 @@ const SuperAce = () => {
             <Button
               variant="ghost"
               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
+              onClick={() => changeBet(-10)}
             >
               <Minus className="h-5 w-5" />
             </Button>
@@ -572,6 +572,7 @@ const SuperAce = () => {
             <Button
               variant="ghost"
               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
+              onClick={() => changeBet(10)}
             >
               <Plus className="h-5 w-5" />
             </Button>
