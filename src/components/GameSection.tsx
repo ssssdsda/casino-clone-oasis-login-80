@@ -17,9 +17,11 @@ interface Game {
 interface GameSectionProps {
   title: string;
   games: Game[];
+  isAdmin?: boolean;
+  onEditGame?: (game: Game) => void;
 }
 
-const GameSection = ({ title, games }: GameSectionProps) => {
+const GameSection = ({ title, games, isAdmin = false, onEditGame }: GameSectionProps) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -29,6 +31,12 @@ const GameSection = ({ title, games }: GameSectionProps) => {
       navigate(game.path);
     } else {
       console.log(`Clicked game: ${game.title}`);
+    }
+  };
+  
+  const handleEditClick = (game: Game) => {
+    if (onEditGame) {
+      onEditGame(game);
     }
   };
   
@@ -54,6 +62,7 @@ const GameSection = ({ title, games }: GameSectionProps) => {
               multiplier={game.multiplier}
               isNew={game.isNew}
               onClick={() => handleGameClick(game)}
+              onEditClick={isAdmin ? () => handleEditClick(game) : undefined}
             />
           ))}
         </div>

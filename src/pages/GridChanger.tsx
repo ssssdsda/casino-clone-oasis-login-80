@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import GameSection from '@/components/GameSection';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,7 +49,6 @@ const GridChanger = () => {
       if (savedGames) {
         setGames(JSON.parse(savedGames));
       } else {
-        // Load from Index.tsx defaults - in a real app this would come from an API
         const defaultGames = {
           featuredGames: [
             {
@@ -360,6 +360,16 @@ const GridChanger = () => {
     }
   };
 
+  const handleEditGameClick = (game: GameData) => {
+    handleSelectGame(game);
+    
+    // Scroll to the edit form
+    const editFormElement = document.getElementById('edit-form');
+    if (editFormElement) {
+      editFormElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
       <Header />
@@ -377,63 +387,45 @@ const GridChanger = () => {
           
           {CATEGORIES.map((category) => (
             <TabsContent key={category.id} value={category.id}>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
-                {(games[category.id] || []).map((game) => (
-                  <Card 
-                    key={game.id} 
-                    className={`cursor-pointer transition-all ${selectedGame?.id === game.id ? 'border-casino-accent' : 'border-gray-700'}`}
-                    onClick={() => handleSelectGame(game)}
-                  >
-                    <CardHeader className="p-3">
-                      <CardTitle className="text-sm truncate">{game.title}</CardTitle>
-                      {game.multiplier && (
-                        <CardDescription className="text-casino-accent">
-                          ${game.multiplier}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent className="p-3 pt-0">
-                      <div className="relative aspect-[3/4] w-full">
-                        <img 
-                          src={game.image} 
-                          alt={game.title} 
-                          className="w-full h-full object-cover rounded-md"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = '/placeholder.svg';
-                          }}
-                        />
-                        {game.isNew && (
-                          <div className="absolute top-1 left-1 bg-casino-accent text-xs font-bold text-black px-1 py-0.5 rounded">
-                            NEW
-                          </div>
-                        )}
-                        <div className="absolute bottom-1 right-1">
-                          <Button size="icon" variant="secondary" className="h-7 w-7">
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {/* Add New Game Card */}
-                <Card 
-                  className="cursor-pointer border-dashed border-gray-700 flex items-center justify-center"
-                  onClick={() => setSelectedGame(null)}
+              <div className="mb-6">
+                <GameSection 
+                  title={category.title}
+                  games={games[category.id] || []}
+                  isAdmin={true}
+                  onEditGame={handleEditGameClick}
+                />
+              </div>
+              
+              <div className="mb-6">
+                <Button 
+                  variant="outline" 
+                  className="w-full py-8 border-dashed border-gray-700 hover:border-casino-accent"
+                  onClick={() => {
+                    setSelectedGame(null);
+                    setGameTitle('');
+                    setGameMultiplier('');
+                    setGameIsNew(false);
+                    setGamePath('');
+                    setPreviewImage(null);
+                    setSelectedFile(null);
+                    
+                    // Scroll to the edit form
+                    const editFormElement = document.getElementById('edit-form');
+                    if (editFormElement) {
+                      editFormElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                 >
-                  <div className="text-center p-6">
-                    <div className="mx-auto bg-casino-dark w-12 h-12 rounded-full flex items-center justify-center mb-2">
+                  <div className="flex flex-col items-center">
+                    <div className="bg-casino-dark w-12 h-12 rounded-full flex items-center justify-center mb-2">
                       <Upload className="h-6 w-6 text-gray-400" />
                     </div>
                     <p className="text-sm text-gray-400">Add New Game</p>
                   </div>
-                </Card>
+                </Button>
               </div>
 
-              {/* Edit/Add Game Form */}
-              <Card>
+              <Card id="edit-form">
                 <CardHeader>
                   <CardTitle>{selectedGame ? 'Edit Game' : 'Add New Game'}</CardTitle>
                   <CardDescription>

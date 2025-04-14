@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
+import { doc, getDoc, setDoc, getFirestore } from 'firebase/firestore';
 
 interface User {
   id: string;
@@ -32,35 +33,52 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const db = getFirestore();
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  const getUserBalance = async (userId: string) => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists() && userDoc.data().balance) {
+        return userDoc.data().balance;
+      }
+      return 0;
+    } catch (error) {
+      console.error("Error getting user balance:", error);
+      return 0;
+    }
+  };
+
   useEffect(() => {
-    // Listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in
-        const userData = {
-          id: firebaseUser.uid,
-          username: firebaseUser.displayName || 'User',
-          email: firebaseUser.email || undefined,
-          phone: firebaseUser.phoneNumber || undefined,
-          balance: 1000 // Default balance for new users
-        };
-        setUser(userData);
-        localStorage.setItem('casinoUser', JSON.stringify(userData));
+        try {
+          const userBalance = await getUserBalance(firebaseUser.uid);
+          
+          const userData = {
+            id: firebaseUser.uid,
+            username: firebaseUser.displayName || 'User',
+            email: firebaseUser.email || undefined,
+            phone: firebaseUser.phoneNumber || undefined,
+            balance: userBalance
+          };
+          
+          setUser(userData);
+          localStorage.setItem('casinoUser', JSON.stringify(userData));
+        } catch (error) {
+          console.error("Error setting user data:", error);
+        }
       } else {
-        // User is signed out
         setUser(null);
         localStorage.removeItem('casinoUser');
       }
       setIsLoading(false);
     });
 
-    // Check for stored user data for faster initial load
     const storedUser = localStorage.getItem('casinoUser');
     if (storedUser) {
       try {
@@ -73,18 +91,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  // Register with email and password
   const register = async (email: string, password: string, username: string) => {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Create user profile
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        username,
+        email,
+        balance: 0,
+        createdAt: new Date()
+      });
+      
       const newUser = {
         id: userCredential.user.uid,
         username,
         email,
-        balance: 1000
+        balance: 0
       };
       
       setUser(newUser);
@@ -106,11 +129,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Login with email and password
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      const userBalance = await getUserBalance(userCredential.user.uid);
+      
+      const userData = {
+        id: userCredential.user.uid,
+        username: userCredential.user.displayName || 'User',
+        email: userCredential.user.email || undefined,
+        phone: userCredential.user.phoneNumber || undefined,
+        balance: userBalance
+      };
+      
+      setUser(userData);
+      localStorage.setItem('casinoUser', JSON.stringify(userData));
       
       toast({
         title: "Success",
@@ -128,14 +163,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Register with phone number
   const registerWithPhone = async (phoneNumber: string, username: string) => {
     setIsLoading(true);
     try {
-      // In a real app, we'd verify the phone and set up auth
-      // For this demo, we'll simulate the verification
-      
-      // Save username for later use after verification
       localStorage.setItem('pendingUsername', username);
       
       toast({
@@ -156,13 +186,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Login with phone number
   const loginWithPhone = async (phoneNumber: string) => {
     setIsLoading(true);
     try {
-      // In a real app, we'd verify the phone
-      // For this demo, we'll simulate the verification
-      
       toast({
         title: "Success",
         description: "Login successful",
@@ -181,29 +207,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Verify phone code
   const verifyPhoneCode = async (verificationId: string, code: string) => {
     setIsLoading(true);
     try {
       const credential = PhoneAuthProvider.credential(verificationId, code);
       await signInWithCredential(auth, credential);
       
-      // If this is a new registration, update with username
       const pendingUsername = localStorage.getItem('pendingUsername');
       if (pendingUsername) {
-        // Update user with username
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          const userData = {
-            id: currentUser.uid,
+        if (auth.currentUser) {
+          await setDoc(doc(db, "users", auth.currentUser.uid), {
             username: pendingUsername,
-            phone: currentUser.phoneNumber || undefined,
-            balance: 1000
+            phone: auth.currentUser.phoneNumber,
+            balance: 0,
+            createdAt: new Date()
+          });
+          
+          const userData = {
+            id: auth.currentUser.uid,
+            username: pendingUsername,
+            phone: auth.currentUser.phoneNumber || undefined,
+            balance: 0
           };
           
           setUser(userData);
           localStorage.setItem('casinoUser', JSON.stringify(userData));
           localStorage.removeItem('pendingUsername');
+        }
+      } else {
+        if (auth.currentUser) {
+          const userBalance = await getUserBalance(auth.currentUser.uid);
+          
+          const userData = {
+            id: auth.currentUser.uid,
+            username: auth.currentUser.displayName || 'User',
+            phone: auth.currentUser.phoneNumber || undefined,
+            balance: userBalance
+          };
+          
+          setUser(userData);
+          localStorage.setItem('casinoUser', JSON.stringify(userData));
         }
       }
       
@@ -223,15 +266,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Update user balance
-  const updateUserBalance = (newBalance: number) => {
+  const updateUserBalance = async (newBalance: number) => {
     if (user) {
-      const updatedUser = {
-        ...user,
-        balance: newBalance
-      };
-      setUser(updatedUser);
-      localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
+      try {
+        if (auth.currentUser) {
+          await setDoc(doc(db, "users", auth.currentUser.uid), {
+            balance: newBalance
+          }, { merge: true });
+        }
+        
+        const updatedUser = {
+          ...user,
+          balance: newBalance
+        };
+        
+        setUser(updatedUser);
+        localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
+      } catch (error) {
+        console.error("Error updating balance:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update balance",
+          variant: "destructive"
+        });
+      }
     }
   };
 
