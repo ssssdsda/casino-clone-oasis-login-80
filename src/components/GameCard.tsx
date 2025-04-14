@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -18,8 +19,8 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
   const isMobile = useIsMobile();
   const [imageError, setImageError] = useState(false);
   
-  // Add a random query parameter to force the browser to reload the image
-  const imageUrl = `${image}?v=${Math.random().toString(36).substring(7)}`;
+  // Use the image path directly without adding random parameter
+  const imageUrl = image;
   
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent clicking the card if the edit button is clicked

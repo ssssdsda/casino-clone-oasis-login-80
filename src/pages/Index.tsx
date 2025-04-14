@@ -47,7 +47,7 @@ const featuredGames = [
   {
     id: 'money-coming',
     title: 'Money Coming',
-    image: '/lovable-uploads/7b71f0b4-ac4b-4935-a536-cae4e563a9b4.png',
+    image: '/placeholder.svg',
     multiplier: '30000',
     isNew: true,
     path: '/game/moneygram'
@@ -63,7 +63,7 @@ const featuredGames = [
   {
     id: 'fortune-gems-feat',
     title: 'Fortune Gems',
-    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
+    image: '/placeholder.svg',
     multiplier: '35000',
     isNew: true,
     path: '/game/fortune-gems'
@@ -89,14 +89,14 @@ const popularGames = [
   {
     id: 'fortune-gems',
     title: 'Fortune Gems',
-    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
+    image: '/placeholder.svg',
     multiplier: '3500',
     path: '/game/fortune-gems'
   },
   {
     id: 'coin-up',
     title: 'Coin Up',
-    image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
+    image: '/placeholder.svg',
     multiplier: '5000',
     isNew: true,
     path: '/game/coin-up'
@@ -161,24 +161,24 @@ const slotGames = [
   {
     id: '7',
     title: 'Lucky Heroes',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
     multiplier: '2600',
   },
   {
     id: '8',
     title: 'Golden Wheel',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
   },
   {
     id: '9',
     title: 'Diamond Rush',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
     multiplier: '1800',
   },
   {
     id: 'fortune-gems',
     title: 'Fortune Gems',
-    image: '/lovable-uploads/2ba68d66-75e6-4a95-a245-e34754d2fc53.png',
+    image: '/placeholder.svg',
     multiplier: '3500',
     isNew: true,
     path: '/game/fortune-gems'
@@ -186,7 +186,7 @@ const slotGames = [
   {
     id: 'coin-up',
     title: 'Coin Up',
-    image: '/lovable-uploads/8b1e75c0-b325-49af-ac43-3a0f0af41cba.png',
+    image: '/placeholder.svg',
     multiplier: '5000',
     isNew: true,
     path: '/game/coin-up'
@@ -202,7 +202,7 @@ const slotGames = [
   {
     id: '777coins-slot',
     title: '777 Coins',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
     multiplier: '3200',
     path: '/game/777coins'
   },
@@ -212,21 +212,21 @@ const liveGames = [
   {
     id: '11',
     title: 'Live Cricket',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
     isNew: true,
     path: '/game/live-cricket'
   },
   {
     id: '12',
     title: 'Live Football',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
     isNew: true,
     path: '/game/live-football'
   },
   {
     id: '13',
     title: 'Live Baccarat',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
   },
 ];
 
@@ -234,18 +234,18 @@ const casinoGames = [
   {
     id: '16',
     title: 'Royal Poker',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
     multiplier: '5000',
   },
   {
     id: '17',
     title: 'Blackjack Pro',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
   },
   {
     id: '18',
     title: 'Roulette Master',
-    image: '/lovable-uploads/a6514654-403c-4313-a1ba-72241116b3e6.png',
+    image: '/placeholder.svg',
     isNew: true,
   },
 ];

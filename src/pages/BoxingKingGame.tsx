@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Minus, Plus, Settings, RefreshCw, Zap, Wifi } from 'lucide-react';
@@ -9,13 +8,13 @@ import { useAuth } from '@/context/AuthContext';
 const symbols = {
   A: '/lovable-uploads/5e74a510-40f4-4987-8011-5d4569b5aa7c.png', // Using the boxing king image
   K: '/lovable-uploads/5e74a510-40f4-4987-8011-5d4569b5aa7c.png', // Using boxing king image
-  Q: 'https://placehold.co/100/blue/white?text=Q',
-  J: 'https://placehold.co/100/green/white?text=J',
-  BLUE_FIST: 'https://placehold.co/100/blue/white?text=FIST',
-  RED_FIST: 'https://placehold.co/100/red/white?text=FIST',
+  Q: '/placeholder.svg?text=Q',
+  J: '/placeholder.svg?text=J',
+  BLUE_FIST: '/placeholder.svg?text=FIST',
+  RED_FIST: '/placeholder.svg?text=FIST',
   BOXER: '/lovable-uploads/5e74a510-40f4-4987-8011-5d4569b5aa7c.png', // Using boxing king image
-  GLOVE: 'https://placehold.co/100/orange/white?text=GLOVE',
-  SHORTS: 'https://placehold.co/100/cyan/white?text=SHORTS'
+  GLOVE: '/placeholder.svg?text=GLOVE',
+  SHORTS: '/placeholder.svg?text=SHORTS'
 };
 
 // Define paylines
