@@ -14,6 +14,22 @@ import { useLanguage } from '@/context/LanguageContext';
 // Game data
 const featuredGames = [
   {
+    id: 'aviator',
+    title: 'Aviator',
+    image: '/lovable-uploads/f3cc67b3-6063-43a6-841f-f4a23037d206.png',
+    multiplier: '100000',
+    isNew: true,
+    path: '/game/aviator'
+  },
+  {
+    id: 'boxing-king',
+    title: 'Boxing King',
+    image: '/lovable-uploads/a1ddbca9-01d0-433e-89e5-5299a6741bbd.png',
+    multiplier: '50000',
+    isNew: true,
+    path: '/game/boxing-king'
+  },
+  {
     id: 'spin-win',
     title: 'Casino Win Spin',
     image: '/lovable-uploads/0589ec98-6814-4024-b231-39c6e8aceab7.png',

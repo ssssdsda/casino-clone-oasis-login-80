@@ -19,6 +19,8 @@ import LiveFootball from "./pages/LiveFootball";
 import SuperAce from "./pages/SuperAce";
 import CoinsGame from "./pages/CoinsGame";
 import MoneyGram from "./pages/MoneyGram";
+import AviatorGame from "./pages/AviatorGame";
+import BoxingKingGame from "./pages/BoxingKingGame";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "./context/LanguageContext";
 
@@ -41,6 +43,8 @@ const App = () => (
               <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />
               <Route path="/game/plinko" element={<PlinkoGame />} />
               <Route path="/game/moneygram" element={<MoneyGram />} />
+              <Route path="/game/aviator" element={<AviatorGame />} />
+              <Route path="/game/boxing-king" element={<BoxingKingGame />} />
               <Route path="/withdrawal" element={<Withdrawal />} />
               <Route path="/deposit" element={<Deposit />} />
               <Route path="/game/live-cricket" element={<LiveCricket />} />

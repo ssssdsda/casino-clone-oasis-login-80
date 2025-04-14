@@ -1,0 +1,377 @@
+
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Minus, Plus, ChevronDown } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+
+const AviatorGame = () => {
+  const { user, updateUserBalance } = useAuth();
+  const [betAmount, setBetAmount] = useState(10);
+  const [multiplier, setMultiplier] = useState(1.0);
+  const [isFlying, setIsFlying] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [autoCashout, setAutoCashout] = useState(false);
+  const [autoCashoutMultiplier, setAutoCashoutMultiplier] = useState(2.0);
+  const [currentWin, setCurrentWin] = useState(0);
+  const [hasPlacedBet, setHasPlacedBet] = useState(false);
+  const animationRef = useRef<NodeJS.Timeout | null>(null);
+  const planeRef = useRef<HTMLDivElement>(null);
+  const multiplierHistoryRef = useRef([
+    1.11, 1.78, 2.14, 1.25, 1.14, 1.00, 1.15, 1.50, 3.37, 4.47, 
+    2.88, 1.59, 2.33, 1.75, 1.77, 2.28, 2.77, 20.76, 17.27, 7.20, 
+    2.42, 1.26, 1.38
+  ]);
+
+  // Sound effects
+  const takeoffSound = useRef(new Audio('/sounds/takeoff.mp3'));
+  const cashoutSound = useRef(new Audio('/sounds/cashout.mp3'));
+  const crashSound = useRef(new Audio('/sounds/crash.mp3'));
+
+  // Set up the game
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        clearInterval(animationRef.current);
+      }
+    };
+  }, []);
+
+  const startGame = () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please login to play",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (user.balance < betAmount) {
+      toast({
+        title: "Insufficient Balance",
+        description: "Please deposit funds to continue",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Deduct bet amount from user balance
+    if (user && updateUserBalance) {
+      updateUserBalance(user.balance - betAmount);
+    }
+    
+    setMultiplier(1.0);
+    setCurrentWin(0);
+    setGameOver(false);
+    setHasPlacedBet(true);
+    setIsFlying(true);
+    
+    // Play takeoff sound
+    takeoffSound.current.play().catch(e => console.log("Audio play error:", e));
+
+    // Determine when the plane will crash (random)
+    const maxMultiplier = Math.random() < 0.1 
+      ? 10 + Math.random() * 20 // 10% chance for high multiplier
+      : 1 + Math.random() * 5;  // 90% chance for lower multiplier
+
+    animationRef.current = setInterval(() => {
+      setMultiplier(prev => {
+        const increment = prev < 1.5 ? 0.01 : (prev < 5 ? 0.03 : 0.1);
+        const newMultiplier = +(prev + increment).toFixed(2);
+        
+        // Update current potential win
+        setCurrentWin(betAmount * newMultiplier);
+        
+        // Auto cashout if enabled and threshold reached
+        if (autoCashout && newMultiplier >= autoCashoutMultiplier) {
+          cashOut();
+        }
+        
+        // Check if plane should crash
+        if (newMultiplier >= maxMultiplier) {
+          gameCrash();
+          return maxMultiplier;
+        }
+        
+        return newMultiplier;
+      });
+    }, 100);
+  };
+
+  const cashOut = () => {
+    if (!isFlying || gameOver || !hasPlacedBet) return;
+    
+    if (animationRef.current) {
+      clearInterval(animationRef.current);
+      animationRef.current = null;
+    }
+    
+    // Play cashout sound
+    cashoutSound.current.play().catch(e => console.log("Audio play error:", e));
+    
+    // Add winnings to balance
+    const winnings = betAmount * multiplier;
+    if (user && updateUserBalance) {
+      updateUserBalance(user.balance + winnings);
+    }
+    
+    // Show success message
+    toast({
+      title: "Win!",
+      description: `You cashed out at ${multiplier}x and won ${winnings.toFixed(2)}!`,
+    });
+    
+    // Reset game state
+    setIsFlying(false);
+    setHasPlacedBet(false);
+    
+    // Add to history
+    multiplierHistoryRef.current = [multiplier, ...multiplierHistoryRef.current].slice(0, 23);
+  };
+
+  const gameCrash = () => {
+    if (animationRef.current) {
+      clearInterval(animationRef.current);
+      animationRef.current = null;
+    }
+    
+    // Play crash sound
+    crashSound.current.play().catch(e => console.log("Audio play error:", e));
+    
+    // Show crash message
+    toast({
+      title: "Crashed!",
+      description: `The plane crashed at ${multiplier}x!`,
+      variant: "destructive"
+    });
+    
+    // Reset game state
+    setGameOver(true);
+    setIsFlying(false);
+    setHasPlacedBet(false);
+    
+    // Add to history
+    multiplierHistoryRef.current = [multiplier, ...multiplierHistoryRef.current].slice(0, 23);
+  };
+
+  const increaseBet = () => {
+    if (hasPlacedBet) return;
+    if (betAmount < 100) {
+      setBetAmount(prev => prev + 10);
+    } else if (betAmount < 1000) {
+      setBetAmount(prev => prev + 100);
+    } else {
+      setBetAmount(prev => prev + 1000);
+    }
+  };
+
+  const decreaseBet = () => {
+    if (hasPlacedBet) return;
+    if (betAmount > 1000) {
+      setBetAmount(prev => prev - 1000);
+    } else if (betAmount > 100) {
+      setBetAmount(prev => prev - 100);
+    } else if (betAmount > 10) {
+      setBetAmount(prev => prev - 10);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-black flex flex-col">
+      {/* Multiplier History */}
+      <div className="bg-black text-green-500 p-2 flex overflow-x-auto gap-2">
+        {multiplierHistoryRef.current.map((m, i) => {
+          let textColor = "text-blue-400";
+          if (m >= 5) textColor = "text-green-400";
+          if (m >= 10) textColor = "text-purple-400";
+          if (m >= 15) textColor = "text-red-500";
+          
+          return (
+            <div key={i} className={`${textColor} text-sm font-bold`}>
+              {m.toFixed(2)}x
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Fun Mode Banner */}
+      <div className="bg-orange-500 text-center text-white py-2 font-bold">
+        FUN MODE
+      </div>
+
+      {/* Game Area */}
+      <div className="flex-1 bg-gradient-radial from-gray-800 to-black relative overflow-hidden">
+        {/* Multiplier Display */}
+        <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-7xl font-bold z-10">
+          {multiplier.toFixed(2)}x
+        </div>
+
+        {/* Animated Plane */}
+        <div className="absolute bottom-0 left-0 h-full w-full">
+          <motion.div 
+            ref={planeRef}
+            className="absolute bottom-0 left-0"
+            animate={{
+              x: isFlying ? '60vw' : '0vw',
+              y: isFlying ? '-40vh' : '0vh',
+              rotate: isFlying ? 30 : 0
+            }}
+            transition={{ duration: 20, ease: "easeInOut" }}
+          >
+            <div className="relative">
+              {/* Plane Trail */}
+              {isFlying && (
+                <motion.div
+                  className="absolute left-0 bottom-0 h-1 bg-red-600"
+                  style={{ 
+                    width: `${Math.min(60 * (multiplier / 2), 60)}vw`,
+                    transformOrigin: "left bottom",
+                    zIndex: 1
+                  }}
+                />
+              )}
+              
+              {/* Plane */}
+              <div className="text-red-600">
+                <svg width="50" height="30" viewBox="0 0 50 30">
+                  <path 
+                    d="M45,15 L35,10 L10,10 L0,15 L10,20 L35,20 L45,15 Z" 
+                    fill="currentColor" 
+                  />
+                  <path 
+                    d="M40,15 L40,5 L45,5 L45,15 L40,15 Z" 
+                    fill="currentColor" 
+                  />
+                  <circle cx="20" cy="15" r="3" fill="black" />
+                </svg>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="bg-gray-900 text-white p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="border border-gray-700 rounded-lg p-4">
+          <div className="flex justify-between mb-4">
+            <button 
+              className="bg-gray-800 px-4 py-2 rounded-lg"
+              disabled={hasPlacedBet}
+            >
+              Bet
+            </button>
+            <button 
+              className="bg-gray-800 px-4 py-2 rounded-lg"
+              onClick={() => setAutoCashout(!autoCashout)}
+            >
+              {autoCashout ? 'Manual' : 'Auto'}
+            </button>
+          </div>
+          
+          <div className="flex items-center mb-4">
+            <button 
+              onClick={decreaseBet}
+              className="bg-gray-700 p-2 rounded-full"
+              disabled={hasPlacedBet}
+            >
+              <Minus size={18} />
+            </button>
+            <div className="mx-4 text-center">
+              <div className="text-2xl">{betAmount.toFixed(2)}</div>
+              
+              <div className="grid grid-cols-4 gap-1 mt-2">
+                <button 
+                  onClick={() => !hasPlacedBet && setBetAmount(100)}
+                  className="bg-gray-800 py-1 px-2 text-xs rounded"
+                >
+                  100.00
+                </button>
+                <button 
+                  onClick={() => !hasPlacedBet && setBetAmount(200)}
+                  className="bg-gray-800 py-1 px-2 text-xs rounded"
+                >
+                  200.00
+                </button>
+                <button 
+                  onClick={() => !hasPlacedBet && setBetAmount(500)}
+                  className="bg-gray-800 py-1 px-2 text-xs rounded"
+                >
+                  500.00
+                </button>
+                <button 
+                  onClick={() => !hasPlacedBet && setBetAmount(10000)}
+                  className="bg-gray-800 py-1 px-2 text-xs rounded"
+                >
+                  10,000.00
+                </button>
+              </div>
+            </div>
+            <button 
+              onClick={increaseBet}
+              className="bg-gray-700 p-2 rounded-full"
+              disabled={hasPlacedBet}
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+          
+          <button
+            onClick={hasPlacedBet ? cashOut : startGame}
+            className={`w-full py-3 rounded-lg text-xl ${
+              hasPlacedBet 
+                ? 'bg-green-500 hover:bg-green-600' 
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
+          >
+            {hasPlacedBet ? (
+              <span>Cash Out {currentWin.toFixed(2)} BDT</span>
+            ) : (
+              <div>
+                <span>Bet</span><br />
+                <span className="text-2xl">{betAmount.toFixed(2)} BDT</span>
+              </div>
+            )}
+          </button>
+        </div>
+        
+        <div className="border border-gray-700 rounded-lg p-4">
+          {autoCashout && (
+            <div className="mb-4">
+              <label className="block mb-2">Auto Cashout Multiplier</label>
+              <input
+                type="number"
+                step="0.1"
+                min="1.1"
+                max="100"
+                value={autoCashoutMultiplier}
+                onChange={(e) => setAutoCashoutMultiplier(Number(e.target.value))}
+                className="w-full bg-gray-800 p-2 rounded"
+              />
+            </div>
+          )}
+          
+          <button
+            onClick={hasPlacedBet ? cashOut : startGame}
+            className={`w-full py-3 rounded-lg text-xl ${
+              hasPlacedBet 
+                ? 'bg-green-500 hover:bg-green-600' 
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
+          >
+            {hasPlacedBet ? (
+              <span>Cash Out {currentWin.toFixed(2)} BDT</span>
+            ) : (
+              <div>
+                <span>Bet</span><br />
+                <span className="text-2xl">{betAmount.toFixed(2)} BDT</span>
+              </div>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AviatorGame;
