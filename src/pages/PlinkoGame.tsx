@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, useAnimation } from 'framer-motion';
-import { ChevronUp, ChevronDown, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
+import { motion, useAnimation, AnimatePresence } from 'framer-motion';
+import { ChevronUp, ChevronDown, Loader2, Play, Pause, RotateCcw, History } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -11,42 +12,93 @@ import { cn } from '@/lib/utils';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
+import { Slider } from "@/components/ui/slider";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const firestore = getFirestore(app);
 
 // Physics constants - improved for better simulation
-const GRAVITY = 0.6;
-const BOUNCE_FACTOR = 0.65;
+const GRAVITY = 0.7;
+const BOUNCE_FACTOR = 0.6;
 const FRICTION = 0.97;
-const RANDOM_FACTOR = 0.35;
+const RANDOM_FACTOR = 0.4;
 
 // Pin generation settings
-const PIN_ROWS = 16;
+const PIN_ROWS_MIN = 8;
+const PIN_ROWS_MAX = 16;
 const PIN_RADIUS = 5;
 const HORIZONTAL_SPACING = 35;
 const VERTICAL_SPACING = 35;
 const PIN_OFFSET_EVEN = HORIZONTAL_SPACING / 2;
 
 // Multipliers for the game
-const MULTIPLIERS = [
-  { value: '0.2x', color: 'bg-red-500' },
-  { value: '0.3x', color: 'bg-orange-500' },
-  { value: '0.5x', color: 'bg-red-600' },
-  { value: '0.8x', color: 'bg-yellow-500' },
-  { value: '1.2x', color: 'bg-green-500' },
-  { value: '1.5x', color: 'bg-green-400' },
-  { value: '1.7x', color: 'bg-green-600' },
-  { value: '2.0x', color: 'bg-blue-500' },
-  { value: '3.3x', color: 'bg-blue-400' },
-  { value: '5.0x', color: 'bg-purple-500' },
-  { value: '10x', color: 'bg-pink-500' },
-  { value: '20x', color: 'bg-pink-600' },
-  { value: '40x', color: 'bg-red-500' },
-  { value: '100x', color: 'bg-red-600' },
-];
+const MULTIPLIERS = {
+  low: [
+    { value: '1.0x', color: 'bg-blue-400' },
+    { value: '1.1x', color: 'bg-blue-500' },
+    { value: '1.2x', color: 'bg-green-400' },
+    { value: '1.3x', color: 'bg-green-500' },
+    { value: '1.5x', color: 'bg-yellow-500' },
+    { value: '1.7x', color: 'bg-orange-400' },
+    { value: '2.0x', color: 'bg-orange-500' },
+    { value: '2.2x', color: 'bg-purple-500' },
+    { value: '2.5x', color: 'bg-pink-500' },
+    { value: '3.0x', color: 'bg-red-500' },
+    { value: '5.0x', color: 'bg-red-600' },
+    { value: '10.0x', color: 'bg-red-700' },
+    { value: '15.0x', color: 'bg-red-800' },
+    { value: '20.0x', color: 'bg-rose-900' },
+    { value: '45.0x', color: 'bg-rose-950' },
+    { value: '100.0x', color: 'bg-black' },
+  ],
+  medium: [
+    { value: '0.2x', color: 'bg-red-500' },
+    { value: '0.3x', color: 'bg-orange-500' },
+    { value: '0.5x', color: 'bg-red-600' },
+    { value: '0.8x', color: 'bg-yellow-500' },
+    { value: '1.2x', color: 'bg-green-500' },
+    { value: '1.5x', color: 'bg-green-400' },
+    { value: '1.7x', color: 'bg-green-600' },
+    { value: '2.0x', color: 'bg-blue-500' },
+    { value: '3.3x', color: 'bg-blue-400' },
+    { value: '5.0x', color: 'bg-purple-500' },
+    { value: '10x', color: 'bg-pink-500' },
+    { value: '20x', color: 'bg-pink-600' },
+    { value: '40x', color: 'bg-red-500' },
+    { value: '100x', color: 'bg-red-600' },
+    { value: '200x', color: 'bg-red-800' },
+    { value: '1000x', color: 'bg-black' },
+  ],
+  high: [
+    { value: '0.1x', color: 'bg-red-900' },
+    { value: '0.2x', color: 'bg-red-700' },
+    { value: '0.3x', color: 'bg-red-500' },
+    { value: '0.5x', color: 'bg-orange-500' },
+    { value: '0.7x', color: 'bg-yellow-600' },
+    { value: '1.0x', color: 'bg-yellow-500' },
+    { value: '2.0x', color: 'bg-green-600' },
+    { value: '3.0x', color: 'bg-green-500' },
+    { value: '5.0x', color: 'bg-green-400' },
+    { value: '10.0x', color: 'bg-blue-500' },
+    { value: '20.0x', color: 'bg-blue-400' },
+    { value: '40.0x', color: 'bg-purple-500' },
+    { value: '100.0x', color: 'bg-purple-400' },
+    { value: '200.0x', color: 'bg-pink-500' },
+    { value: '500.0x', color: 'bg-pink-400' },
+    { value: '1000.0x', color: 'bg-black' },
+  ]
+};
 
 type GameMode = 'manual' | 'auto';
 type RiskLevel = 'low' | 'medium' | 'high';
+
+interface BetRecord {
+  id: string;
+  timestamp: string;
+  betAmount: number;
+  multiplier: string;
+  winAmount: number;
+}
 
 const PlinkoGame = () => {
   const { t } = useLanguage();
@@ -67,6 +119,7 @@ const PlinkoGame = () => {
   const [autoPlayActive, setAutoPlayActive] = useState<boolean>(false);
   const [remainingBalls, setRemainingBalls] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [betHistory, setBetHistory] = useState<BetRecord[]>([]);
   
   // Pin positions
   const [pins, setPins] = useState<{x: number, y: number}[]>([]);
@@ -79,6 +132,8 @@ const PlinkoGame = () => {
     velocityY: number;
     isMoving: boolean;
     multiplier: string | null;
+    color: string;
+    scale: number;
   }[]>([]);
 
   // Loading animation
@@ -113,13 +168,13 @@ const PlinkoGame = () => {
       
       // Generate multiplier elements based on the number of columns in the last row
       const lastRowPinsCount = rows;
-      const multipliersToUse = MULTIPLIERS.slice(0, lastRowPinsCount);
+      const riskMultipliers = MULTIPLIERS[riskLevel];
+      const multipliersToUse = riskMultipliers.slice(0, lastRowPinsCount);
       
-      const multiplierWidth = containerWidth / multipliersToUse.length;
       const elements = multipliersToUse.map((multiplier, index) => (
         <div 
           key={index}
-          className={`${multiplier.color} h-10 flex items-center justify-center text-white font-bold text-xs`}
+          className={`${multiplier.color} h-12 flex items-center justify-center text-white font-bold text-xs md:text-sm`}
           style={{ width: `${100 / multipliersToUse.length}%` }}
         >
           {multiplier.value}
@@ -128,7 +183,7 @@ const PlinkoGame = () => {
       
       setMultiplierElements(elements);
     }
-  }, [rows, canvasRef.current]);
+  }, [rows, riskLevel, canvasRef.current]);
   
   // Update bet amount
   const updateBetAmount = (amount: number) => {
@@ -138,7 +193,7 @@ const PlinkoGame = () => {
   
   // Update row count
   const updateRows = (value: number) => {
-    if (value >= 8 && value <= 16) {
+    if (value >= PIN_ROWS_MIN && value <= PIN_ROWS_MAX) {
       setRows(value);
     }
   };
@@ -177,6 +232,16 @@ const PlinkoGame = () => {
     const startY = 20;
     
     // Add initial ball with a slight random x velocity
+    const ballColors = [
+      'bg-gradient-to-br from-white to-blue-100',
+      'bg-gradient-to-br from-white to-yellow-100',
+      'bg-gradient-to-br from-white to-green-100',
+      'bg-gradient-to-br from-white to-purple-100',
+      'bg-gradient-to-br from-white to-red-100'
+    ];
+    
+    const randomColorIndex = Math.floor(Math.random() * ballColors.length);
+    
     setActiveBalls(prev => [...prev, {
       id: ballId,
       x: startX,
@@ -185,11 +250,13 @@ const PlinkoGame = () => {
       velocityY: 0,
       isMoving: true,
       multiplier: null,
+      color: ballColors[randomColorIndex],
+      scale: 1
     }]);
     
     // Start the physics simulation after a short delay
     setTimeout(() => {
-      simulateBallDrop(ballId, startX, startY);
+      simulateBallDrop(ballId, startX, startY, ballColors[randomColorIndex]);
     }, 100);
   };
   
@@ -231,7 +298,7 @@ const PlinkoGame = () => {
   };
   
   // Simulate physics for the ball drop with improved animation
-  const simulateBallDrop = (ballId: string, startX: number, startY: number) => {
+  const simulateBallDrop = (ballId: string, startX: number, startY: number, ballColor: string) => {
     let x = startX;
     let y = startY;
     let vx = (Math.random() - 0.5) * 3; // Increased initial horizontal velocity for more randomness
@@ -298,6 +365,27 @@ const PlinkoGame = () => {
             // Add randomness to make the game more interesting
             vx += (Math.random() - 0.5) * RANDOM_FACTOR;
             vy += (Math.random() - 0.5) * RANDOM_FACTOR;
+            
+            // Visual feedback for collision - update ball state
+            setActiveBalls(prev => prev.map(ball => {
+              if (ball.id === ballId) {
+                return { 
+                  ...ball, 
+                  scale: 0.9, // Squish effect on collision
+                };
+              }
+              return ball;
+            }));
+            
+            // Reset scale after a short delay
+            setTimeout(() => {
+              setActiveBalls(prev => prev.map(ball => {
+                if (ball.id === ballId) {
+                  return { ...ball, scale: 1 };
+                }
+                return ball;
+              }));
+            }, 50);
           }
         }
       });
@@ -319,13 +407,25 @@ const PlinkoGame = () => {
         );
         
         // Get multiplier value
-        const multiplierText = MULTIPLIERS[multiplierIndex].value;
+        const riskMultipliers = MULTIPLIERS[riskLevel];
+        const multiplierData = riskMultipliers[multiplierIndex];
+        const multiplierText = multiplierData.value;
+        const multiplierColor = multiplierData.color;
         const multiplierValue = parseFloat(multiplierText.replace('x', ''));
         
         // Update ball position and state
         setActiveBalls(prev => prev.map(ball => {
           if (ball.id === ballId) {
-            return { ...ball, x, y, velocityX: vx, velocityY: vy, isMoving: false, multiplier: multiplierText };
+            return { 
+              ...ball, 
+              x, 
+              y, 
+              velocityX: vx, 
+              velocityY: vy, 
+              isMoving: false, 
+              multiplier: multiplierText,
+              scale: 1.2 // Grow effect when landing
+            };
           }
           return ball;
         }));
@@ -335,12 +435,40 @@ const PlinkoGame = () => {
         setBalance(prev => prev + winAmount);
         setLastWin(winAmount);
         
-        toast({
-          title: t('youWon'),
-          description: `${winAmount.toFixed(2)}€`,
-          variant: "default",
-          className: "bg-green-500 text-white font-bold"
-        });
+        // Add to bet history
+        const newBetRecord: BetRecord = {
+          id: ballId,
+          timestamp: new Date().toLocaleTimeString(),
+          betAmount: betAmount,
+          multiplier: multiplierText,
+          winAmount: winAmount
+        };
+        
+        setBetHistory(prev => [newBetRecord, ...prev.slice(0, 9)]);
+        
+        // Show toast with win animation based on multiplier value
+        if (multiplierValue >= 10) {
+          toast({
+            title: "BIG WIN!",
+            description: `${winAmount.toFixed(2)}€`,
+            variant: "default",
+            className: "bg-green-600 text-white font-bold animate-bounce"
+          });
+        } else if (multiplierValue >= 2) {
+          toast({
+            title: t('youWon'),
+            description: `${winAmount.toFixed(2)}€`,
+            variant: "default",
+            className: "bg-green-500 text-white font-bold"
+          });
+        } else {
+          toast({
+            title: winAmount > betAmount ? t('youWon') : "Try again",
+            description: `${winAmount.toFixed(2)}€`,
+            variant: "default",
+            className: winAmount > betAmount ? "bg-green-500 text-white" : "bg-gray-700 text-white"
+          });
+        }
         
         // Remove ball after a delay
         setTimeout(() => {
@@ -396,13 +524,30 @@ const PlinkoGame = () => {
           </motion.div>
           
           <motion.div
-            className="w-20 h-20 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          />
+            className="w-32 h-32 relative"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <motion.div
+              className="absolute top-0 left-0 right-0 bottom-0 border-8 border-blue-500 border-t-transparent border-b-transparent rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.div
+              className="absolute top-4 left-4 right-4 bottom-4 border-8 border-green-500 border-l-transparent border-r-transparent rounded-full"
+              animate={{ rotate: -360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.div
+              className="absolute top-8 left-8 right-8 bottom-8 bg-white rounded-full"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </motion.div>
           
           <motion.p
-            className="mt-6 text-blue-400"
+            className="mt-8 text-blue-400"
             animate={{ opacity: [0.4, 1, 0.4] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           >
@@ -426,7 +571,7 @@ const PlinkoGame = () => {
                 onClick={() => setGameMode('manual')}
                 className={cn(
                   "flex-1 py-2 text-center text-sm",
-                  gameMode === 'manual' ? "bg-green-400 text-black font-bold" : "bg-transparent"
+                  gameMode === 'manual' ? "bg-indigo-500 text-white font-bold" : "bg-transparent"
                 )}
               >
                 Manual
@@ -435,7 +580,7 @@ const PlinkoGame = () => {
                 onClick={() => setGameMode('auto')}
                 className={cn(
                   "flex-1 py-2 text-center text-sm",
-                  gameMode === 'auto' ? "bg-green-400 text-black font-bold" : "bg-transparent"
+                  gameMode === 'auto' ? "bg-indigo-500 text-white font-bold" : "bg-transparent"
                 )}
               >
                 Auto
@@ -449,8 +594,8 @@ const PlinkoGame = () => {
               <button 
                 onClick={() => setRiskLevel('low')}
                 className={cn(
-                  "flex-1 py-2 text-center text-sm rounded-md",
-                  riskLevel === 'low' ? "bg-green-400 text-black font-bold" : "bg-gray-700"
+                  "flex-1 py-2 text-center text-xs rounded-md",
+                  riskLevel === 'low' ? "bg-indigo-500 text-white font-bold" : "bg-gray-700"
                 )}
               >
                 LOW
@@ -458,8 +603,8 @@ const PlinkoGame = () => {
               <button 
                 onClick={() => setRiskLevel('medium')}
                 className={cn(
-                  "flex-1 py-2 text-center text-sm rounded-md",
-                  riskLevel === 'medium' ? "bg-green-400 text-black font-bold" : "bg-gray-700"
+                  "flex-1 py-2 text-center text-xs rounded-md",
+                  riskLevel === 'medium' ? "bg-indigo-500 text-white font-bold" : "bg-gray-700"
                 )}
               >
                 MEDIUM
@@ -467,8 +612,8 @@ const PlinkoGame = () => {
               <button 
                 onClick={() => setRiskLevel('high')}
                 className={cn(
-                  "flex-1 py-2 text-center text-sm rounded-md",
-                  riskLevel === 'high' ? "bg-green-400 text-black font-bold" : "bg-gray-700"
+                  "flex-1 py-2 text-center text-xs rounded-md",
+                  riskLevel === 'high' ? "bg-indigo-500 text-white font-bold" : "bg-gray-700"
                 )}
               >
                 HIGH
@@ -478,19 +623,16 @@ const PlinkoGame = () => {
           
           <div className="mb-4">
             <div className="text-xs mb-1 text-gray-400">NUMBER OF ROWS</div>
-            <div className="grid grid-cols-5 gap-1">
-              {[8, 9, 10, 11, 12, 13, 14, 15, 16].map(rowNum => (
-                <button
-                  key={rowNum}
-                  onClick={() => updateRows(rowNum)}
-                  className={cn(
-                    "py-1 px-1 text-center text-xs rounded-md",
-                    rows === rowNum ? "bg-green-400 text-black font-bold" : "bg-gray-700"
-                  )}
-                >
-                  {rowNum}
-                </button>
-              ))}
+            <div className="py-2">
+              <Slider 
+                value={[rows]} 
+                min={PIN_ROWS_MIN} 
+                max={PIN_ROWS_MAX}
+                step={1}
+                className="my-4"
+                onValueChange={(value) => setRows(value[0])}
+              />
+              <div className="text-center font-bold text-indigo-300">{rows} ROWS</div>
             </div>
           </div>
           
@@ -523,10 +665,15 @@ const PlinkoGame = () => {
                 "w-full py-3 rounded-full text-center font-bold mb-4",
                 isPlaying || balance < betAmount 
                   ? "bg-gray-600 text-gray-400" 
-                  : "bg-green-400 text-black hover:bg-green-500"
+                  : "bg-indigo-500 text-white hover:bg-indigo-600 transition-colors"
               )}
             >
-              BET
+              {isPlaying ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> 
+                  DROPPING...
+                </span>
+              ) : "DROP BALL"}
             </button>
           ) : (
             <div className="space-y-2 mb-4">
@@ -537,10 +684,10 @@ const PlinkoGame = () => {
                   "w-full py-2 rounded-full text-center font-bold text-sm",
                   autoPlayActive || balance < betAmount 
                     ? "bg-gray-600 text-gray-400" 
-                    : "bg-green-400 text-black hover:bg-green-500"
+                    : "bg-indigo-500 text-white hover:bg-indigo-600"
                 )}
               >
-                5 GAMES
+                5 DROPS
               </button>
               <button
                 onClick={() => startAutoPlay(10)}
@@ -549,15 +696,15 @@ const PlinkoGame = () => {
                   "w-full py-2 rounded-full text-center font-bold text-sm",
                   autoPlayActive || balance < betAmount 
                     ? "bg-gray-600 text-gray-400" 
-                    : "bg-green-400 text-black hover:bg-green-500"
+                    : "bg-indigo-500 text-white hover:bg-indigo-600"
                 )}
               >
-                10 GAMES
+                10 DROPS
               </button>
               {autoPlayActive && (
                 <button
                   onClick={stopAutoPlay}
-                  className="w-full py-2 rounded-full text-center font-bold text-sm bg-red-500 text-white"
+                  className="w-full py-2 rounded-full text-center font-bold text-sm bg-red-500 text-white hover:bg-red-600 transition-colors"
                 >
                   STOP AUTO ({remainingBalls})
                 </button>
@@ -565,24 +712,44 @@ const PlinkoGame = () => {
             </div>
           )}
           
+          <div className="mt-4">
+            <div className="text-xs mb-1 text-gray-400">BET HISTORY</div>
+            <ScrollArea className="h-36 rounded border border-gray-800">
+              <div className="p-2">
+                {betHistory.length > 0 ? (
+                  betHistory.map(bet => (
+                    <div 
+                      key={bet.id} 
+                      className="text-xs border-b border-gray-800 py-1 flex justify-between items-center"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-gray-400">{bet.timestamp}</span>
+                        <span>€{bet.betAmount.toFixed(2)} × {bet.multiplier}</span>
+                      </div>
+                      <span className={bet.winAmount > bet.betAmount ? "text-green-400" : "text-red-400"}>
+                        €{bet.winAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 py-4">
+                    No bets yet
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+          
           <div className="absolute bottom-0 left-0 right-0 p-2 bg-gray-800">
             <div className="text-xs text-center mb-1 text-gray-400">DEMO BALANCE</div>
-            <div className="text-center text-yellow-400 font-bold mb-1">€{balance.toFixed(2)}</div>
-            <div className="text-center text-gray-500 text-xs">€1 = ৳1.40</div>
-            
-            <div className="flex justify-between mt-4 border-t border-gray-700 pt-2">
-              <button className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
-                <div className="w-6 h-6 rounded-full bg-gray-600"></div>
-              </button>
-              <button className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
-                <div className="w-6 h-6 rounded-full bg-gray-600"></div>
-              </button>
-              <button className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
-                <div className="w-6 h-6 rounded-full bg-gray-600"></div>
-              </button>
-              <button className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
-                <div className="w-6 h-6 rounded-full bg-gray-600"></div>
-              </button>
+            <div className="text-center text-yellow-400 font-bold mb-1">€{Math.floor(balance)}</div>
+            <div className="flex justify-center gap-2 mt-2">
+              <Button size="sm" variant="outline" className="bg-gray-700 hover:bg-gray-600 w-8 h-8 p-0">
+                <RotateCcw size={14} />
+              </Button>
+              <Button size="sm" variant="outline" className="bg-gray-700 hover:bg-gray-600 w-8 h-8 p-0">
+                <History size={14} />
+              </Button>
             </div>
           </div>
         </div>
@@ -591,74 +758,141 @@ const PlinkoGame = () => {
         <div className="flex-1 flex flex-col relative overflow-hidden" ref={gameAreaRef}>
           {/* Header */}
           <div className="h-12 bg-indigo-950 flex items-center justify-between px-4 border-b border-indigo-900">
-            <div className="text-sm text-gray-400">19:42 | Plinko</div>
+            <div className="text-sm text-gray-400">Plinko Game</div>
             <div className="text-4xl font-bold tracking-widest text-white">PLINKO</div>
-            <button className="w-8 h-8 text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-              </svg>
-            </button>
+            {lastWin !== null && (
+              <motion.div 
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-yellow-400 font-bold"
+              >
+                LAST WIN: €{lastWin.toFixed(2)}
+              </motion.div>
+            )}
           </div>
           
           {/* Game canvas */}
           <div 
             ref={canvasRef}
-            className="flex-1 relative bg-indigo-950"
+            className="flex-1 relative bg-gradient-to-b from-indigo-950 to-indigo-900"
             style={{
-              backgroundImage: "repeating-linear-gradient(transparent, transparent 40px, rgba(255, 255, 255, 0.03) 40px, rgba(255, 255, 255, 0.03) 80px)"
+              backgroundImage: "radial-gradient(circle at 50% 50%, rgba(79, 70, 229, 0.1) 0%, transparent 50%)"
             }}
           >
+            {/* Grid lines for better visual guidance */}
+            <div className="absolute inset-0 grid grid-cols-8 opacity-10">
+              {Array(8).fill(0).map((_, i) => (
+                <div key={i} className="border-r border-white"></div>
+              ))}
+            </div>
+            
+            {/* Vertical grid lines */}
+            <div className="absolute inset-0 grid grid-rows-8 opacity-10">
+              {Array(8).fill(0).map((_, i) => (
+                <div key={i} className="border-b border-white"></div>
+              ))}
+            </div>
+            
             {/* Pins with glow effect */}
             {pins.map((pin, index) => (
-              <div 
+              <motion.div 
                 key={index}
                 className="absolute w-2.5 h-2.5 rounded-full bg-white"
                 style={{
                   left: `${pin.x}px`,
                   top: `${pin.y}px`,
                   transform: 'translate(-50%, -50%)',
-                  boxShadow: '0 0 5px rgba(255, 255, 255, 0.7)'
+                  boxShadow: '0 0 8px rgba(255, 255, 255, 0.8), 0 0 4px rgba(99, 102, 241, 0.6)'
+                }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: 1, 
+                  opacity: 1 
+                }}
+                transition={{ 
+                  delay: index * 0.001,  
+                  duration: 0.3,
+                  ease: "easeOut"
                 }}
               />
             ))}
             
             {/* Balls container with improved animation */}
             <div ref={ballsContainerRef} className="absolute inset-0">
-              {activeBalls.map(ball => (
-                <motion.div
-                  key={ball.id}
-                  className="absolute w-5 h-5 rounded-full bg-gradient-to-br from-white to-blue-100"
-                  style={{
-                    left: `${ball.x}px`,
-                    top: `${ball.y}px`,
-                    transform: 'translate(-50%, -50%)',
-                    boxShadow: '0 0 10px rgba(255, 255, 255, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.8)'
-                  }}
-                  initial={{ scale: 0 }}
-                  animate={{ 
-                    x: ball.x - 10,
-                    y: ball.y - 10,
-                    scale: 1,
-                    transition: { 
+              <AnimatePresence>
+                {activeBalls.map(ball => (
+                  <motion.div
+                    key={ball.id}
+                    className={`absolute w-5 h-5 rounded-full ${ball.color}`}
+                    style={{
+                      left: `${ball.x}px`,
+                      top: `${ball.y}px`,
+                      transform: `translate(-50%, -50%) scale(${ball.scale})`,
+                      boxShadow: '0 0 10px rgba(255, 255, 255, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.8)'
+                    }}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: ball.scale }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ 
                       type: 'spring', 
                       stiffness: 500,
                       damping: 30
-                    }
-                  }}
-                >
-                  {ball.multiplier && (
-                    <motion.span
-                      className="absolute inset-0 flex items-center justify-center text-xs font-bold"
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.2, duration: 0.3 }}
-                    >
-                      {ball.multiplier[0]}
-                    </motion.span>
-                  )}
-                </motion.div>
-              ))}
+                    }}
+                  >
+                    {ball.multiplier && (
+                      <motion.span
+                        className="absolute inset-0 flex items-center justify-center text-xs font-bold"
+                        initial={{ opacity: 0, scale: 0 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.2, duration: 0.3 }}
+                      >
+                        {ball.multiplier[0]}
+                      </motion.span>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
+            
+            {/* Path tracer effect - shows ball's possible paths */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+              <defs>
+                <linearGradient id="pathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
+                  <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                </linearGradient>
+              </defs>
+              {rows > 8 && /* Only show paths for higher row counts */
+                Array.from({length: pins.length / 3}).map((_, i) => {
+                  const startX = canvasRef.current ? canvasRef.current.clientWidth / 2 : 0;
+                  const startY = 20;
+                  const endX = startX + (Math.random() * 200 - 100);
+                  const endY = canvasRef.current ? canvasRef.current.clientHeight - 50 : 400;
+                  
+                  return (
+                    <motion.path
+                      key={`path-${i}`}
+                      d={`M ${startX} ${startY} Q ${startX + (Math.random() * 100 - 50)} ${(startY + endY) / 2}, ${endX} ${endY}`}
+                      stroke="url(#pathGradient)"
+                      strokeWidth="1"
+                      fill="none"
+                      strokeDasharray="3,3"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ 
+                        pathLength: 1, 
+                        opacity: 0.3,
+                        transition: { 
+                          duration: 2, 
+                          ease: "easeInOut",
+                          repeat: Infinity,
+                          repeatType: "loop"
+                        }
+                      }}
+                    />
+                  );
+                })
+              }
+            </svg>
             
             {/* Bottom multipliers with glow effect */}
             <div className="absolute bottom-0 left-0 right-0 flex">
