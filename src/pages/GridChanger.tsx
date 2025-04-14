@@ -223,6 +223,7 @@ const GridChanger = () => {
         try {
           const parsedGames = JSON.parse(savedGames);
           
+          // Update image paths and add cache-busting timestamp
           Object.keys(parsedGames).forEach(category => {
             parsedGames[category] = parsedGames[category].map((game: GameData) => {
               if (game.title.toLowerCase().includes('aviator')) {
@@ -249,6 +250,7 @@ const GridChanger = () => {
           
           setGames(parsedGames);
           
+          // Force re-save with updated paths
           localStorage.setItem('gameGridData', JSON.stringify(parsedGames));
         } catch (error) {
           console.error("Error parsing saved games:", error);
@@ -259,6 +261,10 @@ const GridChanger = () => {
         setGames(defaultGames);
         localStorage.setItem('gameGridData', JSON.stringify(defaultGames));
       }
+      
+      // Preload the Aviator image
+      const preloadImage = new Image();
+      preloadImage.src = '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png?v=' + new Date().getTime();
     } catch (error) {
       console.error("Error loading game data:", error);
       toast({

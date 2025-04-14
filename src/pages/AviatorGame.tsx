@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Minus, Plus, ChevronDown } from 'lucide-react';
@@ -29,6 +30,10 @@ const AviatorGame = () => {
   const crashSound = useRef(new Audio('/sounds/crash.mp3'));
 
   useEffect(() => {
+    // Preload the Aviator image
+    const preloadImage = new Image();
+    preloadImage.src = '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png?v=' + new Date().getTime();
+    
     return () => {
       if (animationRef.current) {
         clearInterval(animationRef.current);
@@ -192,9 +197,13 @@ const AviatorGame = () => {
 
       <div className="flex justify-center my-4">
         <img 
-          src="/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png"
+          src="/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png?v=refresh" 
           alt="Aviator Game Logo"
           className="h-16"
+          onError={(e) => {
+            console.error("Failed to load Aviator logo");
+            (e.target as HTMLImageElement).src = '/placeholder.svg';
+          }}
         />
       </div>
 

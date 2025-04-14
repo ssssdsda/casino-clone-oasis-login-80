@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CategorySidebar from '@/components/CategorySidebar';
 import Banner from '@/components/Banner';
@@ -256,6 +256,13 @@ const Index = () => {
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
   };
+  
+  // Force reload image caches on component mount
+  useEffect(() => {
+    // Create a new image object and set its src to the Aviator image to force browser to reload it
+    const preloadImage = new Image();
+    preloadImage.src = '/lovable-uploads/7846c04c-50ac-41c6-9f57-9955887f7b06.png?v=' + new Date().getTime();
+  }, []);
   
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">

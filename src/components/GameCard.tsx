@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -17,6 +17,10 @@ interface GameCardProps {
 const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: GameCardProps) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const [imageError, setImageError] = useState(false);
+  
+  // Add a random query parameter to force the browser to reload the image
+  const imageUrl = `${image}?v=${new Date().getTime()}`;
   
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent clicking the card if the edit button is clicked
@@ -46,7 +50,7 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
       {/* Game image */}
       <div className="aspect-[3/4] relative bg-gray-800">
         <img 
-          src={image} 
+          src={imageUrl} 
           alt={title} 
           className="w-full h-full object-cover"
           loading="lazy"
@@ -54,6 +58,7 @@ const GameCard = ({ title, image, multiplier, isNew, onClick, onEditClick }: Gam
             console.error(`Failed to load image: ${image}`);
             // Set a fallback image if the original image fails to load
             (e.target as HTMLImageElement).src = '/placeholder.svg';
+            setImageError(true);
           }}
         />
         
