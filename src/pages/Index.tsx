@@ -15,7 +15,7 @@ const featuredGames = [
   {
     id: 'aviator',
     title: 'Aviator',
-    image: '/lovable-uploads/ba327bc8-d695-4ebf-a7f8-0d4ae1540fdc.png',
+    image: '/lovable-uploads/babf4736-0af9-4669-ae00-f4f2c78065c0.png',
     multiplier: '100000',
     isNew: true,
     path: '/game/aviator'

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,8 +28,36 @@ import BonusControl from "./pages/BonusControl";
 import GridChanger from "./pages/GridChanger";
 import NotFound from "./pages/NotFound";
 import { LanguageProvider } from "./context/LanguageContext";
+import AviatorControl from "./pages/AviatorControl";
 
 const queryClient = new QueryClient();
+
+const routes = [
+  <Route path="/" element={<Index />} />,
+  <Route path="/admin/images" element={<ImagesChanger />} />,
+  <Route path="/admin/grid-changer" element={<GridChanger />} />,
+  <Route path="/game/spin" element={<SpinGame />} />,
+  <Route path="/admin/spin-control" element={<SpinControl />} />,
+  <Route path="/game/megaspin" element={<MegaSpin />} />,
+  <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />,
+  <Route path="/game/plinko" element={<PlinkoGame />} />,
+  <Route path="/game/moneygram" element={<MoneyGram />} />,
+  <Route path="/game/aviator" element={<AviatorGame />} />,
+  <Route path="/game/aviator-control" element={<AviatorControl />} />,
+  <Route path="/game/boxing-king" element={<BoxingKingGame />} />,
+  <Route path="/game/fortune-gems" element={<FortuneGemsGame />} />,
+  <Route path="/game/coin-up" element={<CoinUpGame />} />,
+  <Route path="/game/golden-basin" element={<GoldenBasinGame />} />,
+  <Route path="/withdrawal" element={<Withdrawal />} />,
+  <Route path="/deposit" element={<Deposit />} />,
+  <Route path="/bonus" element={<Bonus />} />,
+  <Route path="/admin/bonus-control" element={<BonusControl />} />,
+  <Route path="/game/live-cricket" element={<LiveCricket />} />,
+  <Route path="/game/live-football" element={<LiveFootball />} />,
+  <Route path="/game/super-ace" element={<SuperAce />} />,
+  <Route path="/game/777coins" element={<CoinsGame />} />,
+  <Route path="*" element={<NotFound />} />
+];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -41,30 +68,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/admin/images" element={<ImagesChanger />} />
-              <Route path="/admin/grid-changer" element={<GridChanger />} />
-              <Route path="/game/spin" element={<SpinGame />} />
-              <Route path="/admin/spin-control" element={<SpinControl />} />
-              <Route path="/game/megaspin" element={<MegaSpin />} />
-              <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />
-              <Route path="/game/plinko" element={<PlinkoGame />} />
-              <Route path="/game/moneygram" element={<MoneyGram />} />
-              <Route path="/game/aviator" element={<AviatorGame />} />
-              <Route path="/game/boxing-king" element={<BoxingKingGame />} />
-              <Route path="/game/fortune-gems" element={<FortuneGemsGame />} />
-              <Route path="/game/coin-up" element={<CoinUpGame />} />
-              <Route path="/game/golden-basin" element={<GoldenBasinGame />} />
-              <Route path="/withdrawal" element={<Withdrawal />} />
-              <Route path="/deposit" element={<Deposit />} />
-              <Route path="/bonus" element={<Bonus />} />
-              <Route path="/admin/bonus-control" element={<BonusControl />} />
-              <Route path="/game/live-cricket" element={<LiveCricket />} />
-              <Route path="/game/live-football" element={<LiveFootball />} />
-              <Route path="/game/super-ace" element={<SuperAce />} />
-              <Route path="/game/777coins" element={<CoinsGame />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
+              {routes}
             </Routes>
           </BrowserRouter>
         </TooltipProvider>

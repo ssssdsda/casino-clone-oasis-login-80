@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import { Minus, Plus, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const AviatorGame = () => {
   const { user, updateUserBalance } = useAuth();
+  const navigate = useNavigate();
   const [betAmount, setBetAmount] = useState(10);
   const [multiplier, setMultiplier] = useState(1.0);
   const [isFlying, setIsFlying] = useState(false);
@@ -37,6 +39,10 @@ const AviatorGame = () => {
     };
   }, []);
 
+  const goToControlPanel = () => {
+    navigate('/aviator-control');
+  };
+
   const startGame = () => {
     if (!user) {
       toast({
@@ -56,47 +62,53 @@ const AviatorGame = () => {
       return;
     }
 
-    // Deduct bet amount from user balance
-    if (user && updateUserBalance) {
-      updateUserBalance(user.balance - betAmount);
-    }
+    // Reset plane position
+    setIsFlying(false);
     
-    setMultiplier(1.0);
-    setCurrentWin(0);
-    setGameOver(false);
-    setHasPlacedBet(true);
-    setIsFlying(true);
-    
-    // Play takeoff sound
-    takeoffSound.current.play().catch(e => console.log("Audio play error:", e));
+    // Short delay before starting flight to reset the plane position
+    setTimeout(() => {
+      // Deduct bet amount from user balance
+      if (user && updateUserBalance) {
+        updateUserBalance(user.balance - betAmount);
+      }
+      
+      setMultiplier(1.0);
+      setCurrentWin(0);
+      setGameOver(false);
+      setHasPlacedBet(true);
+      setIsFlying(true);
+      
+      // Play takeoff sound
+      takeoffSound.current.play().catch(e => console.log("Audio play error:", e));
 
-    // Determine when the plane will crash (random)
-    const maxMultiplier = Math.random() < 0.1 
-      ? 10 + Math.random() * 20 // 10% chance for high multiplier
-      : 1 + Math.random() * 5;  // 90% chance for lower multiplier
+      // Determine when the plane will crash (random)
+      const maxMultiplier = Math.random() < 0.1 
+        ? 10 + Math.random() * 20 // 10% chance for high multiplier
+        : 1 + Math.random() * 5;  // 90% chance for lower multiplier
 
-    animationRef.current = setInterval(() => {
-      setMultiplier(prev => {
-        const increment = prev < 1.5 ? 0.01 : (prev < 5 ? 0.03 : 0.1);
-        const newMultiplier = +(prev + increment).toFixed(2);
-        
-        // Update current potential win
-        setCurrentWin(betAmount * newMultiplier);
-        
-        // Auto cashout if enabled and threshold reached
-        if (autoCashout && newMultiplier >= autoCashoutMultiplier) {
-          cashOut();
-        }
-        
-        // Check if plane should crash
-        if (newMultiplier >= maxMultiplier) {
-          gameCrash();
-          return maxMultiplier;
-        }
-        
-        return newMultiplier;
-      });
-    }, 100);
+      animationRef.current = setInterval(() => {
+        setMultiplier(prev => {
+          const increment = prev < 1.5 ? 0.01 : (prev < 5 ? 0.03 : 0.1);
+          const newMultiplier = +(prev + increment).toFixed(2);
+          
+          // Update current potential win
+          setCurrentWin(betAmount * newMultiplier);
+          
+          // Auto cashout if enabled and threshold reached
+          if (autoCashout && newMultiplier >= autoCashoutMultiplier) {
+            cashOut();
+          }
+          
+          // Check if plane should crash
+          if (newMultiplier >= maxMultiplier) {
+            gameCrash();
+            return maxMultiplier;
+          }
+          
+          return newMultiplier;
+        });
+      }, 100);
+    }, 300);
   };
 
   const cashOut = () => {
@@ -207,6 +219,16 @@ const AviatorGame = () => {
           {multiplier.toFixed(2)}x
         </div>
 
+        {/* Admin Control Button - Only visible to admins */}
+        {user?.role === 'admin' && (
+          <button 
+            onClick={goToControlPanel}
+            className="absolute top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg z-20"
+          >
+            Control Panel
+          </button>
+        )}
+
         {/* Animated Plane */}
         <div className="absolute bottom-0 left-0 h-full w-full">
           <motion.div 
@@ -217,13 +239,14 @@ const AviatorGame = () => {
               y: isFlying ? '-40vh' : '0vh',
               rotate: isFlying ? 30 : 0
             }}
+            initial={{ x: '0vw', y: '0vh', rotate: 0 }}
             transition={{ duration: 20, ease: "easeInOut" }}
           >
             <div className="relative">
               {/* Plane Trail */}
               {isFlying && (
                 <motion.div
-                  className="absolute left-0 bottom-0 h-1 bg-red-600"
+                  className="absolute left-0 bottom-0 h-1.5 bg-red-600"
                   style={{ 
                     width: `${Math.min(60 * (multiplier / 2), 60)}vw`,
                     transformOrigin: "left bottom",
@@ -232,18 +255,31 @@ const AviatorGame = () => {
                 />
               )}
               
-              {/* Plane */}
+              {/* Enhanced Plane Design */}
               <div className="text-red-600">
-                <svg width="50" height="30" viewBox="0 0 50 30">
+                <svg width="64" height="40" viewBox="0 0 64 40">
+                  {/* Main body */}
                   <path 
-                    d="M45,15 L35,10 L10,10 L0,15 L10,20 L35,20 L45,15 Z" 
+                    d="M55,20 L40,13 L10,13 L0,20 L10,27 L40,27 L55,20 Z" 
                     fill="currentColor" 
                   />
+                  {/* Tail */}
                   <path 
-                    d="M40,15 L40,5 L45,5 L45,15 L40,15 Z" 
+                    d="M48,20 L48,10 L55,8 L55,20 L48,20 Z" 
                     fill="currentColor" 
                   />
-                  <circle cx="20" cy="15" r="3" fill="black" />
+                  {/* Propeller */}
+                  <circle cx="55" cy="20" r="2" fill="#FFF" />
+                  <path 
+                    d="M54,15 L56,15 L57,10 L53,10 L54,15 Z" 
+                    fill="#FFF"
+                    className="animate-spin"
+                    style={{ transformOrigin: "55px 15px", animationDuration: "0.2s" }}
+                  />
+                  {/* Windows */}
+                  <circle cx="25" cy="20" r="2" fill="#BBF" />
+                  <circle cx="32" cy="20" r="2" fill="#BBF" />
+                  <circle cx="39" cy="20" r="2" fill="#BBF" />
                 </svg>
               </div>
             </div>

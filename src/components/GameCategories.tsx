@@ -7,7 +7,8 @@ import {
   Trophy, 
   Dice5, 
   Gamepad2, 
-  Joystick 
+  Joystick,
+  Flame
 } from 'lucide-react';
 
 interface CategoryProps {
@@ -30,7 +31,7 @@ const GameCategory = ({ icon, label, onClick, isSelected }: CategoryProps) => {
       }`}>
         {icon}
       </div>
-      <span className="text-xs md:text-sm font-medium text-white text-center">{label}</span>
+      <span className="text-xs md:text-sm font-medium text-white text-center truncate w-full">{label}</span>
     </div>
   );
 };
@@ -44,6 +45,11 @@ const GameCategories = ({ onCategorySelect, selectedCategory }: GameCategoriesPr
   const { t } = useLanguage();
   
   const categories = [
+    { 
+      id: 'featuredGames',
+      icon: <Flame className="w-6 h-6 md:w-8 md:h-8 text-white" />, 
+      label: t('featuredGames')
+    },
     { 
       id: 'slots', 
       icon: <Coins className="w-6 h-6 md:w-8 md:h-8 text-white" />, 
@@ -85,7 +91,7 @@ const GameCategories = ({ onCategorySelect, selectedCategory }: GameCategoriesPr
   };
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 md:gap-4 mb-4 px-1">
+    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 md:gap-4 mb-4 px-1">
       {categories.map((category) => (
         <GameCategory
           key={category.id}
