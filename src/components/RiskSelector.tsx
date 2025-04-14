@@ -1,74 +1,84 @@
 
 import React from 'react';
-import { Slider } from "@/components/ui/slider";
-import { RISK_LEVELS, RiskLevel, ROWS_BY_RISK } from '@/utils/gameLogic';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
-interface RiskSelectorProps {
-  selectedRisk: RiskLevel;
-  onRiskChange: (risk: RiskLevel) => void;
-  selectedRows: number;
-  onRowsChange: (rows: number) => void;
+// Define risk levels enum
+export enum RISK_LEVELS {
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH"
 }
 
-const RiskSelector: React.FC<RiskSelectorProps> = ({
-  selectedRisk,
-  onRiskChange,
-  selectedRows,
-  onRowsChange
-}) => {
-  const handleRowsChange = (values: number[]) => {
-    onRowsChange(values[0]);
-  };
-  
-  const availableRows = ROWS_BY_RISK[selectedRisk];
-  const minRows = availableRows[0];
-  const maxRows = availableRows[availableRows.length - 1];
-  
+type RiskSelectorProps = {
+  selectedRisk: RISK_LEVELS;
+  onSelectRisk: (risk: RISK_LEVELS) => void;
+};
+
+const RiskSelector = ({ selectedRisk, onSelectRisk }: RiskSelectorProps) => {
   return (
-    <div>
-      <div className="mb-4">
-        <div className="text-xs mb-1 text-gray-400">RISK</div>
-        <div className="flex gap-1">
-          <button 
-            onClick={() => onRiskChange(RISK_LEVELS.LOW)}
-            className={`flex-1 py-2 text-center text-sm rounded-md ${
-              selectedRisk === RISK_LEVELS.LOW ? "bg-green-600 text-white font-bold" : "bg-gray-700"
-            }`}
-          >
-            LOW
-          </button>
-          <button 
-            onClick={() => onRiskChange(RISK_LEVELS.MEDIUM)}
-            className={`flex-1 py-2 text-center text-sm rounded-md ${
-              selectedRisk === RISK_LEVELS.MEDIUM ? "bg-green-600 text-white font-bold" : "bg-gray-700"
-            }`}
-          >
-            MEDIUM
-          </button>
-          <button 
-            onClick={() => onRiskChange(RISK_LEVELS.HIGH)}
-            className={`flex-1 py-2 text-center text-sm rounded-md ${
-              selectedRisk === RISK_LEVELS.HIGH ? "bg-green-600 text-white font-bold" : "bg-gray-700"
-            }`}
-          >
-            HIGH
-          </button>
-        </div>
-      </div>
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
+      <h3 className="text-lg font-semibold mb-3 dark:text-white">Risk Level</h3>
       
-      <div>
-        <div className="text-xs mb-1 text-gray-400">NUMBER OF ROWS</div>
-        <div className="py-2">
-          <Slider 
-            value={[selectedRows]} 
-            min={minRows} 
-            max={maxRows}
-            step={2}
-            className="my-4"
-            onValueChange={handleRowsChange}
+      <RadioGroup
+        defaultValue={selectedRisk}
+        onValueChange={(value) => onSelectRisk(value as RISK_LEVELS)}
+        className="space-y-2"
+      >
+        <div className="flex items-center">
+          <RadioGroupItem
+            value={RISK_LEVELS.LOW}
+            id="risk-low"
+            className="border-green-500"
           />
-          <div className="text-center font-bold text-green-400">{selectedRows} ROWS</div>
+          <Label 
+            htmlFor="risk-low"
+            className={`ml-2 font-medium cursor-pointer ${
+              selectedRisk === RISK_LEVELS.LOW ? 'text-green-500' : 'text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            Low Risk
+          </Label>
+          <span className="ml-auto text-sm text-green-500">1.5x - 2x</span>
         </div>
+        
+        <div className="flex items-center">
+          <RadioGroupItem
+            value={RISK_LEVELS.MEDIUM}
+            id="risk-medium"
+            className="border-amber-500"
+          />
+          <Label 
+            htmlFor="risk-medium"
+            className={`ml-2 font-medium cursor-pointer ${
+              selectedRisk === RISK_LEVELS.MEDIUM ? 'text-amber-500' : 'text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            Medium Risk
+          </Label>
+          <span className="ml-auto text-sm text-amber-500">5x - 10x</span>
+        </div>
+        
+        <div className="flex items-center">
+          <RadioGroupItem
+            value={RISK_LEVELS.HIGH}
+            id="risk-high"
+            className="border-red-500"
+          />
+          <Label 
+            htmlFor="risk-high"
+            className={`ml-2 font-medium cursor-pointer ${
+              selectedRisk === RISK_LEVELS.HIGH ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            High Risk
+          </Label>
+          <span className="ml-auto text-sm text-red-500">10x - 100x</span>
+        </div>
+      </RadioGroup>
+      
+      <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+        Higher risk means higher potential rewards but lower chances of winning.
       </div>
     </div>
   );

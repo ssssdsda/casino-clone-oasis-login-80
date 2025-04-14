@@ -17,6 +17,7 @@ import Deposit from "./pages/Deposit";
 import LiveCricket from "./pages/LiveCricket";
 import LiveFootball from "./pages/LiveFootball";
 import SuperAce from "./pages/SuperAce";
+import SuperAceCasinoGame from "./pages/SuperAceCasinoGame";
 import CoinsGame from "./pages/CoinsGame";
 import MoneyGram from "./pages/MoneyGram";
 import AviatorGame from "./pages/AviatorGame";
@@ -56,6 +57,7 @@ const routes = [
   <Route path="/game/live-cricket" element={<LiveCricket />} />,
   <Route path="/game/live-football" element={<LiveFootball />} />,
   <Route path="/game/super-ace" element={<SuperAce />} />,
+  <Route path="/game/super-ace-casino" element={<SuperAceCasinoGame />} />,
   <Route path="/game/777coins" element={<CoinsGame />} />,
   <Route path="/admin/popup-customizer" element={<PopupCustomizer />} />,
   <Route path="/admin/withdrawal-manager" element={<WithdrawalManager />} />,

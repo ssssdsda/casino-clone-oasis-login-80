@@ -28,6 +28,7 @@ const GoldenBasinGame = () => {
   const [selectedMultiplier, setSelectedMultiplier] = useState('1.10x');
   const [gameMode, setGameMode] = useState<'Manual' | 'Auto'>('Manual');
   const [gameResult, setGameResult] = useState<'WIN' | 'LOSS' | null>(null);
+  const [betCounter, setBetCounter] = useState(0); // Counter to track bets for the 1-in-5 win system
   const spinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const winSound = useRef<HTMLAudioElement | null>(null);
@@ -81,11 +82,15 @@ const GoldenBasinGame = () => {
     // Calculate win after a delay
     if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current);
     
+    // Update bet counter
+    const newBetCount = betCounter + 1;
+    setBetCounter(newBetCount);
+    
     spinTimeoutRef.current = setTimeout(() => {
-      const userId = user.id || 'anonymous';
-      const didWin = shouldBetWin(userId);
+      // 1-in-5 win system: win on every 5th bet (or first bet)
+      const shouldWin = newBetCount % 5 === 0 || newBetCount === 1;
       
-      if (didWin) { // Win condition
+      if (shouldWin) { // Win condition
         const selectedMultiplierValue = parseFloat(selectedMultiplier.replace('x', ''));
         const winAmount = betAmount * selectedMultiplierValue;
         setWinAmount(Number(winAmount.toFixed(2)));
@@ -150,6 +155,27 @@ const GoldenBasinGame = () => {
     if (spinTimeoutRef.current) {
       clearTimeout(spinTimeoutRef.current);
     }
+  };
+  
+  // Get bet history
+  const getBetHistory = () => {
+    // Generate artificial history based on 1-in-5 win pattern
+    const history = [];
+    const currentCount = betCounter;
+    
+    // Show last 6 results
+    for (let i = 0; i < 6; i++) {
+      const betNumber = currentCount - i;
+      if (betNumber > 0) {
+        const wasWin = betNumber % 5 === 0 || betNumber === 1;
+        history.push(wasWin ? 'WIN' : 'LOSS');
+      } else {
+        // For bets not yet made
+        history.push('');
+      }
+    }
+    
+    return history;
   };
 
   return (
@@ -266,9 +292,16 @@ const GoldenBasinGame = () => {
             <div className="text-center text-sm mb-2">Bet History</div>
             
             <div className="grid grid-cols-3 gap-2">
-              {Array(6).fill(null).map((_, index) => (
-                <div key={index} className={`h-8 rounded-full ${index % 5 === 0 ? 'bg-green-600' : 'bg-red-600'} flex items-center justify-center text-xs font-bold`}>
-                  {index % 5 === 0 ? 'WIN' : 'LOSS'}
+              {getBetHistory().map((result, index) => (
+                <div 
+                  key={index} 
+                  className={`h-8 rounded-full ${
+                    result === 'WIN' ? 'bg-green-600' : 
+                    result === 'LOSS' ? 'bg-red-600' : 
+                    'bg-gray-600'
+                  } flex items-center justify-center text-xs font-bold`}
+                >
+                  {result || '-'}
                 </div>
               ))}
             </div>
