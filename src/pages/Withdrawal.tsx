@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Header from '@/components/Header';
 import { ArrowLeft, BadgeCheck, Clock, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, onSnapshot, doc } from 'firebase/firestore';
 
 interface WithdrawalRequest {
   id: string;
@@ -29,7 +29,8 @@ const paymentMethods = [
   { id: 'rocket', name: 'Rocket', logo: '/lovable-uploads/d10fd039-e61a-4e50-8145-a1efe284ada2.png' },
 ];
 
-const predefinedAmounts = [500, 1000, 2000, 5000];
+// Updated predefined amounts to be within the 200-1000 range
+const predefinedAmounts = [200, 500, 800, 1000];
 
 const Withdrawal = () => {
   const { user, updateUserBalance } = useAuth();
@@ -43,12 +44,15 @@ const Withdrawal = () => {
   const [processing, setProcessing] = useState<boolean>(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRequest[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [activeWithdrawals, setActiveWithdrawals] = useState<string[]>([]);
   
   const db = getFirestore();
   
   useEffect(() => {
     if (user) {
       fetchWithdrawalHistory();
+      // Listen for status changes in active withdrawal requests
+      listenToActiveWithdrawals();
     }
   }, [user]);
   
@@ -65,10 +69,11 @@ const Withdrawal = () => {
       
       const querySnapshot = await getDocs(q);
       const history: WithdrawalRequest[] = [];
+      const activeIds: string[] = [];
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        history.push({
+        const request = {
           id: doc.id,
           amount: data.amount,
           paymentMethod: data.paymentMethod,
@@ -76,15 +81,73 @@ const Withdrawal = () => {
           status: data.status,
           createdAt: data.createdAt.toDate(),
           completedAt: data.completedAt ? data.completedAt.toDate() : undefined,
-        });
+        };
+        
+        history.push(request);
+        
+        if (request.status === 'pending') {
+          activeIds.push(doc.id);
+        }
       });
       
       setWithdrawalHistory(history);
+      setActiveWithdrawals(activeIds);
     } catch (error) {
       console.error("Error fetching withdrawal history:", error);
     } finally {
       setLoadingHistory(false);
     }
+  };
+  
+  // Listen for changes to active withdrawal requests
+  const listenToActiveWithdrawals = () => {
+    if (!user) return;
+    
+    // Set up listener for each active withdrawal
+    const unsubscribe = onSnapshot(
+      collection(db, "withdrawals"),
+      where("userId", "==", user.id),
+      where("status", "==", "pending"),
+      (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "modified") {
+            const data = change.doc.data();
+            
+            // If the status changed to completed, update the user's balance
+            if (data.status === 'completed' && user) {
+              // Deduct amount from user balance when withdrawal is approved
+              updateUserBalance(user.balance - data.amount);
+              
+              toast({
+                title: language === 'en' ? "Withdrawal Approved" : "উত্তোলন অনুমোদিত",
+                description: language === 'en' 
+                  ? `Your withdrawal request for ${t('currency')}${data.amount} has been approved`
+                  : `${t('currency')}${data.amount} এর জন্য আপনার উত্তোলন অনুরোধ অনুমোদিত হয়েছে`,
+                variant: "default",
+                className: "bg-green-600 text-white",
+              });
+              
+              // Refresh withdrawal history
+              fetchWithdrawalHistory();
+            } else if (data.status === 'rejected') {
+              toast({
+                title: language === 'en' ? "Withdrawal Rejected" : "উত্তোলন প্রত্যাখ্যান করা হয়েছে",
+                description: language === 'en' 
+                  ? "Your withdrawal request was rejected"
+                  : "আপনার উত্তোলন অনুরোধ প্রত্যাখ্যান করা হয়েছে",
+                variant: "destructive",
+              });
+              
+              // Refresh withdrawal history
+              fetchWithdrawalHistory();
+            }
+          }
+        });
+      }
+    );
+    
+    // Clean up listener on unmount
+    return () => unsubscribe();
   };
   
   const handleAmountChange = (value: number) => {
@@ -123,10 +186,21 @@ const Withdrawal = () => {
       return;
     }
     
-    if (amount < 500) {
+    // Set minimum withdrawal to 200
+    if (amount < 200) {
       toast({
         title: "Error",
-        description: language === 'en' ? "Minimum withdrawal amount is ৳500" : "সর্বনিম্ন উত্তোলনের পরিমাণ ৳৫০০",
+        description: language === 'en' ? "Minimum withdrawal amount is ৳200" : "সর্বনিম্ন উত্তোলনের পরিমাণ ৳২০০",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Set maximum withdrawal to 1000
+    if (amount > 1000) {
+      toast({
+        title: "Error",
+        description: language === 'en' ? "Maximum withdrawal amount is ৳1000" : "সর্বাধিক উত্তোলনের পরিমাণ ৳১০০০",
         variant: "destructive"
       });
       return;
@@ -153,9 +227,7 @@ const Withdrawal = () => {
     setProcessing(true);
     
     try {
-      // Deduct amount from user balance
-      await updateUserBalance(user.balance - amount);
-      
+      // Don't deduct from balance here, instead wait for status change to 'completed'
       // Create withdrawal request in Firestore
       await addDoc(collection(db, "withdrawals"), {
         userId: user.id,
@@ -189,11 +261,6 @@ const Withdrawal = () => {
           : "উত্তোলন অনুরোধ প্রক্রিয়া করতে ব্যর্থ হয়েছে",
         variant: "destructive"
       });
-      
-      // Restore user balance in case of error
-      if (user) {
-        updateUserBalance(user.balance);
-      }
     } finally {
       setProcessing(false);
     }
@@ -269,7 +336,7 @@ const Withdrawal = () => {
                     key={amt}
                     type="button"
                     variant={amount === amt ? "default" : "outline"}
-                    className={amount === amt ? "bg-casino-accent text-black" : "text-white"}
+                    className={`${amount === amt ? 'bg-gray-800 text-white' : 'bg-gray-800 text-white border-gray-700'}`}
                     onClick={() => handleAmountChange(amt)}
                   >
                     {t('currency')}{amt}
@@ -287,13 +354,13 @@ const Withdrawal = () => {
                   <Input
                     id="custom-amount"
                     className="pl-8 bg-casino-dark border-gray-600 text-white"
-                    placeholder="1000"
+                    placeholder="500"
                     value={customAmount}
                     onChange={handleCustomAmountChange}
                   />
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
-                  {language === 'en' ? 'Minimum: ৳500' : 'সর্বনিম্ন: ৳৫০০'}
+                  {language === 'en' ? 'Min: ৳200, Max: ৳1000' : 'সর্বনিম্ন: ৳২০০, সর্বাধিক: ৳১০০০'}
                 </p>
               </div>
             </div>
@@ -339,9 +406,9 @@ const Withdrawal = () => {
             
             <div className="pt-2">
               <Button
-                className="w-full bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
+                className="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold"
                 onClick={handleWithdrawal}
-                disabled={processing || !amount || amount < 500 || !accountNumber}
+                disabled={processing || !amount || amount < 200 || amount > 1000 || !accountNumber}
               >
                 {processing 
                   ? (language === 'en' ? 'Processing...' : 'প্রক্রিয়াজাতকরণ...') 
