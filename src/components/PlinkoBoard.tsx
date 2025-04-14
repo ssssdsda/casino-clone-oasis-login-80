@@ -20,7 +20,7 @@ type PegPosition = {
 type BallPosition = {
   x: number;
   y: number;
-  path: number[];
+  path: {x: number, y: number}[];
 };
 
 const PlinkoBoard = ({
@@ -34,6 +34,7 @@ const PlinkoBoard = ({
   const [ballPosition, setBallPosition] = useState<BallPosition | null>(null);
   const [multiplier, setMultiplier] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [hitPegs, setHitPegs] = useState<number[]>([]);
 
   const boardRef = useRef<HTMLDivElement>(null);
 
@@ -106,6 +107,7 @@ const PlinkoBoard = ({
     // Reset previous state
     setMultiplier(null);
     setSelectedSlot(null);
+    setHitPegs([]);
     
     // Pick starting position (random within the bounds)
     const startX = Math.random() * 80 + 10; // Between 10% and 90%
@@ -114,7 +116,7 @@ const PlinkoBoard = ({
     const newBallPosition: BallPosition = {
       x: startX,
       y: 0,
-      path: [] // Will store the path of the ball
+      path: [{x: startX, y: 0}] // Will store the path of the ball
     };
     
     setBallPosition(newBallPosition);
@@ -123,24 +125,52 @@ const PlinkoBoard = ({
     simulatePathAndAnimate(newBallPosition);
   };
 
-  // Simulate ball path and animate
+  // Simulate ball path and animate with peg interactions
   const simulatePathAndAnimate = (initialPosition: BallPosition) => {
-    // Implementation of path simulation and animation logic
-    const simulatedPath: number[] = [];
-    let currentPos = { ...initialPosition };
+    const pegs = generatePegs();
+    const newPath: {x: number, y: number}[] = [{x: initialPosition.x, y: 0}];
+    const pegHits: number[] = [];
     
-    // Generate a semi-random path for the ball
-    for (let i = 0; i < rows; i++) {
-      // At each row, decide whether to go left (0) or right (1)
-      const direction = Math.random() > 0.5 ? 1 : 0;
-      simulatedPath.push(direction);
+    let currentPos = { x: initialPosition.x, y: 0 };
+    const pegRadius = 1.5; // Radius of pegs in percentage
+    const ballRadius = 2.5; // Radius of ball in percentage
+    
+    // Move ball down by simulating collision with pegs
+    for (let row = 1; row <= rows; row++) {
+      // Get pegs in current row
+      const rowPegs = pegs.filter(peg => Math.abs(peg.y - (row * (100 / (rows + 1)))) < 1);
       
-      // Update position based on direction
-      if (direction === 0) {
-        currentPos.x = Math.max(5, currentPos.x - (100 / (cols * 2)));
-      } else {
-        currentPos.x = Math.min(95, currentPos.x + (100 / (cols * 2)));
+      // Move down to this row's y position
+      currentPos.y = row * (100 / (rows + 1));
+      
+      // Check for collision with pegs in this row
+      let hitPegIndex = -1;
+      
+      for (let i = 0; i < rowPegs.length; i++) {
+        const peg = rowPegs[i];
+        const distance = Math.sqrt(
+          Math.pow(currentPos.x - peg.x, 2) + 
+          Math.pow(currentPos.y - peg.y, 2)
+        );
+        
+        if (distance < (pegRadius + ballRadius)) {
+          hitPegIndex = i;
+          pegHits.push(pegs.indexOf(peg));
+          break;
+        }
       }
+      
+      // If hit a peg, deflect left or right
+      if (hitPegIndex !== -1) {
+        // Calculate bounce direction (slightly random)
+        const direction = Math.random() > 0.5 ? 1 : -1;
+        const deflection = (Math.random() * 5 + 5) * direction; // 5-10% deflection
+        
+        currentPos.x = Math.max(5, Math.min(95, currentPos.x + deflection));
+      }
+      
+      // Add point to path
+      newPath.push({...currentPos});
     }
     
     // Determine which slot the ball lands in
@@ -156,16 +186,20 @@ const PlinkoBoard = ({
       }
     }
     
-    // Set the final position and path
-    const finalPosition = {
+    // Add final point (slot)
+    newPath.push({
       x: slots[closestSlot].position,
-      y: 100, // Bottom of the board
-      path: simulatedPath
-    };
+      y: 100
+    });
     
-    setBallPosition({ ...initialPosition, path: simulatedPath });
+    // Update state with path and hit pegs
+    setHitPegs(pegHits);
+    setBallPosition({
+      ...initialPosition,
+      path: newPath
+    });
     
-    // Animate the ball along the path
+    // After animation, update results
     setTimeout(() => {
       // Animation complete
       setSelectedSlot(closestSlot);
@@ -184,10 +218,13 @@ const PlinkoBoard = ({
   };
 
   // Generate components
-  const pegElements = generatePegs().map((peg, index) => (
+  const pegs = generatePegs();
+  
+  const pegElements = pegs.map((peg, index) => (
     <div
       key={`peg-${index}`}
-      className="absolute w-3 h-3 bg-amber-300 rounded-full transform -translate-x-1/2 -translate-y-1/2 shadow-glow"
+      className={`absolute w-3 h-3 rounded-full transform -translate-x-1/2 -translate-y-1/2 shadow-glow 
+        ${hitPegs.includes(index) ? 'bg-amber-500' : 'bg-amber-300'}`}
       style={{
         left: `${peg.x}%`,
         top: `${peg.y}%`
@@ -216,36 +253,22 @@ const PlinkoBoard = ({
     <motion.div
       className="absolute w-5 h-5 bg-white rounded-full shadow-lg z-10"
       style={{
-        left: `${ballPosition.x}%`,
+        left: `${ballPosition.path[0].x}%`,
         top: 0
       }}
       animate={{
-        y: ['0%', '100%'],
-        left: calculateBallPathX(ballPosition.path),
+        left: ballPosition.path.map(point => `${point.x}%`),
+        top: ballPosition.path.map(point => `${point.y}%`),
       }}
       transition={{
         duration: 2,
-        ease: "easeIn"
+        ease: "linear",
+        times: ballPosition.path.map((_, i) => 
+          i / (ballPosition.path.length - 1)
+        )
       }}
     />
   );
-
-  // Helper function to calculate ball path coordinates
-  function calculateBallPathX(path: number[]): string[] {
-    let positions: string[] = ['0%'];
-    let currentX = ballPosition?.x || 50;
-    
-    path.forEach((direction, index) => {
-      if (direction === 0) {
-        currentX = Math.max(5, currentX - (100 / (cols * 2)));
-      } else {
-        currentX = Math.min(95, currentX + (100 / (cols * 2)));
-      }
-      positions.push(`${currentX}%`);
-    });
-    
-    return positions;
-  }
 
   return (
     <div 

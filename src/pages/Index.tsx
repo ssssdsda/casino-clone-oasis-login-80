@@ -42,8 +42,15 @@ const Index = () => {
     {
       id: 'fruity-bonanza',
       title: 'Fruity Bonanza',
-      image: '/lovable-uploads/e269552a-2099-4f35-951c-73f811cc496a.png',
+      image: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png',
       path: '/game/fruity-bonanza',
+      isNew: true
+    },
+    {
+      id: 'super-elements',
+      title: 'Super Elements',
+      image: '/lovable-uploads/722c58de-9fd2-48c9-ba1f-9969bebd1e23.png',
+      path: '/game/super-element',
       isNew: true
     },
     {
@@ -100,8 +107,15 @@ const Index = () => {
     {
       id: 'fruity-bonanza',
       title: 'Fruity Bonanza',
-      image: '/lovable-uploads/e269552a-2099-4f35-951c-73f811cc496a.png',
+      image: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png',
       path: '/game/fruity-bonanza',
+      isNew: true
+    },
+    {
+      id: 'super-elements',
+      title: 'Super Elements',
+      image: '/lovable-uploads/722c58de-9fd2-48c9-ba1f-9969bebd1e23.png',
+      path: '/game/super-element',
       isNew: true
     },
     {
@@ -130,13 +144,6 @@ const Index = () => {
       title: 'Super Ace',
       image: '/lovable-uploads/ff7d4b10-032b-41d7-9313-48fcf2c0710a.png',
       path: '/game/super-ace',
-      isNew: true
-    },
-    {
-      id: '777coins',
-      title: '777 Coins',
-      image: '/lovable-uploads/a1de6d81-6374-4dbf-b6ca-8305cc8bf5b4.png',
-      path: '/game/777coins',
       isNew: true
     }
   ];
