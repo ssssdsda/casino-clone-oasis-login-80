@@ -44,6 +44,20 @@ export const MULTIPLIERS = {
   ]
 };
 
+// MegaSpin wheel values and segments
+export const MEGA_SPIN_SEGMENTS = [
+  { id: 1, text: '50x', value: 50, color: '#f44336', textColor: '#ffffff', probability: 0.01 },
+  { id: 2, text: '3x', value: 3, color: '#2196f3', textColor: '#ffffff', probability: 0.08 },
+  { id: 3, text: '10x', value: 10, color: '#4caf50', textColor: '#ffffff', probability: 0.03 },
+  { id: 4, text: '5x', value: 5, color: '#ff9800', textColor: '#ffffff', probability: 0.05 },
+  { id: 5, text: '0x', value: 0, color: '#9c27b0', textColor: '#ffffff', probability: 0.3 },
+  { id: 6, text: '2x', value: 2, color: '#e91e63', textColor: '#ffffff', probability: 0.1 },
+  { id: 7, text: '20x', value: 20, color: '#009688', textColor: '#ffffff', probability: 0.02 },
+  { id: 8, text: '0x', value: 0, color: '#673ab7', textColor: '#ffffff', probability: 0.3 },
+  { id: 9, text: '2x', value: 2, color: '#3f51b5', textColor: '#ffffff', probability: 0.1 },
+  { id: 10, text: '1x', value: 1, color: '#ffc107', textColor: '#333333', probability: 0.01 },
+];
+
 // Colors for multiplier buckets
 export const MULTIPLIER_COLORS = {
   [RISK_LEVELS.LOW]: [

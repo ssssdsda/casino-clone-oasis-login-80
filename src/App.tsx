@@ -24,6 +24,7 @@ import BoxingKingGame from "./pages/BoxingKingGame";
 import FortuneGemsGame from "./pages/FortuneGemsGame";
 import CoinUpGame from "./pages/CoinUpGame";
 import GoldenBasinGame from "./pages/GoldenBasinGame";
+import SuperElementGame from "./pages/SuperElementGame";
 import Bonus from "./pages/Bonus";
 import BonusControl from "./pages/BonusControl";
 import NotFound from "./pages/NotFound";
@@ -49,6 +50,7 @@ const routes = [
   <Route path="/game/fortune-gems" element={<FortuneGemsGame />} />,
   <Route path="/game/coin-up" element={<CoinUpGame />} />,
   <Route path="/game/golden-basin" element={<GoldenBasinGame />} />,
+  <Route path="/game/super-element" element={<SuperElementGame />} />,
   <Route path="/withdrawal" element={<Withdrawal />} />,
   <Route path="/deposit" element={<Deposit />} />,
   <Route path="/bonus" element={<Bonus />} />,

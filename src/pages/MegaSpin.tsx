@@ -6,22 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { shouldBetWin } from '@/utils/bettingSystem';
+import { MEGA_SPIN_SEGMENTS } from '@/utils/gameLogic';
 
-// Define segments for the wheel
-const segments = [
-  { id: 1, text: '50x', value: 50, color: '#f44336', textColor: '#ffffff', probability: 0.01 },
-  { id: 2, text: '3x', value: 3, color: '#2196f3', textColor: '#ffffff', probability: 0.08 },
-  { id: 3, text: '10x', value: 10, color: '#4caf50', textColor: '#ffffff', probability: 0.03 },
-  { id: 4, text: '5x', value: 5, color: '#ff9800', textColor: '#ffffff', probability: 0.05 },
-  { id: 5, text: '0x', value: 0, color: '#9c27b0', textColor: '#ffffff', probability: 0.3 },
-  { id: 6, text: '2x', value: 2, color: '#e91e63', textColor: '#ffffff', probability: 0.1 },
-  { id: 7, text: '20x', value: 20, color: '#009688', textColor: '#ffffff', probability: 0.02 },
-  { id: 8, text: '0x', value: 0, color: '#673ab7', textColor: '#ffffff', probability: 0.3 },
-  { id: 9, text: '2x', value: 2, color: '#3f51b5', textColor: '#ffffff', probability: 0.1 },
-  { id: 10, text: '1x', value: 1, color: '#ffc107', textColor: '#333333', probability: 0.01 },
-];
-
-const totalSegments = segments.length;
+const totalSegments = MEGA_SPIN_SEGMENTS.length;
 const segmentAngle = 360 / totalSegments;
 
 const MegaSpin = () => {
@@ -107,18 +94,18 @@ const MegaSpin = () => {
     
     if (shouldWinThisBet) {
       // Choose a winning segment (value > 0)
-      const winningSegments = segments.filter(s => s.value > 0);
+      const winningSegments = MEGA_SPIN_SEGMENTS.filter(s => s.value > 0);
       const winningSegmentIndex = Math.floor(Math.random() * winningSegments.length);
       targetSegment = winningSegments[winningSegmentIndex];
     } else {
       // Choose a losing segment (value = 0)
-      const losingSegments = segments.filter(s => s.value === 0);
+      const losingSegments = MEGA_SPIN_SEGMENTS.filter(s => s.value === 0);
       const losingSegmentIndex = Math.floor(Math.random() * losingSegments.length);
       targetSegment = losingSegments[losingSegmentIndex];
     }
     
     // Find the target segment index
-    const targetIndex = segments.findIndex(s => s.id === targetSegment.id);
+    const targetIndex = MEGA_SPIN_SEGMENTS.findIndex(s => s.id === targetSegment.id);
     
     // Calculate the angle needed to land on this segment
     // Add multiple rotations for effect
@@ -145,7 +132,7 @@ const MegaSpin = () => {
     }, 5000); // Match this with animation duration
   };
 
-  const handleResult = (segment: typeof segments[0]) => {
+  const handleResult = (segment: typeof MEGA_SPIN_SEGMENTS[0]) => {
     setIsSpinning(false);
     
     // Calculate win amount (capped at 100)
@@ -234,7 +221,7 @@ const MegaSpin = () => {
               animate={{ rotate: rotation }}
               transition={{ duration: 5, ease: "easeOut" }}
             >
-              {segments.map((segment, index) => {
+              {MEGA_SPIN_SEGMENTS.map((segment, index) => {
                 const startAngle = index * segmentAngle;
                 const endAngle = (index + 1) * segmentAngle;
                 
@@ -247,20 +234,27 @@ const MegaSpin = () => {
                       backgroundColor: segment.color,
                     }}
                   >
-                    {/* Better positioned text for visibility */}
+                    {/* Better positioned text for visibility with background */}
                     <div 
-                      className="absolute whitespace-nowrap font-bold text-xl"
+                      className="absolute whitespace-nowrap font-bold"
                       style={{
-                        top: '35%', // Position text a bit higher than center
+                        top: '35%',
                         left: '50%',
                         transform: `translate(-50%, -50%) rotate(${startAngle + segmentAngle / 2}deg) translateY(-70px)`,
-                        color: segment.textColor,
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.7), -1px -1px 2px rgba(0,0,0,0.7), 1px -1px 2px rgba(0,0,0,0.7), -1px 1px 2px rgba(0,0,0,0.7)',
-                        fontSize: '1.2rem', // Larger text
-                        fontWeight: 'bold', // Extra bold for visibility
                       }}
                     >
-                      {segment.text}
+                      {/* Text with better visibility */}
+                      <div 
+                        className="bg-black/30 px-3 py-1 rounded-full border border-white/30"
+                        style={{
+                          color: segment.textColor,
+                          textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                          fontSize: '1.4rem',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {segment.text}
+                      </div>
                     </div>
                   </div>
                 );
