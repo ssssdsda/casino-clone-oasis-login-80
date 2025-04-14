@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import GameSection from '@/components/GameSection';
@@ -8,7 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, Image, Edit } from 'lucide-react';
+import { Upload, Image, Edit, Trash2 } from 'lucide-react';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import app from '@/lib/firebase';
+import { v4 as uuidv4 } from 'uuid';
 
 // Define the game data structure
 type GameData = {
@@ -39,7 +43,10 @@ const GridChanger = () => {
   const [gamePath, setGamePath] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const storage = getStorage(app);
 
   // Load initial game data from localStorage or use default data
   useEffect(() => {
@@ -241,17 +248,35 @@ const GridChanger = () => {
     setSelectedFile(null);
   };
 
+  const uploadImageToFirebase = async (file: File): Promise<string> => {
+    try {
+      setIsUploading(true);
+      const fileId = uuidv4();
+      const fileExtension = file.name.split('.').pop();
+      const storageRef = ref(storage, `game-images/${fileId}.${fileExtension}`);
+      
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      throw new Error("Failed to upload image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSaveChanges = async () => {
     if (!selectedGame) return;
 
     try {
+      setIsUploading(true);
       let imageUrl = selectedGame.image;
 
-      // If a new file was selected, we would upload it
+      // If a new file was selected, upload it to Firebase Storage
       if (selectedFile) {
-        // In a real app, this would upload to a server
-        // For now we'll just use the preview URL
-        imageUrl = previewImage || selectedGame.image;
+        imageUrl = await uploadImageToFirebase(selectedFile);
       }
 
       // Update the game in our state
@@ -287,6 +312,10 @@ const GridChanger = () => {
       setSelectedGame(null);
       setPreviewImage(null);
       setSelectedFile(null);
+      setGameTitle('');
+      setGameMultiplier('');
+      setGameIsNew(false);
+      setGamePath('');
     } catch (error) {
       console.error("Error saving changes:", error);
       toast({
@@ -294,10 +323,12 @@ const GridChanger = () => {
         title: "Error",
         description: "Failed to save changes",
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const handleAddNewGame = () => {
+  const handleAddNewGame = async () => {
     if (!gameTitle) {
       toast({
         variant: "destructive",
@@ -307,7 +338,7 @@ const GridChanger = () => {
       return;
     }
 
-    if (!previewImage && !selectedFile) {
+    if (!selectedFile) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -317,8 +348,11 @@ const GridChanger = () => {
     }
 
     try {
+      setIsUploading(true);
       const newGameId = `game-${Date.now()}`;
-      const imageUrl = previewImage || '/placeholder.svg';
+      
+      // Upload the image to Firebase Storage
+      const imageUrl = await uploadImageToFirebase(selectedFile);
 
       const newGame: GameData = {
         id: newGameId,
@@ -357,6 +391,16 @@ const GridChanger = () => {
         title: "Error",
         description: "Failed to add new game",
       });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedFile(null);
+    setPreviewImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -367,6 +411,39 @@ const GridChanger = () => {
     const editFormElement = document.getElementById('edit-form');
     if (editFormElement) {
       editFormElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleDeleteGame = (gameId: string) => {
+    try {
+      const updatedGames = {...games};
+      const categoryGames = updatedGames[currentCategory] || [];
+      updatedGames[currentCategory] = categoryGames.filter(game => game.id !== gameId);
+      
+      setGames(updatedGames);
+      localStorage.setItem('gameGridData', JSON.stringify(updatedGames));
+      
+      toast({
+        title: "Game Deleted",
+        description: "The game has been deleted successfully.",
+      });
+      
+      if (selectedGame?.id === gameId) {
+        setSelectedGame(null);
+        setGameTitle('');
+        setGameMultiplier('');
+        setGameIsNew(false);
+        setGamePath('');
+        setPreviewImage(null);
+        setSelectedFile(null);
+      }
+    } catch (error) {
+      console.error("Error deleting game:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete game",
+      });
     }
   };
 
@@ -396,10 +473,45 @@ const GridChanger = () => {
                 />
               </div>
               
-              <div className="mb-6">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+                {(games[category.id] || []).map((game) => (
+                  <div key={game.id} className="bg-gray-800 rounded-lg p-4 flex items-center gap-4">
+                    <img 
+                      src={game.image} 
+                      alt={game.title} 
+                      className="w-16 h-20 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <h3 className="text-white font-medium">{game.title}</h3>
+                      {game.multiplier && (
+                        <p className="text-sm text-casino-accent">{game.multiplier}x</p>
+                      )}
+                      {game.path && (
+                        <p className="text-xs text-gray-400 truncate">{game.path}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleEditGameClick(game)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive" 
+                        onClick={() => handleDeleteGame(game.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                
                 <Button 
                   variant="outline" 
-                  className="w-full py-8 border-dashed border-gray-700 hover:border-casino-accent"
+                  className="h-32 border-dashed border-gray-700 hover:border-casino-accent"
                   onClick={() => {
                     setSelectedGame(null);
                     setGameTitle('');
@@ -482,10 +594,10 @@ const GridChanger = () => {
                     <div className="space-y-4">
                       <Label>Game Image</Label>
                       <div className="border-2 border-dashed border-gray-700 rounded-lg p-4 text-center">
-                        {(previewImage || (selectedGame && !selectedFile)) ? (
+                        {previewImage ? (
                           <div className="relative aspect-[3/4] max-w-[200px] mx-auto">
                             <img 
-                              src={previewImage || selectedGame?.image} 
+                              src={previewImage} 
                               alt="Game preview" 
                               className="w-full h-full object-cover rounded-md"
                             />
@@ -493,25 +605,43 @@ const GridChanger = () => {
                               variant="destructive" 
                               size="sm"
                               className="absolute top-2 right-2"
-                              onClick={() => {
-                                setSelectedFile(null);
-                                setPreviewImage(null);
-                              }}
+                              onClick={handleRemoveImage}
                             >
                               Remove
                             </Button>
+                          </div>
+                        ) : selectedGame && !selectedFile ? (
+                          <div className="relative aspect-[3/4] max-w-[200px] mx-auto">
+                            <img 
+                              src={selectedGame.image} 
+                              alt="Current game image" 
+                              className="w-full h-full object-cover rounded-md"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                              <Button 
+                                variant="secondary"
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                Change Image
+                              </Button>
+                            </div>
                           </div>
                         ) : (
                           <label className="cursor-pointer flex flex-col items-center space-y-2">
                             <Image className="h-12 w-12 text-gray-400" />
                             <span className="text-sm text-gray-400">Upload image</span>
                             <input
+                              ref={fileInputRef}
                               type="file"
                               className="hidden"
                               accept="image/*"
                               onChange={handleFileChange}
                             />
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
                               Select File
                             </Button>
                           </label>
@@ -538,8 +668,16 @@ const GridChanger = () => {
                   >
                     Cancel
                   </Button>
-                  <Button onClick={selectedGame ? handleSaveChanges : handleAddNewGame}>
-                    {selectedGame ? 'Save Changes' : 'Add Game'}
+                  <Button 
+                    onClick={selectedGame ? handleSaveChanges : handleAddNewGame}
+                    disabled={isUploading}
+                  >
+                    {isUploading 
+                      ? 'Uploading...' 
+                      : selectedGame 
+                        ? 'Save Changes' 
+                        : 'Add Game'
+                    }
                   </Button>
                 </CardFooter>
               </Card>

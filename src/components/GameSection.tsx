@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import GameCard from './GameCard';
 import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -21,10 +21,45 @@ interface GameSectionProps {
   onEditGame?: (game: Game) => void;
 }
 
-const GameSection = ({ title, games, isAdmin = false, onEditGame }: GameSectionProps) => {
+const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: GameSectionProps) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [games, setGames] = useState<Game[]>(propGames);
+  
+  // Load games from localStorage if available when not in admin mode
+  useEffect(() => {
+    if (!isAdmin) {
+      try {
+        const savedGames = localStorage.getItem('gameGridData');
+        if (savedGames) {
+          const parsedGames = JSON.parse(savedGames);
+          const categoryId = getCategoryIdFromTitle(title);
+          if (categoryId && parsedGames[categoryId]) {
+            setGames(parsedGames[categoryId]);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error loading games from localStorage:", error);
+      }
+    }
+    
+    // Fallback to prop games if no localStorage data or in admin mode
+    setGames(propGames);
+  }, [propGames, title, isAdmin]);
+  
+  const getCategoryIdFromTitle = (title: string) => {
+    // Map the title to the correct category ID used in localStorage
+    const mapping: Record<string, string> = {
+      'featuredGames': 'featuredGames',
+      'popularGames': 'popularGames',
+      'slots': 'slotGames',
+      'liveGames': 'liveGames',
+      'tableGames': 'casinoGames'
+    };
+    return mapping[title];
+  };
   
   const handleGameClick = (game: Game) => {
     if (game.path) {
