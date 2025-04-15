@@ -29,7 +29,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithPhone: (phoneNumber: string) => Promise<string>;
-  verifyPhoneCode: (verificationId: string, code: string) => Promise<void>;
+  verifyPhoneCode: (verificationId: string, code: string) => Promise<boolean>;
   register: (email: string, password: string, username: string, referralCode?: string) => Promise<void>;
   registerWithPhone: (phoneNumber: string, username: string, referralCode?: string) => Promise<string>;
   logout: () => void;
