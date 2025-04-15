@@ -18,11 +18,11 @@ export function WelcomePopup() {
   const { user, isAuthenticated } = useAuth();
   const { t } = useLanguage();
   const [popupSettings, setPopupSettings] = useState({
-    title: 'Welcome',
-    description: "We're thrilled to have you join our casino community!",
-    imageUrl: 'https://images.unsplash.com/photo-1542297566-39ea5e9dafa5?auto=format&fit=crop&w=500&h=300',
+    title: 'Big Offer!',
+    description: "Deposit now and get 100% bonus!",
+    imageUrl: '/lovable-uploads/5035849b-d0e0-4890-af49-cc92532ea221.png',
     messageText: 'Deposit now and get 100% bonus. Low turnover requirements and you can withdraw amounts as low as ৳200!',
-    buttonText: 'Start Playing',
+    buttonText: 'Get Bonus Now',
   });
   
   useEffect(() => {
@@ -69,8 +69,8 @@ export function WelcomePopup() {
         <div className="relative w-full h-64 mb-4 overflow-hidden rounded-lg">
           <img 
             src={popupSettings.imageUrl}
-            alt="Welcome" 
-            className="w-full h-full object-cover"
+            alt="Big Offer" 
+            className="w-full h-full object-contain"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a2328] to-transparent flex items-end p-4">
             <p className="text-white text-xl font-bold">
@@ -80,7 +80,7 @@ export function WelcomePopup() {
         </div>
         
         <p className="text-gray-300 mb-4">
-          {popupSettings.messageText} <span className="text-casino-accent font-bold">{t('currency')}{user?.balance}</span>.
+          {popupSettings.messageText} <span className="text-casino-accent font-bold">৳{user?.balance.toFixed(0)}</span>.
         </p>
         
         <DialogFooter>
