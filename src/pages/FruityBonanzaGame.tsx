@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
@@ -9,27 +8,28 @@ import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { shouldBetWin } from '@/utils/bettingSystem';
 
 // Fruit symbols for the game with proper icons
 const symbols = [
-  { id: 'cherry', value: 'cherry', icon: Cherry, color: 'text-red-500', value: 5 },
-  { id: 'apple', value: 'apple', icon: Apple, color: 'text-green-500', value: 3 },
-  { id: 'banana', value: 'banana', icon: Banana, color: 'text-yellow-400', value: 4 },
-  { id: 'grape', value: 'grape', icon: Grape, color: 'text-purple-500', value: 4 },
-  { id: 'bell', value: 'bell', icon: Bell, color: 'text-yellow-500', value: 5 },
-  { id: 'dollar', value: 'dollar', icon: DollarSign, color: 'text-green-400', value: 10 },
-  { id: 'seven', value: '7', icon: () => (
+  { id: 'cherry', symbol: 'cherry', icon: Cherry, color: 'text-red-500', multiplier: 5 },
+  { id: 'apple', symbol: 'apple', icon: Apple, color: 'text-green-500', multiplier: 3 },
+  { id: 'banana', symbol: 'banana', icon: Banana, color: 'text-yellow-400', multiplier: 4 },
+  { id: 'grape', symbol: 'grape', icon: Grape, color: 'text-purple-500', multiplier: 4 },
+  { id: 'bell', symbol: 'bell', icon: Bell, color: 'text-yellow-500', multiplier: 5 },
+  { id: 'dollar', symbol: 'dollar', icon: DollarSign, color: 'text-green-400', multiplier: 10 },
+  { id: 'seven', symbol: '7', icon: () => (
     <div className="bg-red-600 w-full h-full rounded-full flex items-center justify-center">
       <span className="text-white font-bold text-lg">7</span>
     </div>
-  ), value: 15 },
-  { id: 'star', value: 'star', icon: () => (
+  ), multiplier: 15 },
+  { id: 'star', symbol: 'star', icon: () => (
     <div className="text-yellow-400">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
         <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
       </svg>
     </div>
-  ), value: 7 }
+  ), multiplier: 7 }
 ];
 
 type JackpotType = 'GRAND' | 'MAJOR' | 'MINI';
