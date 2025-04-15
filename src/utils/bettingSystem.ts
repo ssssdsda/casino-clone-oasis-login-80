@@ -20,12 +20,11 @@ const userBetPatterns: Record<string, number[]> = {};
 /**
  * Determines if a bet should win based on the specified pattern:
  * - First 2 bets win
- * - Next 3 bets lose
+ * - Next 2 bets lose
+ * - Next 3 bets win
+ * - Next 5 bets lose
  * - Win 1 time
  * - Lose 2 times
- * - Win 1 time big
- * - Lose 5 times
- * - Win 4 times
  * - Then rarely win after that
  * 
  * @param userId The ID of the user placing the bet
@@ -35,7 +34,7 @@ export const shouldBetWin = (userId: string): boolean => {
   // Initialize bet count for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = 0;
-    userBetPatterns[userId] = [1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0];
+    userBetPatterns[userId] = [1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0];
   }
   
   // Increment bet count

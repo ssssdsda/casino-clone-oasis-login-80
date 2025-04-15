@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -35,6 +35,7 @@ const Deposit = () => {
   const [walletNumber, setWalletNumber] = useState<string>('');
   const [paymentDialogOpen, setPaymentDialogOpen] = useState<boolean>(false);
   const [paymentURL, setPaymentURL] = useState<string>('');
+  const [popupTimer, setPopupTimer] = useState<number>(240); // 4 minutes in seconds
   
   // Handle amount selection
   const handleAmountSelect = (amt: number) => {
@@ -55,6 +56,30 @@ const Deposit = () => {
       if (timer) clearInterval(timer);
     };
   }, [depositStatus, isComplete]);
+
+  // Popup timer countdown
+  useEffect(() => {
+    let popupTimerInterval: NodeJS.Timeout | null = null;
+    
+    if (paymentDialogOpen && popupTimer > 0) {
+      popupTimerInterval = setInterval(() => {
+        setPopupTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(popupTimerInterval as NodeJS.Timeout);
+            setPaymentDialogOpen(false);
+            return 240; // Reset timer for next use
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (popupTimerInterval) {
+        clearInterval(popupTimerInterval);
+      }
+    };
+  }, [paymentDialogOpen, popupTimer]);
   
   // Listen for deposit status changes
   useEffect(() => {
@@ -100,6 +125,13 @@ const Deposit = () => {
     return () => unsubscribe();
   }, [depositId, amount, navigate, toast, updateUserBalance, user, t]);
   
+  // Format time remaining for popup
+  const formatRemainingTime = () => {
+    const minutes = Math.floor(popupTimer / 60);
+    const seconds = popupTimer % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+  
   // Handle deposit submission
   const handleSubmit = async () => {
     if (amount <= 0) {
@@ -138,6 +170,7 @@ const Deposit = () => {
       setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
     }
     setPaymentDialogOpen(true);
+    setPopupTimer(240); // Reset timer to 4 minutes
   };
   
   // Format elapsed time
@@ -331,6 +364,14 @@ const Deposit = () => {
           </DialogDescription>
           <div className="flex flex-col items-center justify-center p-4 space-y-4">
             <img src="/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png" alt="bKash" className="w-16 h-16" />
+            
+            {/* Timer display */}
+            <div className="bg-gray-800 px-4 py-2 rounded-full">
+              <p className="text-center text-white">
+                Window closes in: <span className="font-mono font-bold text-yellow-400">{formatRemainingTime()}</span>
+              </p>
+            </div>
+            
             <p className="text-center text-sm text-gray-500">
               {t('paymentRedirectInfo')}
             </p>
