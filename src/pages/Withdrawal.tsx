@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -118,8 +119,8 @@ const Withdrawal = () => {
               toast({
                 title: language === 'en' ? "Withdrawal Approved" : "উত্তোলন অনুমোদিত",
                 description: language === 'en' 
-                  ? `Your withdrawal request for ${t('currency')}${data.amount} has been approved`
-                  : `${t('currency')}${data.amount} এর জন্য আপনার উত্তোলন অনুরোধ অনুমোদিত হয়েছে`,
+                  ? `Your withdrawal request for ৳${data.amount} has been approved`
+                  : `৳${data.amount} এর জন্য আপনার উত্তোলন অনুরোধ অনুমোদিত হয়েছে`,
                 variant: "default",
                 className: "bg-green-600 text-white",
               });
@@ -132,6 +133,7 @@ const Withdrawal = () => {
                   ? "Your withdrawal request was rejected"
                   : "আপনার উত্তোলন অনুরোধ প্রত্যাখ্যান করা হয়েছে",
                 variant: "destructive",
+                className: "bg-red-500 text-white", // Make error toasts red with white text
               });
               
               fetchWithdrawalHistory();
@@ -166,7 +168,8 @@ const Withdrawal = () => {
       toast({
         title: "Error",
         description: language === 'en' ? "Please log in to continue" : "চালিয়ে যেতে লগ ইন করুন",
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-500 text-white", // Make error toasts red with white text
       });
       return;
     }
@@ -175,7 +178,8 @@ const Withdrawal = () => {
       toast({
         title: "Error",
         description: language === 'en' ? "Please enter a valid amount" : "একটি বৈধ পরিমাণ লিখুন",
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-500 text-white", // Make error toasts red with white text
       });
       return;
     }
@@ -184,7 +188,8 @@ const Withdrawal = () => {
       toast({
         title: "Error",
         description: language === 'en' ? "Minimum withdrawal amount is ৳200" : "সর্বনিম্ন উত্তোলনের পরিমাণ ৳২০০",
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-500 text-white", // Make error toasts red with white text
       });
       return;
     }
@@ -193,7 +198,8 @@ const Withdrawal = () => {
       toast({
         title: "Error",
         description: language === 'en' ? "Maximum withdrawal amount is ৳1000" : "সর্বাধিক উত্তোলনের পরিমাণ ৳১০০০",
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-500 text-white", // Make error toasts red with white text
       });
       return;
     }
@@ -202,7 +208,8 @@ const Withdrawal = () => {
       toast({
         title: "Error",
         description: language === 'en' ? "Please enter a valid account number" : "একটি বৈধ অ্যাকাউন্ট নম্বর লিখুন",
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-500 text-white", // Make error toasts red with white text
       });
       return;
     }
@@ -211,7 +218,8 @@ const Withdrawal = () => {
       toast({
         title: "Error",
         description: language === 'en' ? "Insufficient balance" : "অপর্যাপ্ত ব্যালেন্স",
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-500 text-white", // Make error toasts red with white text
       });
       return;
     }
@@ -233,7 +241,8 @@ const Withdrawal = () => {
         title: "Success",
         description: language === 'en' 
           ? "Withdrawal request submitted successfully" 
-          : "উত্তোলন অনুরোধ সফলভাবে জমা দেওয়া হয়েছে"
+          : "উত্তোলন অনুরোধ সফলভাবে জমা দেওয়া হয়েছে",
+        className: "bg-green-600 text-white", // Make success toasts green with white text
       });
       
       setCustomAmount('');
@@ -247,7 +256,8 @@ const Withdrawal = () => {
         description: language === 'en' 
           ? "Failed to process withdrawal request" 
           : "উত্তোলন অনুরোধ প্রক্রিয়া করতে ব্যর্থ হয়েছে",
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-500 text-white", // Make error toasts red with white text
       });
     } finally {
       setProcessing(false);
@@ -267,7 +277,7 @@ const Withdrawal = () => {
         return (
           <div className="flex items-center text-green-500">
             <BadgeCheck className="h-4 w-4 mr-1" />
-            <span>{language === 'en' ? 'Completed' : 'সম্পন্ন'}</span>
+            <span>{language === 'en' ? 'Successful' : 'সফল'}</span> {/* Changed from 'Completed' to 'Successful' */}
           </div>
         );
       case 'rejected':
@@ -327,7 +337,7 @@ const Withdrawal = () => {
                     className={`${amount === amt ? 'bg-gray-800 text-white' : 'bg-gray-800 text-white border-gray-700'}`}
                     onClick={() => handleAmountChange(amt)}
                   >
-                    {t('currency')}{amt}
+                    ৳{amt}
                   </Button>
                 ))}
               </div>
@@ -337,7 +347,7 @@ const Withdrawal = () => {
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    {t('currency')}
+                    ৳
                   </span>
                   <Input
                     id="custom-amount"
@@ -439,7 +449,7 @@ const Withdrawal = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-bold text-white">
-                          {t('currency')}{withdrawal.amount}
+                          ৳{withdrawal.amount}
                         </p>
                         <p className="text-xs text-gray-400">
                           {formatDate(withdrawal.createdAt)}

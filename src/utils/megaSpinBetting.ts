@@ -1,4 +1,3 @@
-
 /**
  * MegaSpin Betting System Utility
  * Controls winning odds for the MegaSpin game with a specific pattern:
@@ -34,9 +33,10 @@ const DEFAULT_PATTERN = [
  * Determines if the user's bet should win based on the specified pattern
  * 
  * @param userId The ID of the user placing the bet
+ * @param betAmount The amount being bet
  * @returns Whether this bet should win
  */
-export const shouldMegaSpinWin = (userId: string): boolean => {
+export const shouldMegaSpinWin = (userId: string, betAmount: number = 0): boolean => {
   // Initialize bet count for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = 0;
@@ -51,7 +51,6 @@ export const shouldMegaSpinWin = (userId: string): boolean => {
   const shouldWin = DEFAULT_PATTERN[patternPosition] === 1;
   
   // Large bets never win (>200)
-  const betAmount = 200; // This would normally come from the bet context
   if (betAmount > 200) {
     console.log(`MegaSpin Bet ${betCount} - Large bet amount (${betAmount}), forced loss`);
     return false;

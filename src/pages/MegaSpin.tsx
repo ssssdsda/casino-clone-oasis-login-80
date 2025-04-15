@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Settings, ArrowBigLeft, ArrowBigRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { shouldBetWin } from '@/utils/bettingSystem';
+import { shouldMegaSpinWin } from '@/utils/megaSpinBetting';
 import { MEGA_SPIN_SEGMENTS } from '@/utils/gameLogic';
 
 const totalSegments = MEGA_SPIN_SEGMENTS.length;
@@ -22,13 +21,13 @@ const MegaSpin = () => {
   const [winAmount, setWinAmount] = useState(0);
   const [balance, setBalance] = useState(0);
   const [betCount, setBetCount] = useState(0);
+  const [animationKey, setAnimationKey] = useState(0);
 
   const wheelRef = useRef<HTMLDivElement>(null);
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const winSound = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Initialize sounds
     spinSound.current = new Audio('/sounds/spin.mp3');
     winSound.current = new Audio('/sounds/win.mp3');
     
@@ -70,83 +69,67 @@ const MegaSpin = () => {
       return;
     }
 
-    // Increment bet count
     setBetCount(prev => prev + 1);
     
-    // Deduct bet amount from balance
     const newBalance = balance - betAmount;
     setBalance(newBalance);
     if (user) {
       updateUserBalance(newBalance);
     }
     
-    // Play spin sound
     if (spinSound.current) {
       spinSound.current.currentTime = 0;
       spinSound.current.play().catch(err => console.error("Error playing sound:", err));
     }
     
-    // Determine if this bet should win based on the betting system
-    const shouldWinThisBet = shouldBetWin(user?.id || 'anonymous');
+    const shouldWinThisBet = shouldMegaSpinWin(user?.id || 'anonymous', betAmount);
     
-    // Calculate target segment
     let targetSegment;
     
     if (shouldWinThisBet) {
-      // Choose a winning segment (value > 0)
       const winningSegments = MEGA_SPIN_SEGMENTS.filter(s => s.value > 0);
       const winningSegmentIndex = Math.floor(Math.random() * winningSegments.length);
       targetSegment = winningSegments[winningSegmentIndex];
     } else {
-      // Choose a losing segment (value = 0)
       const losingSegments = MEGA_SPIN_SEGMENTS.filter(s => s.value === 0);
       const losingSegmentIndex = Math.floor(Math.random() * losingSegments.length);
       targetSegment = losingSegments[losingSegmentIndex];
     }
     
-    // Find the target segment index
     const targetIndex = MEGA_SPIN_SEGMENTS.findIndex(s => s.id === targetSegment.id);
     
-    // Calculate the angle needed to land on this segment
-    // Add multiple rotations for effect
-    const extraSpins = 4; // Number of full rotations before landing
+    const extraSpins = 4;
     const baseAngle = 360 * extraSpins;
     
-    // Calculate angle to the middle of the target segment
     const segmentOffset = targetIndex * segmentAngle;
-    const pointerOffset = 270; // The pointer is at top (270 degrees in canvas coordinates)
+    const pointerOffset = 270;
     
-    // Final rotation = full rotations + segment offset + adjustment to land in the middle of the segment
-    // We add half a segment to land in the center and then adjust for the pointer position
     const finalRotation = baseAngle + segmentOffset + (segmentAngle / 2) + pointerOffset;
     
     setIsSpinning(true);
     setWinAmount(0);
     
-    // Start animation
+    setAnimationKey(prev => prev + 1);
+    
     setRotation(finalRotation);
     
-    // Handle result after animation completes
     setTimeout(() => {
       handleResult(targetSegment);
-    }, 5000); // Match this with animation duration
+    }, 5000);
   };
 
   const handleResult = (segment: typeof MEGA_SPIN_SEGMENTS[0]) => {
     setIsSpinning(false);
     
-    // Calculate win amount (capped at 100)
     const rawWinAmount = betAmount * segment.value;
     const cappedWinAmount = Math.min(100, rawWinAmount);
     
     if (segment.value > 0) {
-      // Play win sound
       if (winSound.current) {
         winSound.current.currentTime = 0;
         winSound.current.play().catch(err => console.error("Error playing sound:", err));
       }
       
-      // Update balance with win amount
       const newBalance = balance + cappedWinAmount;
       setBalance(newBalance);
       if (user) {
@@ -157,7 +140,7 @@ const MegaSpin = () => {
       
       toast({
         title: "You Won!",
-        description: `${cappedWinAmount.toFixed(2)} coins (${segment.text})`,
+        description: `৳${cappedWinAmount.toFixed(2)} (${segment.text})`,
         variant: "default",
         className: "bg-green-500 text-white"
       });
@@ -166,14 +149,14 @@ const MegaSpin = () => {
       toast({
         title: "Better luck next time!",
         description: `You landed on ${segment.text}`,
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-500 text-white"
       });
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-900 to-indigo-900 text-white">
-      {/* Header */}
       <div className="bg-purple-800 p-3 flex justify-between items-center">
         <button onClick={() => navigate('/')} className="text-white">
           <ArrowLeft size={24} />
@@ -184,34 +167,30 @@ const MegaSpin = () => {
         </button>
       </div>
       
-      {/* Game area */}
       <div className="max-w-md mx-auto p-4 flex flex-col h-[calc(100vh-80px)]">
-        {/* Balance and bet display */}
         <div className="bg-purple-800 rounded-lg p-3 mb-6 flex justify-between">
           <div>
             <div className="text-xs text-purple-300">BALANCE</div>
-            <div className="text-xl font-bold">{balance.toFixed(2)}</div>
+            <div className="text-xl font-bold">৳{balance.toFixed(2)}</div>
           </div>
           <div>
             <div className="text-xs text-purple-300">BET</div>
-            <div className="text-xl font-bold">{betAmount.toFixed(2)}</div>
+            <div className="text-xl font-bold">৳{betAmount.toFixed(2)}</div>
           </div>
           <div>
             <div className="text-xs text-purple-300">WIN</div>
-            <div className="text-xl font-bold">{winAmount.toFixed(2)}</div>
+            <div className="text-xl font-bold">৳{winAmount.toFixed(2)}</div>
           </div>
         </div>
         
-        {/* Wheel container with improved text visibility */}
         <div className="flex-1 relative flex items-center justify-center mb-6">
           <div className="relative w-full max-w-md aspect-square">
-            {/* Pointer */}
             <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
               <div className="w-0 h-0 border-l-[20px] border-r-[20px] border-t-[40px] border-l-transparent border-r-transparent border-t-yellow-500"></div>
             </div>
             
-            {/* Wheel with improved text visibility */}
             <motion.div 
+              key={animationKey}
               ref={wheelRef}
               className="w-full h-full rounded-full relative overflow-hidden border-8 border-yellow-500"
               style={{
@@ -219,6 +198,7 @@ const MegaSpin = () => {
                 boxShadow: "0 0 30px rgba(255, 215, 0, 0.6)"
               }}
               animate={{ rotate: rotation }}
+              initial={{ rotate: 0 }}
               transition={{ duration: 5, ease: "easeOut" }}
             >
               {MEGA_SPIN_SEGMENTS.map((segment, index) => {
@@ -234,7 +214,6 @@ const MegaSpin = () => {
                       backgroundColor: segment.color,
                     }}
                   >
-                    {/* Better positioned text for visibility with background */}
                     <div 
                       className="absolute whitespace-nowrap font-bold"
                       style={{
@@ -243,7 +222,6 @@ const MegaSpin = () => {
                         transform: `translate(-50%, -50%) rotate(${startAngle + segmentAngle / 2}deg) translateY(-70px)`,
                       }}
                     >
-                      {/* Text with better visibility */}
                       <div 
                         className="bg-black/30 px-3 py-1 rounded-full border border-white/30"
                         style={{
@@ -263,7 +241,6 @@ const MegaSpin = () => {
           </div>
         </div>
         
-        {/* Bet controls */}
         <div className="bg-purple-800 rounded-lg p-4">
           <div className="flex justify-between items-center mb-4">
             <button 
