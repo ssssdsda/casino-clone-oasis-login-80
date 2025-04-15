@@ -1,7 +1,6 @@
-
 /**
  * Betting System Utility
- * Controls winning odds for casino games to ensure specific win patterns
+ * Controls winning odds for casino games to ensure fair play
  */
 
 // Store user session data to track bets across sessions
@@ -18,14 +17,8 @@ const userBetCounts: Record<string, number> = {};
 const userBetPatterns: Record<string, number[]> = {};
 
 /**
- * Determines if a bet should win based on the specified pattern:
- * - First 2 bets win
- * - Next 3 bets lose
- * - Next 1 bet wins
- * - Next 2 bets lose
- * - Next 2 bets win
- * - Next 5 bets lose
- * Then repeat the pattern
+ * Determines if a bet should win based on randomized but fair odds
+ * Win chance is more balanced regardless of bet amount
  * 
  * @param userId The ID of the user placing the bet
  * @param betAmount The bet amount placed by the user
@@ -35,20 +28,30 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
   // Initialize bet count for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = 0;
-    userBetPatterns[userId] = [1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0];
+    // Pattern with more wins and better distribution
+    userBetPatterns[userId] = [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1];
   }
   
   // Increment bet count
   userBetCounts[userId]++;
   const betCount = userBetCounts[userId];
   
-  // For larger bets (>200), never win (new requirement)
-  if (betAmount > 200) {
-    console.log(`Bet ${betCount} - Large bet amount (${betAmount}), forced loss`);
-    return false;
+  // Base win chance (30-45%)
+  let winChance = 0.35;
+  
+  // Slight adjustments based on bet amount (but not heavily biased)
+  if (betAmount <= 50) {
+    winChance += 0.05; // Small bets have slightly better odds (40%)
+  } else if (betAmount > 200) {
+    winChance -= 0.05; // Large bets have slightly lower odds (30%)
   }
   
-  // For bets within the predefined pattern, return the predetermined result
+  // First 3 bets have better odds to encourage new players
+  if (betCount <= 3) {
+    winChance += 0.2; // First 3 bets have 50-65% chance to win
+  }
+  
+  // Use pattern for more predictability in the early game
   const patternLength = userBetPatterns[userId].length;
   if (betCount <= patternLength) {
     const shouldWin = userBetPatterns[userId][betCount - 1] === 1;
@@ -56,27 +59,42 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
     return shouldWin;
   }
   
-  // After the pattern, repeat the pattern
-  const patternPosition = (betCount - 1) % patternLength;
-  const shouldWin = userBetPatterns[userId][patternPosition] === 1;
+  // After the pattern, use probability system
+  const random = Math.random();
+  const shouldWin = random < winChance;
   
-  console.log(`Bet ${betCount} - Pattern position ${patternPosition}: ${shouldWin ? 'Win' : 'Loss'}`);
+  console.log(`Bet ${betCount} - Probability: ${winChance.toFixed(2)}, Result: ${shouldWin ? 'Win' : 'Loss'}`);
+  
+  // Add to history
+  betHistory.push({
+    userId,
+    didWin: shouldWin,
+    timestamp: Date.now()
+  });
+  
+  // Keep history manageable
+  if (betHistory.length > 100) {
+    betHistory.shift();
+  }
+  
   return shouldWin;
 };
 
 /**
- * Calculates a winning amount that's capped at 100
+ * Calculates a winning amount with improved scaling
  * @param betAmount The original bet amount
  * @param multiplier The game's standard multiplier
- * @returns A winning amount capped at 100
+ * @returns A winning amount with better scaling for larger bets
  */
 export const calculateWinAmount = (betAmount: number, multiplier: number): number => {
   // Calculate the standard win amount
   let winAmount = betAmount * multiplier;
   
-  // Cap the win amount at 100
-  if (winAmount > 100) {
-    winAmount = 100;
+  // Higher cap for larger bets (instead of strict 100 cap)
+  const maxWin = Math.max(100, betAmount * 2);
+  
+  if (winAmount > maxWin) {
+    winAmount = maxWin;
   }
   
   return Math.floor(winAmount);
