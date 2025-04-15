@@ -28,7 +28,7 @@ const ReferralProgram = () => {
     // Generate referral link based on user ID
     if (user) {
       const baseUrl = window.location.origin;
-      // Use the user's ID as the referral code
+      // Use the register route for a more standard referral flow
       setReferralLink(`${baseUrl}/register?ref=${user.id}`);
       
       // Fetch real referral stats from Firebase
@@ -116,7 +116,7 @@ const ReferralProgram = () => {
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle className="text-white">Referral Program</CardTitle>
-              <CardDescription className="text-gray-300">Login to access your personal referral link</CardDescription>
+              <CardDescription className="text-white">Login to access your personal referral link</CardDescription>
             </CardHeader>
             <CardFooter>
               <Button className="w-full">Login to Continue</Button>
@@ -139,8 +139,8 @@ const ReferralProgram = () => {
                 <Gift className="h-6 w-6" />
                 <span>Refer & Earn</span>
               </CardTitle>
-              <CardDescription className="text-gray-100">
-                Share your link and earn ₹119 for each friend who registers and deposits!
+              <CardDescription className="text-white">
+                Share your link and earn ৳119 for each friend who registers and deposits!
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -199,7 +199,7 @@ const ReferralProgram = () => {
                   
                   <Card className="bg-green-900/20 border-green-800">
                     <CardContent className="p-4 flex flex-col items-center justify-center">
-                      <div className="text-2xl font-bold text-white">₹{referralStats.totalEarned}</div>
+                      <div className="text-2xl font-bold text-white">৳{referralStats.totalEarned}</div>
                       <div className="text-sm text-gray-300">Total Earned</div>
                     </CardContent>
                   </Card>
@@ -234,7 +234,7 @@ const ReferralProgram = () => {
                 <div className="bg-green-700 rounded-full h-8 w-8 flex items-center justify-center shrink-0">
                   <span className="text-white font-bold">3</span>
                 </div>
-                <p className="text-gray-300">When they make their first deposit, you earn ₹119!</p>
+                <p className="text-gray-300">When they make their first deposit, you earn ৳119!</p>
               </div>
             </CardContent>
           </Card>
