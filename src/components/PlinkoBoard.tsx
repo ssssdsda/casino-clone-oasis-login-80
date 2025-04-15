@@ -36,6 +36,7 @@ const PlinkoBoard = ({
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [hitPegs, setHitPegs] = useState<number[]>([]);
   const [animationInProgress, setAnimationInProgress] = useState(false);
+  const [showResult, setShowResult] = useState(false);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>(0);
@@ -111,6 +112,7 @@ const PlinkoBoard = ({
     if (!boardRef.current || animationInProgress) return;
     
     setAnimationInProgress(true);
+    setShowResult(false); // Reset result visibility
     
     // Reset previous state
     setMultiplier(null);
@@ -226,13 +228,21 @@ const PlinkoBoard = ({
         // Update state with hit pegs
         setHitPegs(hitPegIndices);
         
-        // Update result
+        // Update result AFTER ball reaches the bottom
+        const calculatedMultiplier = slots[closestSlot].multiplier;
+        
+        // Store result so we can show it later
+        const finalSlot = closestSlot;
+        const finalMultiplier = calculatedMultiplier;
+        
+        // Set timeout to show result only after animation completes
         setTimeout(() => {
-          setSelectedSlot(closestSlot);
-          setMultiplier(slots[closestSlot].multiplier);
+          setSelectedSlot(finalSlot);
+          setMultiplier(finalMultiplier);
+          setShowResult(true);
           
           if (onResult) {
-            onResult(slots[closestSlot].multiplier, closestSlot);
+            onResult(finalMultiplier, finalSlot);
           }
           
           setTimeout(() => {
@@ -241,7 +251,7 @@ const PlinkoBoard = ({
               onDropComplete();
             }
           }, 1000);
-        }, 1000);
+        }, 2800); // Show result after animation completes
         
         break;
       }
@@ -328,7 +338,7 @@ const PlinkoBoard = ({
       {slotElements}
       {ballElement}
       
-      {multiplier !== null && (
+      {showResult && multiplier !== null && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-bold z-20 bg-black/50 p-4 rounded-lg">
           {multiplier > 0 ? 
             <span className="text-green-500">{multiplier}x Win!</span> : 

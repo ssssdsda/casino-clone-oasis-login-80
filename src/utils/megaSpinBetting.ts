@@ -3,11 +3,11 @@
  * MegaSpin Betting System Utility
  * Controls winning odds for the MegaSpin game with a specific pattern:
  * - First 2 bets win
+ * - Next 3 bets lose
+ * - Next 1 bet win
  * - Next 2 bets lose
- * - Next 3 bets win
+ * - Next 2 bets win
  * - Next 5 bets lose
- * - Win 1 bet
- * - Lose 2 bets
  * Loop this pattern
  */
 
@@ -18,16 +18,16 @@ const userBetCounts: Record<string, number> = {};
 const DEFAULT_PATTERN = [
   // First 2 bets win
   1, 1,
+  // Next 3 bets lose
+  0, 0, 0,
+  // Next 1 bet win
+  1,
   // Next 2 bets lose
   0, 0,
-  // Next 3 bets win
-  1, 1, 1,
+  // Next 2 bets win
+  1, 1,
   // Next 5 bets lose
-  0, 0, 0, 0, 0,
-  // Win 1 bet
-  1,
-  // Lose 2 bets
-  0, 0
+  0, 0, 0, 0, 0
 ];
 
 /**
@@ -49,6 +49,13 @@ export const shouldMegaSpinWin = (userId: string): boolean => {
   // Get position in pattern (use modulo to loop pattern)
   const patternPosition = (betCount - 1) % DEFAULT_PATTERN.length;
   const shouldWin = DEFAULT_PATTERN[patternPosition] === 1;
+  
+  // Large bets never win (>200)
+  const betAmount = 200; // This would normally come from the bet context
+  if (betAmount > 200) {
+    console.log(`MegaSpin Bet ${betCount} - Large bet amount (${betAmount}), forced loss`);
+    return false;
+  }
   
   console.log(`MegaSpin Bet ${betCount} - Pattern position ${patternPosition}: ${shouldWin ? 'Win' : 'Loss'}`);
   return shouldWin;

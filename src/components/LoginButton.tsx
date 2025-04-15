@@ -137,12 +137,18 @@ export function LoginButton() {
           </DialogHeader>
           
           <Tabs defaultValue="email" value={loginMethod} onValueChange={(v) => setLoginMethod(v as 'email' | 'phone')}>
-            <TabsList className="grid grid-cols-2 mb-4">
-              <TabsTrigger value="email" className="flex items-center gap-1">
+            <TabsList className="grid grid-cols-2 mb-4 bg-casino-dark">
+              <TabsTrigger 
+                value="email" 
+                className="flex items-center gap-1 text-white data-[state=active]:bg-casino-accent data-[state=active]:text-black"
+              >
                 <Mail className="h-4 w-4" />
                 {t('email')}
               </TabsTrigger>
-              <TabsTrigger value="phone" className="flex items-center gap-1">
+              <TabsTrigger 
+                value="phone" 
+                className="flex items-center gap-1 text-white data-[state=active]:bg-casino-accent data-[state=active]:text-black"
+              >
                 <Phone className="h-4 w-4" />
                 {t('phone')}
               </TabsTrigger>
@@ -152,7 +158,7 @@ export function LoginButton() {
               <form onSubmit={handleEmailSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-white flex items-center gap-2">
-                    <Mail className="h-4 w-4" /> {t('email')}
+                    <Mail className="h-4 w-4 text-casino-accent" /> {t('email')}
                   </Label>
                   <Input 
                     id="email"
@@ -165,7 +171,7 @@ export function LoginButton() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-white flex items-center gap-2">
-                    <Lock className="h-4 w-4" /> {t('password')}
+                    <Lock className="h-4 w-4 text-casino-accent" /> {t('password')}
                   </Label>
                   <Input
                     id="password"
@@ -192,7 +198,7 @@ export function LoginButton() {
               <form onSubmit={handlePhoneSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="text-white flex items-center gap-2">
-                    <Phone className="h-4 w-4" /> {t('phone')}
+                    <Phone className="h-4 w-4 text-casino-accent" /> {t('phone')}
                   </Label>
                   <Input 
                     id="phone"
@@ -204,7 +210,7 @@ export function LoginButton() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone-password" className="text-white flex items-center gap-2">
-                    <Lock className="h-4 w-4" /> {t('password')}
+                    <Lock className="h-4 w-4 text-casino-accent" /> {t('password')}
                   </Label>
                   <Input
                     id="phone-password"
