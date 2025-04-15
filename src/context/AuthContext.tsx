@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc, setDoc, getFirestore, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getFirestore, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 interface User {
   id: string;
@@ -292,7 +292,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loginWithPhone = async (phoneNumber: string) => {
     setIsLoading(true);
     try {
-      const querySnapshot = await getFirestore().collection("users").where("phone", "==", phoneNumber).get();
+      const db = getFirestore();
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("phone", "==", phoneNumber));
+      const querySnapshot = await getDocs(q);
       
       if (querySnapshot.empty) {
         toast({
