@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, Plus, Minus, Bell, Settings, Apple, Banana, Cherry, DollarSign, Grape } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -101,17 +101,15 @@ const FruityBonanzaGame: React.FC = () => {
     if (isSpinning) return;
     
     if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please login to play",
+      toast("Please login to play", {
+        description: "Login required to play games",
         className: "bg-red-600 text-white border-red-700",
       });
       return;
     }
     
     if (balance < betAmount) {
-      toast({
-        title: "Insufficient Funds",
+      toast("Insufficient Funds", {
         description: "Please deposit more to play",
         className: "bg-red-600 text-white border-red-700",
       });
@@ -158,8 +156,7 @@ const FruityBonanzaGame: React.FC = () => {
         winSound.current.play().catch(e => console.error("Error playing sound:", e));
       }
       
-      toast({
-        title: "You Won!",
+      toast("You Won!", {
         description: `${win.toFixed(2)} coins`,
         className: "bg-red-600 text-white border-red-700"
       });
