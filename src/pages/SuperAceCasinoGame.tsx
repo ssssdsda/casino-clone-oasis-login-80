@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Settings } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { shouldBetWin } from '@/utils/bettingSystem';
+import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 // Types
 type CardSuit = 'hearts' | 'diamonds' | 'clubs' | 'spades' | 'scatter';
@@ -16,6 +19,14 @@ interface CardType {
   suit: CardSuit;
   value: CardValue;
   isGolden?: boolean;
+}
+
+interface GameSettings {
+  winRate: number;
+  minBet: number;
+  maxBet: number;
+  maxWin: number;
+  isActive: boolean;
 }
 
 // Utils
@@ -181,14 +192,50 @@ const SuperAceCasinoGame = () => {
     lastWin: 0,
     betCount: 0
   });
+
+  const [gameSettings, setGameSettings] = useState<GameSettings>({
+    winRate: 25,
+    minBet: 1,
+    maxBet: 100,
+    maxWin: 1000,
+    isActive: true
+  });
   
   useEffect(() => {
     if (user) {
       setGameState(prev => ({ ...prev, balance: user.balance }));
     }
+    
+    // Load game settings from Firebase
+    const loadGameSettings = async () => {
+      try {
+        const settingsRef = doc(db, "admin", "gameSettings");
+        const settingsDoc = await getDoc(settingsRef);
+        
+        if (settingsDoc.exists()) {
+          const data = settingsDoc.data();
+          if (data.games && data.games.SuperAce) {
+            const superAceSettings = data.games.SuperAce;
+            setGameSettings(superAceSettings);
+            
+            // Set initial bet to minBet if current bet is lower
+            setGameState(prev => ({
+              ...prev,
+              bet: prev.bet < superAceSettings.minBet ? superAceSettings.minBet : prev.bet
+            }));
+          }
+        } else {
+          console.log("No game settings found, using defaults");
+        }
+      } catch (error) {
+        console.error("Error loading game settings:", error);
+      }
+    };
+    
+    loadGameSettings();
   }, [user?.balance]);
   
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (gameState.isSpinning || !user) {
       if (!user) {
         toast("Login Required", {
@@ -224,15 +271,19 @@ const SuperAceCasinoGame = () => {
     
     const spinDuration = gameState.isTurboMode ? 500 : 1500;
     
-    setTimeout(() => {
+    setTimeout(async () => {
       const newCards = generateCardGrid();
       
-      const shouldWin = shouldBetWin(user?.id || 'anonymous', 'SuperAce');
+      const shouldWin = await shouldBetWin(user?.id || 'anonymous', 'SuperAce', gameState.bet);
       
       let totalWin = 0;
       if (shouldWin) {
-        totalWin = Math.floor(Math.random() * 5 + 5) * gameState.bet;
-        totalWin = Math.min(totalWin, 100);
+        // Use the multiplier from the selected option
+        const multiplier = MULTIPLIERS[gameState.multiplier];
+        totalWin = await calculateWinAmount(gameState.bet, multiplier, 'SuperAce');
+        
+        // Cap the win at the maximum win setting
+        totalWin = Math.min(totalWin, gameSettings.maxWin);
       }
       
       const finalBalance = newBalance + totalWin;
@@ -267,6 +318,16 @@ const SuperAceCasinoGame = () => {
         });
       }
     }, spinDuration);
+  };
+
+  // Enforce min and max bet limits from game settings
+  const adjustBet = (newBet: number) => {
+    if (newBet < gameSettings.minBet) {
+      return gameSettings.minBet;
+    } else if (newBet > gameSettings.maxBet) {
+      return gameSettings.maxBet;
+    }
+    return newBet;
   };
   
   return (
@@ -310,6 +371,13 @@ const SuperAceCasinoGame = () => {
             winningLines={gameState.winningLines}
           />
         </div>
+
+        <div className="px-3 py-1 mb-2 bg-gray-800 rounded-md mx-2">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 text-sm">Min Bet: {gameSettings.minBet}</span>
+            <span className="text-gray-400 text-sm">Max Bet: {gameSettings.maxBet}</span>
+          </div>
+        </div>
         
         <div className="bg-gradient-to-b from-gray-800 to-black rounded-t-xl pb-4">
           <div className="flex justify-between items-center px-4 py-2">
@@ -324,9 +392,12 @@ const SuperAceCasinoGame = () => {
           <div className="flex justify-between items-center px-4">
             <div className="flex items-center">
               <Button 
-                onClick={() => setGameState(prev => ({ ...prev, bet: Math.max(1, prev.bet - 1) }))}
+                onClick={() => setGameState(prev => ({ 
+                  ...prev, 
+                  bet: adjustBet(Math.max(gameSettings.minBet, prev.bet - 1)) 
+                }))}
                 className="rounded-full p-2 bg-gray-700 text-white h-10 w-10"
-                disabled={gameState.isSpinning}
+                disabled={gameState.isSpinning || gameState.bet <= gameSettings.minBet}
                 variant="outline"
               >
                 -
@@ -336,9 +407,12 @@ const SuperAceCasinoGame = () => {
                 <div className="text-yellow-500 font-bold">{gameState.bet}</div>
               </div>
               <Button 
-                onClick={() => setGameState(prev => ({ ...prev, bet: prev.bet + 1 }))}
+                onClick={() => setGameState(prev => ({ 
+                  ...prev, 
+                  bet: adjustBet(Math.min(gameSettings.maxBet, prev.bet + 1)) 
+                }))}
                 className="rounded-full p-2 bg-gray-700 text-white h-10 w-10"
-                disabled={gameState.isSpinning}
+                disabled={gameState.isSpinning || gameState.bet >= gameSettings.maxBet}
                 variant="outline"
               >
                 +
@@ -353,7 +427,7 @@ const SuperAceCasinoGame = () => {
                   : 'bg-gradient-to-b from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500'}
               `}
               onClick={handleSpin}
-              disabled={gameState.isSpinning || gameState.balance < gameState.bet}
+              disabled={gameState.isSpinning || gameState.balance < gameState.bet || !gameSettings.isActive}
               variant="ghost"
             >
               SPIN

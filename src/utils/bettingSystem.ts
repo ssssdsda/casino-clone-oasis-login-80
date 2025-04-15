@@ -1,3 +1,4 @@
+
 /**
  * Betting System Utility
  * Controls winning odds for casino games to ensure fair play and player satisfaction
@@ -65,16 +66,21 @@ async function getGameSettings() {
     games: {
       BoxingKing: { 
         winRate: 20, 
+        minBet: 10,
+        maxBet: 1000,
+        maxWin: 10000,
+        isActive: true,
         specialRules: { 
           firstTwoBetsWin: true,
           firstTwoBetsMultiplier: 2,
           regularMultiplier: 0.7
         } 
       },
-      MoneyGram: { winRate: 20 },
-      CoinUp: { winRate: 30 },
+      MoneyGram: { winRate: 20, minBet: 10, maxBet: 1000, maxWin: 5000, isActive: true },
+      CoinUp: { winRate: 30, minBet: 5, maxBet: 500, maxWin: 3000, isActive: true },
+      SuperAce: { winRate: 25, minBet: 10, maxBet: 500, maxWin: 5000, isActive: true },
       // Default values for other games
-      default: { winRate: 25 }
+      default: { winRate: 25, minBet: 1, maxBet: 100, maxWin: 1000, isActive: true }
     }
   };
 }
