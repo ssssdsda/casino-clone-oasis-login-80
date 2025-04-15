@@ -1,4 +1,3 @@
-
 /**
  * Betting System Utility
  * Controls winning odds for casino games to ensure fair play and player satisfaction
@@ -19,7 +18,7 @@ const userBetPatterns: Record<string, number[]> = {};
 
 /**
  * Determines if a bet should win based on randomized but fair odds
- * Win chance is more balanced regardless of bet amount
+ * Win chance is set to approximately 10% as requested
  * 
  * @param userId The ID of the user placing the bet
  * @param betAmount The bet amount placed by the user
@@ -29,30 +28,25 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
   // Initialize bet count for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = 0;
-    // Pattern with more wins and better distribution (60% win rate)
-    userBetPatterns[userId] = [1, 1, 1, 0, 1, 0, 1, 1, 0, 1];
+    // Pattern with low win rate (approximately 10% win rate)
+    userBetPatterns[userId] = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0];
   }
   
   // Increment bet count
   userBetCounts[userId]++;
   const betCount = userBetCounts[userId];
   
-  // Higher base win chance (45-60%)
-  let winChance = 0.45;
+  // Low base win chance (10%)
+  let winChance = 0.10;
   
-  // Slight adjustments based on bet amount (more balanced)
-  if (betAmount <= 50) {
-    winChance += 0.10; // Small bets have better odds (55%)
-  } else if (betAmount > 200) {
-    winChance -= 0.05; // Large bets have slightly lower odds (40%)
+  // No adjustments based on bet amount to keep consistent 10% win rate
+  
+  // First bet might have slightly better odds just to keep players engaged
+  if (betCount === 1) {
+    winChance = 0.15; // First bet has 15% chance to win
   }
   
-  // First 5 bets have even better odds to encourage new players
-  if (betCount <= 5) {
-    winChance += 0.15; // First 5 bets have 60-70% chance to win
-  }
-  
-  // Use pattern for more predictability in the early game
+  // Use pattern for predictability in the early game
   const patternLength = userBetPatterns[userId].length;
   if (betCount <= patternLength) {
     const shouldWin = userBetPatterns[userId][betCount - 1] === 1;
@@ -60,7 +54,7 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
     return shouldWin;
   }
   
-  // After the pattern, use probability system with improved win rates
+  // After the pattern, use probability system with 10% win rate
   const random = Math.random();
   const shouldWin = random < winChance;
   
