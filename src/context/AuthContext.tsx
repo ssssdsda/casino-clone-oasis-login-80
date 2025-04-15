@@ -28,7 +28,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  loginWithPhone: (phoneNumber: string, password: string) => Promise<void>;
+  loginWithPhone: (phoneNumber: string, password: string) => Promise<string>;
   verifyPhoneCode: (verificationId: string, code: string) => Promise<void>;
   register: (email: string, password: string, username: string, referralCode?: string) => Promise<void>;
   registerWithPhone: (phoneNumber: string, username: string, referralCode?: string) => Promise<string>;
@@ -289,7 +289,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const loginWithPhone = async (phoneNumber: string, password: string) => {
+  const loginWithPhone = async (phoneNumber: string, password: string): Promise<string> => {
     setIsLoading(true);
     try {
       const db = getFirestore();
@@ -353,7 +353,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const registerWithPhone = async (phoneNumber: string, username: string, referralCode?: string) => {
+  const registerWithPhone = async (phoneNumber: string, username: string, referralCode?: string): Promise<string> => {
     setIsLoading(true);
     try {
       // Check if the phone number is already registered

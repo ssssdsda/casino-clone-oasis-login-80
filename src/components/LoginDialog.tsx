@@ -29,6 +29,7 @@ export function LoginDialog() {
   
   // Phone login state
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [phonePassword, setPhonePassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationId, setVerificationId] = useState('');
   const [showVerification, setShowVerification] = useState(false);
@@ -95,8 +96,16 @@ export function LoginDialog() {
         const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
         
         if (activeTab === 'login') {
-          const verId = await loginWithPhone(formattedPhone);
-          setVerificationId(verId);
+          if (!phonePassword) {
+            toast({
+              title: "Error",
+              description: "Please enter your password",
+              variant: "destructive"
+            });
+            return;
+          }
+          const response = await loginWithPhone(formattedPhone, phonePassword);
+          setVerificationId(response);
         } else {
           if (!username) {
             toast({
@@ -142,6 +151,7 @@ export function LoginDialog() {
     setPhoneNumber('');
     setVerificationCode('');
     setShowVerification(false);
+    setPhonePassword('');
   };
 
   return (
