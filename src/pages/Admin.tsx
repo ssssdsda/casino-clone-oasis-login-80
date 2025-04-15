@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -10,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
+import Percent from '@/components/ui/Percent';
 
 const Admin = () => {
   const { user, isAuthenticated } = useAuth();
@@ -180,6 +181,20 @@ const Admin = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        
+        <Link to="/admin/game-odds" className="block">
+          <Card className="hover:bg-gray-800 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Percent className="mr-2 h-6 w-6 text-purple-500" />
+                Game Odds Management
+              </CardTitle>
+              <CardDescription>
+                Control win rates and betting limits for all casino games
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
       </main>
       <Footer />
     </div>

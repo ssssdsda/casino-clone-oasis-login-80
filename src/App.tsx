@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -36,6 +35,7 @@ import ReferralProgram from "./pages/ReferralProgram";
 import PlinkoGame from "./pages/PlinkoGame";
 import FruityBonanzaGame from "./pages/FruityBonanzaGame";
 import Register from "./pages/Register";
+import GameOddsManagement from './pages/GameOddsManagement';
 
 const queryClient = new QueryClient();
 
@@ -70,6 +70,7 @@ const routes = [
   <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />,
   <Route path="/register" element={<Register />} />,
   <Route path="/signup" element={<Register />} />,
+  <Route path="/admin/game-odds" element={<GameOddsManagement />} />,
   <Route path="*" element={<NotFound />} />
 ];
 

@@ -70,7 +70,7 @@ const CoinsGame: React.FC = () => {
     }
   }, [user?.balance]);
 
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (spinning) return;
     
     if (!user) {
@@ -105,7 +105,7 @@ const CoinsGame: React.FC = () => {
     setSpinning(true);
     setSelectedCoinIndex(null);
     
-    const shouldWin = shouldBetWin(user?.id || 'anonymous', 'CoinsGame');
+    const shouldWin = await shouldBetWin(user?.id || 'anonymous', 'CoinsGame', currentBet);
     
     setTimeout(() => {
       let targetIndex: number;
@@ -128,9 +128,12 @@ const CoinsGame: React.FC = () => {
       }
       
       const winMultiplier = coins[targetIndex];
-      const winAmount = calculateWinAmount(currentBet, winMultiplier);
+      const calculateWinningAmount = async () => {
+        const winAmount = await calculateWinAmount(currentBet, winMultiplier, 'CoinsGame', newBetCount);
+        animateSpinToIndex(targetIndex, winAmount);
+      };
       
-      animateSpinToIndex(targetIndex, winAmount);
+      calculateWinningAmount();
     }, 500);
   };
 
@@ -149,7 +152,7 @@ const CoinsGame: React.FC = () => {
     }, currentIndex > totalRotations - 10 ? 200 : 100);
   };
 
-  const handleSpinResult = (landedIndex: number, winAmount: number) => {
+  const handleSpinResult = async (landedIndex: number, winAmount: number) => {
     const currentBet = betLevels[betLevel];
     
     setTimeout(() => {
