@@ -28,7 +28,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  loginWithPhone: (phoneNumber: string) => Promise<string>;
+  loginWithPhone: (phoneNumber: string, password: string) => Promise<void>;
   verifyPhoneCode: (verificationId: string, code: string) => Promise<void>;
   register: (email: string, password: string, username: string, referralCode?: string) => Promise<void>;
   registerWithPhone: (phoneNumber: string, username: string, referralCode?: string) => Promise<string>;
@@ -289,7 +289,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const loginWithPhone = async (phoneNumber: string) => {
+  const loginWithPhone = async (phoneNumber: string, password: string) => {
     setIsLoading(true);
     try {
       const db = getFirestore();
@@ -309,6 +309,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
       const userId = userDoc.id;
+      
+      // Check password
+      if (userData.password !== password) {
+        toast({
+          title: "Error",
+          description: "Incorrect password",
+          variant: "destructive"
+        });
+        throw new Error("Incorrect password");
+      }
       
       const user = {
         id: userId,
@@ -346,14 +356,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const registerWithPhone = async (phoneNumber: string, username: string, referralCode?: string) => {
     setIsLoading(true);
     try {
+      // Check if the phone number is already registered
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("phone", "==", phoneNumber));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        toast({
+          title: "Error",
+          description: "This phone number is already registered",
+          variant: "destructive"
+        });
+        throw new Error("This phone number is already registered");
+      }
+      
       const refCode = referralCode || extractReferralCode();
       console.log("Register with phone and referral code:", refCode);
       
       const mockUserId = "phone-" + Date.now();
         
+      // Generate a simple default password from phone number (last 6 digits)
+      const defaultPassword = phoneNumber.slice(-6);
+        
       const userData: any = {
         username: username,
         phone: phoneNumber,
+        password: defaultPassword, // Store default password
         balance: PHONE_SIGNUP_BONUS,
         createdAt: new Date(),
         phoneVerified: true,
@@ -396,7 +424,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       toast({
         title: "Registration Successful!",
-        description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for registering!`,
+        description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for registering! Your password is the last 6 digits of your phone number.`,
         variant: "default",
         className: "bg-green-600 text-white font-bold"
       });

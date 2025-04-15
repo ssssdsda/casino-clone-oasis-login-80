@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone } from 'lucide-react';
+import { Mail, Phone, KeyRound } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export function LoginButton(props: any) {
@@ -27,6 +27,7 @@ export function LoginButton(props: any) {
   
   // Phone login state
   const [phoneNumber, setPhoneNumber] = useState('+880'); // Default to Bangladesh code
+  const [phonePassword, setPhonePassword] = useState('');
   
   const { login, loginWithPhone, isLoading } = useAuth();
   const { toast } = useToast();
@@ -70,8 +71,17 @@ export function LoginButton(props: any) {
       return;
     }
     
+    if (!phonePassword) {
+      toast({
+        title: "Error",
+        description: "Please enter your password",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
-      await loginWithPhone(phoneNumber);
+      await loginWithPhone(phoneNumber, phonePassword);
       setOpen(false);
       toast({
         title: "Success",
@@ -88,6 +98,7 @@ export function LoginButton(props: any) {
     setEmail('');
     setPassword('');
     setPhoneNumber('+880');
+    setPhonePassword('');
   };
 
   return (
@@ -141,7 +152,7 @@ export function LoginButton(props: any) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password" className="text-white flex items-center gap-2">
-                    <Mail className="h-4 w-4" /> {t('password')}
+                    <KeyRound className="h-4 w-4" /> {t('password')}
                   </Label>
                   <Input
                     id="login-password"
@@ -178,6 +189,20 @@ export function LoginButton(props: any) {
                     placeholder="+8801XXXXXXXXX"
                   />
                   <p className="text-xs text-blue-400">Bangladesh number (+880)</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="phone-password" className="text-white flex items-center gap-2">
+                    <KeyRound className="h-4 w-4" /> {t('password')}
+                  </Label>
+                  <Input
+                    id="phone-password"
+                    type="password"
+                    value={phonePassword}
+                    onChange={(e) => setPhonePassword(e.target.value)}
+                    className="bg-casino-dark border-gray-700 text-white"
+                    placeholder="********"
+                  />
                 </div>
                 
                 <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
