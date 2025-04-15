@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -73,6 +74,7 @@ const routes = [
   <Route path="/register" element={<Register />} />,
   <Route path="/signup" element={<Register />} />,
   <Route path="/admin/game-odds" element={<GameOddsManagement />} />,
+  <Route path="/game-odds" element={<GameOddsManagement />} />,
   <Route path="*" element={<NotFound />} />
 ];
 
