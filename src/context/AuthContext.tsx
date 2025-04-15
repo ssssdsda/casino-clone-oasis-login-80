@@ -2,10 +2,8 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
-  PhoneAuthProvider,
   signOut,
   onAuthStateChanged,
-  signInWithCredential,
   sendEmailVerification
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -29,9 +27,8 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithPhone: (phoneNumber: string, password: string) => Promise<string>;
-  verifyPhoneCode: (verificationId: string, code: string) => Promise<void>;
   register: (email: string, password: string, username: string, referralCode?: string) => Promise<void>;
-  registerWithPhone: (phoneNumber: string, username: string, referralCode?: string) => Promise<string>;
+  registerWithPhone: (phoneNumber: string, username: string, password: string, referralCode?: string) => Promise<string>;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -234,6 +231,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast({
         title: "Registration successful!",
         description: "Please verify your email to complete registration. A verification link has been sent to your email address. You've received ৳89 as a signup bonus!",
+        variant: "default",
+        className: "bg-green-600 text-white"
       });
       
       if (refCode) {
@@ -276,6 +275,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast({
         title: "Success",
         description: "Login successful",
+        variant: "default",
+        className: "bg-green-600 text-white"
       });
     } catch (error: any) {
       toast({
@@ -337,6 +338,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast({
         title: "Success",
         description: "Login successful",
+        variant: "default",
+        className: "bg-green-600 text-white"
       });
       
       return "success";
@@ -353,7 +356,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const registerWithPhone = async (phoneNumber: string, username: string, referralCode?: string): Promise<string> => {
+  const registerWithPhone = async (phoneNumber: string, username: string, password: string, referralCode?: string): Promise<string> => {
     setIsLoading(true);
     try {
       // Check if the phone number is already registered
@@ -374,14 +377,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Register with phone and referral code:", refCode);
       
       const mockUserId = "phone-" + Date.now();
-        
-      // Generate a simple default password from phone number (last 6 digits)
-      const defaultPassword = phoneNumber.slice(-6);
-        
+      
       const userData: any = {
         username: username,
         phone: phoneNumber,
-        password: defaultPassword, // Store default password
+        password: password, // Store user provided password
         balance: PHONE_SIGNUP_BONUS,
         createdAt: new Date(),
         phoneVerified: true,
@@ -418,13 +418,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       setUser(newUserData);
       localStorage.setItem('casinoUser', JSON.stringify(newUserData));
-      localStorage.removeItem('pendingUsername');
-      localStorage.removeItem('pendingPhone');
-      localStorage.removeItem('pendingReferralCode');
       
       toast({
         title: "Registration Successful!",
-        description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for registering! Your password is the last 6 digits of your phone number.`,
+        description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for registering!`,
         variant: "default",
         className: "bg-green-600 text-white font-bold"
       });
@@ -438,23 +435,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast({
         title: "Error",
         description: error.message || "Phone registration failed",
-        variant: "destructive"
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const verifyPhoneCode = async (verificationId: string, code: string): Promise<void> => {
-    setIsLoading(true);
-    try {
-      console.log("Phone verification bypassed");
-      setIsLoading(false);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Verification failed",
         variant: "destructive"
       });
       throw error;
@@ -543,7 +523,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user, 
       login,
       loginWithPhone,
-      verifyPhoneCode,
       register,
       registerWithPhone,
       logout, 

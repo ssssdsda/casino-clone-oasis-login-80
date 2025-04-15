@@ -19,14 +19,14 @@ import { useLanguage } from '@/context/LanguageContext';
 
 export function LoginButton(props: any) {
   const [open, setOpen] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('phone'); // Default to phone
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('phone');
   
   // Email login state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
   // Phone login state
-  const [phoneNumber, setPhoneNumber] = useState('+880'); // Default to Bangladesh code
+  const [phoneNumber, setPhoneNumber] = useState('+880');
   const [phonePassword, setPhonePassword] = useState('');
   
   const { login, loginWithPhone, isLoading } = useAuth();
@@ -82,7 +82,7 @@ export function LoginButton(props: any) {
     
     try {
       const result = await loginWithPhone(phoneNumber, phonePassword);
-      if (result === "success") {
+      if (result) {
         setOpen(false);
         toast({
           title: "Success",

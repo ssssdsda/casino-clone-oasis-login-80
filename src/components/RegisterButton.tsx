@@ -19,7 +19,7 @@ import { useLanguage } from '@/context/LanguageContext';
 
 export function RegisterButton(props: any) {
   const [open, setOpen] = useState(false);
-  const [registerMethod, setRegisterMethod] = useState<'email' | 'phone'>('phone'); // Default to phone
+  const [registerMethod, setRegisterMethod] = useState<'email' | 'phone'>('phone');
   
   // Email register state
   const [email, setEmail] = useState('');
@@ -27,7 +27,7 @@ export function RegisterButton(props: any) {
   const [username, setUsername] = useState('');
   
   // Phone register state
-  const [phoneNumber, setPhoneNumber] = useState('+880'); // Default Bangladesh code
+  const [phoneNumber, setPhoneNumber] = useState('+880');
   const [phonePassword, setPhonePassword] = useState('');
   const [phoneUsername, setPhoneUsername] = useState('');
   
@@ -62,6 +62,12 @@ export function RegisterButton(props: any) {
     try {
       await register(email, password, username, referralCode);
       setOpen(false);
+      toast({
+        title: "Registration Successful!",
+        description: "You've received signup bonus!",
+        variant: "default",
+        className: "bg-green-600 text-white font-bold"
+      });
     } catch (error) {
       // Error handled in register function
     }
@@ -83,8 +89,8 @@ export function RegisterButton(props: any) {
       // Format phone number to ensure it has Bangladesh code
       const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+880${phoneNumber}`;
       
-      // Directly register without OTP verification
-      await registerWithPhone(formattedPhone, phoneUsername, referralCode);
+      // Register with phone
+      await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
       setOpen(false);
       
       toast({
