@@ -1,465 +1,499 @@
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
-import { SaveAll, Percent, ChevronDown, BarChart3, Dice1, RefreshCcw } from "lucide-react";
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { saveGameSettings } from '@/utils/bettingSystem';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from "@/components/ui/sonner";
+import { getDoc, doc, getFirestore, DocumentData } from 'firebase/firestore';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { useNavigate } from 'react-router-dom';
 
+// Define the game settings type for better type safety
 interface GameSettings {
-  winRate: number;
-  minBet: number;
-  maxBet: number;
-  maxWin: number;
-  isActive: boolean;
-  specialRules?: {
-    [key: string]: any;
-  };
-}
-
-interface GlobalSettings {
-  games: {
-    [key: string]: GameSettings;
-  };
-  lastUpdated: number;
-}
-
-const defaultSettings: GlobalSettings = {
   games: {
     BoxingKing: {
-      winRate: 20,
-      minBet: 10,
-      maxBet: 1000,
-      maxWin: 10000,
-      isActive: true,
+      winRate: number;
+      minBet: number;
+      maxBet: number;
+      maxWin: number;
+      isActive: boolean;
       specialRules: {
-        firstTwoBetsWin: true,
-        firstTwoBetsMultiplier: 2,
-        regularMultiplier: 0.7
+        firstTwoBetsWin: boolean;
+        firstTwoBetsMultiplier: number;
+        regularMultiplier: number;
       }
-    },
-    MoneyGram: {
-      winRate: 20,
-      minBet: 10,
-      maxBet: 1000,
-      maxWin: 5000,
-      isActive: true
-    },
-    CoinUp: {
-      winRate: 30,
-      minBet: 5,
-      maxBet: 500,
-      maxWin: 3000,
-      isActive: true
-    },
-    MegaSpin: {
-      winRate: 15,
-      minBet: 10,
-      maxBet: 2000,
-      maxWin: 20000,
-      isActive: true
-    },
-    Aviator: {
-      winRate: 25,
-      minBet: 5,
-      maxBet: 1000,
-      maxWin: 10000,
-      isActive: true
-    },
-    Plinko: {
-      winRate: 25,
-      minBet: 5,
-      maxBet: 500,
-      maxWin: 5000,
-      isActive: true
-    },
-    CasinoWin: {
-      winRate: 20,
-      minBet: 10,
-      maxBet: 1000,
-      maxWin: 8000,
-      isActive: true
-    },
-    FortuneGems: {
-      winRate: 20,
-      minBet: 5,
-      maxBet: 500,
-      maxWin: 5000,
-      isActive: true
-    },
-    FruityBonanza: {
-      winRate: 20,
-      minBet: 5,
-      maxBet: 500,
-      maxWin: 5000,
-      isActive: true
-    },
-    SuperAce: {
-      winRate: 25,
-      minBet: 10,
-      maxBet: 1000,
-      maxWin: 8000,
-      isActive: true
-    },
-    SuperElements: {
-      winRate: 20,
-      minBet: 10,
-      maxBet: 500,
-      maxWin: 3000,
-      isActive: true
-    },
-    GoldenBasin: {
-      winRate: 15,
-      minBet: 50,
-      maxBet: 5000,
-      maxWin: 50000,
-      isActive: true
-    },
-    CoinsGame: {
-      winRate: 25,
-      minBet: 5,
-      maxBet: 500,
-      maxWin: 2500,
-      isActive: true
-    }
-  },
-  lastUpdated: Date.now()
-};
+    };
+    MoneyGram: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
+    CoinUp: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
+    SuperAce: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
+    default: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
+  }
+}
 
-const GameOddsManagement: React.FC = () => {
+const GameOddsManagement = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  
-  const [settings, setSettings] = useState<GlobalSettings>(defaultSettings);
-  const [selectedGame, setSelectedGame] = useState<string>("BoxingKing");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-
+  const [gameSettings, setGameSettings] = useState<GameSettings>({
+    games: {
+      BoxingKing: {
+        winRate: 20, 
+        minBet: 10,
+        maxBet: 1000,
+        maxWin: 10000,
+        isActive: true,
+        specialRules: { 
+          firstTwoBetsWin: true,
+          firstTwoBetsMultiplier: 2,
+          regularMultiplier: 0.7
+        }
+      },
+      MoneyGram: { winRate: 20, minBet: 10, maxBet: 1000, maxWin: 5000, isActive: true },
+      CoinUp: { winRate: 30, minBet: 5, maxBet: 500, maxWin: 3000, isActive: true },
+      SuperAce: { winRate: 25, minBet: 10, maxBet: 500, maxWin: 5000, isActive: true },
+      default: { winRate: 25, minBet: 1, maxBet: 100, maxWin: 1000, isActive: true }
+    }
+  });
+  
+  const { user } = useAuth();
+  const db = getFirestore();
+  
   useEffect(() => {
-    loadSettings();
-  }, []);
+    const fetchSettings = async () => {
+      try {
+        // Try to get settings from Firebase
+        const settingsRef = doc(db, "admin", "gameSettings");
+        const settingsDoc = await getDoc(settingsRef);
+        
+        if (settingsDoc.exists()) {
+          const data = settingsDoc.data();
+          // Check if the data has the expected structure
+          if (data && data.games) {
+            setGameSettings(data as GameSettings);
+            console.log("Game settings loaded from Firebase:", data);
+          } else {
+            console.warn("Firebase data doesn't match the expected structure:", data);
+          }
+        } else {
+          // If no settings in Firebase, try localStorage
+          const localSettings = localStorage.getItem('gameOddsSettings');
+          if (localSettings) {
+            setGameSettings(JSON.parse(localSettings));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+        // If Firebase fails, try localStorage
+        const localSettings = localStorage.getItem('gameOddsSettings');
+        if (localSettings) {
+          setGameSettings(JSON.parse(localSettings));
+        }
+      }
+    };
 
-  const loadSettings = async () => {
+    fetchSettings();
+  }, [db]);
+  
+  const handleUpdateSetting = (gameType: string, property: string, value: any) => {
+    setGameSettings(prev => {
+      const updatedSettings = {...prev};
+      
+      // Handle special rules separately
+      if (property.includes('.')) {
+        const [mainProperty, subProperty] = property.split('.');
+        updatedSettings.games[gameType][mainProperty] = {
+          ...updatedSettings.games[gameType][mainProperty],
+          [subProperty]: value
+        };
+      } else {
+        updatedSettings.games[gameType][property] = value;
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const handleSaveSettings = async () => {
     setIsLoading(true);
     try {
-      const settingsRef = doc(db, "admin", "gameSettings");
-      const settingsDoc = await getDoc(settingsRef);
+      // Save to Firebase
+      const success = await saveGameSettings(gameSettings);
       
-      if (settingsDoc.exists()) {
-        setSettings(settingsDoc.data() as GlobalSettings);
+      if (success) {
+        toast("Settings saved successfully!");
       } else {
-        await setDoc(settingsRef, defaultSettings);
+        // If Firebase save fails, save to localStorage as fallback
+        localStorage.setItem('gameOddsSettings', JSON.stringify(gameSettings));
+        toast("Settings saved locally but Firebase update failed");
       }
     } catch (error) {
-      console.error("Error loading game settings:", error);
-      toast({
-        title: "Error Loading Settings",
-        description: "Could not load game settings from database",
-        variant: "destructive",
-      });
+      console.error("Error saving settings:", error);
+      localStorage.setItem('gameOddsSettings', JSON.stringify(gameSettings));
+      toast("Error saving to Firebase, saved locally instead");
     } finally {
       setIsLoading(false);
     }
   };
-
-  const saveSettings = async () => {
-    setIsSaving(true);
-    const updatedSettings = {
-      ...settings,
-      lastUpdated: Date.now()
-    };
-    
-    try {
-      const settingsRef = doc(db, "admin", "gameSettings");
-      await setDoc(settingsRef, updatedSettings);
-      
-      toast({
-        title: "Settings Saved",
-        description: "Game odds settings have been updated successfully",
-      });
-      
-      localStorage.setItem('gameOddsSettings', JSON.stringify(updatedSettings));
-      
-    } catch (error) {
-      console.error("Error saving game settings:", error);
-      toast({
-        title: "Error Saving Settings",
-        description: "Could not save game settings to database",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+  
+  // Protect route for non-admin users
+  useEffect(() => {
+    if (!user || !(user as any).isAdmin) {
+      toast("You need admin privileges to access this page");
+      navigate('/');
     }
-  };
-
-  const updateGameSetting = (game: string, field: keyof GameSettings, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      games: {
-        ...prev.games,
-        [game]: {
-          ...prev.games[game],
-          [field]: value
-        }
-      }
-    }));
-  };
-
-  const updateSpecialRule = (game: string, rule: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      games: {
-        ...prev.games,
-        [game]: {
-          ...prev.games[game],
-          specialRules: {
-            ...prev.games[game].specialRules,
-            [rule]: value
-          }
-        }
-      }
-    }));
-  };
-
-  const resetToDefaults = () => {
-    setSettings(defaultSettings);
-    toast({
-      title: "Reset to Defaults",
-      description: "All game settings have been reset to default values",
-    });
-  };
-
-  const currentGame = settings.games[selectedGame];
+  }, [user, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-casino-dark flex flex-col">
       <Header />
-      <main className="flex-1 p-4 max-w-6xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Game Odds Management</h1>
-            <p className="text-gray-400">Control win rates and betting limits for all games</p>
-          </div>
-          
-          <div className="flex space-x-2 mt-4 md:mt-0">
-            <Button 
-              variant="outline" 
-              onClick={resetToDefaults}
-              className="text-gray-300"
-            >
-              <RefreshCcw className="mr-2 h-4 w-4" />
-              Reset All
-            </Button>
-            <Button 
-              onClick={saveSettings}
-              disabled={isSaving}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <SaveAll className="mr-2 h-4 w-4" />
-              {isSaving ? 'Saving...' : 'Save All Changes'}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="md:col-span-1">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Games</CardTitle>
-                <CardDescription>Select a game to configure</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {Object.keys(settings.games).map((game) => (
-                    <div 
-                      key={game} 
-                      className={`p-2 rounded-md cursor-pointer flex justify-between items-center ${
-                        selectedGame === game ? 'bg-blue-900 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
-                      onClick={() => setSelectedGame(game)}
-                    >
-                      <span>{game}</span>
-                      <div className="flex items-center">
-                        <span className={`w-3 h-3 rounded-full mr-2 ${settings.games[game].isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        <ChevronDown className="h-4 w-4" />
-                      </div>
+      <div className="flex-1 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl bg-casino border border-casino-accent">
+          <CardHeader>
+            <CardTitle className="text-white">Game Odds Management</CardTitle>
+            <CardDescription className="text-white">
+              Adjust game settings and win rates.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="BoxingKing" className="space-y-4">
+              <TabsList className="grid grid-cols-4">
+                <TabsTrigger value="BoxingKing">Boxing King</TabsTrigger>
+                <TabsTrigger value="MoneyGram">Money Gram</TabsTrigger>
+                <TabsTrigger value="CoinUp">Coin Up</TabsTrigger>
+                <TabsTrigger value="SuperAce">Super Ace</TabsTrigger>
+                <TabsTrigger value="default">Default</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="BoxingKing">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="boxingking-winrate" className="text-white">Win Rate (%)</Label>
+                      <Input 
+                        type="number"
+                        id="boxingking-winrate"
+                        value={gameSettings.games.BoxingKing.winRate}
+                        onChange={(e) => handleUpdateSetting('BoxingKing', 'winRate', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="md:col-span-3">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">{selectedGame} Settings</CardTitle>
-                <CardDescription>Configure odds and limits for this game</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label htmlFor="active" className="text-white">Game Active</Label>
-                      <p className="text-sm text-gray-400">Enable or disable this game</p>
+                    <div>
+                      <Label htmlFor="boxingking-minbet" className="text-white">Min Bet</Label>
+                      <Input 
+                        type="number"
+                        id="boxingking-minbet"
+                        value={gameSettings.games.BoxingKing.minBet}
+                        onChange={(e) => handleUpdateSetting('BoxingKing', 'minBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
                     </div>
-                    <Switch
-                      id="active"
-                      checked={currentGame.isActive}
-                      onCheckedChange={(checked) => updateGameSetting(selectedGame, 'isActive', checked)}
-                    />
+                    <div>
+                      <Label htmlFor="boxingking-maxbet" className="text-white">Max Bet</Label>
+                      <Input 
+                        type="number"
+                        id="boxingking-maxbet"
+                        value={gameSettings.games.BoxingKing.maxBet}
+                        onChange={(e) => handleUpdateSetting('BoxingKing', 'maxBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="boxingking-maxwin" className="text-white">Max Win</Label>
+                      <Input 
+                        type="number"
+                        id="boxingking-maxwin"
+                        value={gameSettings.games.BoxingKing.maxWin}
+                        onChange={(e) => handleUpdateSetting('BoxingKing', 'maxWin', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
+                    <Label className="text-white">Special Rules</Label>
                     <div className="flex items-center justify-between">
-                      <Label className="text-white flex items-center">
-                        <Percent className="h-4 w-4 mr-2 text-blue-400" />
-                        Win Rate (%)
-                      </Label>
-                      <span className="text-yellow-400 font-mono">{currentGame.winRate}%</span>
-                    </div>
-                    <Slider
-                      value={[currentGame.winRate]}
-                      min={1}
-                      max={50}
-                      step={1}
-                      onValueChange={(value) => updateGameSetting(selectedGame, 'winRate', value[0])}
-                      className="my-2"
-                    />
-                    <p className="text-xs text-gray-400">Percentage chance of players winning in this game</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="minBet" className="text-white">Minimum Bet</Label>
-                      <Input
-                        id="minBet"
-                        type="number"
-                        value={currentGame.minBet}
-                        onChange={(e) => updateGameSetting(selectedGame, 'minBet', Number(e.target.value))}
-                        className="bg-gray-700 border-gray-600 text-white"
+                      <Label htmlFor="boxingking-firsttwobetswin" className="text-white">First Two Bets Win</Label>
+                      <Switch 
+                        id="boxingking-firsttwobetswin"
+                        checked={gameSettings.games.BoxingKing.specialRules.firstTwoBetsWin}
+                        onCheckedChange={(checked) => handleUpdateSetting('BoxingKing', 'specialRules.firstTwoBetsWin', checked)}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="maxBet" className="text-white">Maximum Bet</Label>
-                      <Input
-                        id="maxBet"
-                        type="number"
-                        value={currentGame.maxBet}
-                        onChange={(e) => updateGameSetting(selectedGame, 'maxBet', Number(e.target.value))}
-                        className="bg-gray-700 border-gray-600 text-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="maxWin" className="text-white">Maximum Win</Label>
-                      <Input
-                        id="maxWin"
-                        type="number"
-                        value={currentGame.maxWin}
-                        onChange={(e) => updateGameSetting(selectedGame, 'maxWin', Number(e.target.value))}
-                        className="bg-gray-700 border-gray-600 text-white"
-                      />
-                    </div>
-                  </div>
-                  
-                  {selectedGame === "BoxingKing" && currentGame.specialRules && (
-                    <div className="border rounded-md border-gray-700 p-4 bg-gray-900/50">
-                      <h3 className="text-white font-medium mb-4">Special Rules for Boxing King</h3>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="firstTwoBetsWin" className="text-white">First 2 bets always win</Label>
-                          <Switch
-                            id="firstTwoBetsWin"
-                            checked={currentGame.specialRules.firstTwoBetsWin}
-                            onCheckedChange={(checked) => updateSpecialRule(selectedGame, 'firstTwoBetsWin', checked)}
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="firstTwoBetsMultiplier" className="text-white">First 2 bets multiplier</Label>
-                          <Input
-                            id="firstTwoBetsMultiplier"
-                            type="number"
-                            step="0.1"
-                            value={currentGame.specialRules.firstTwoBetsMultiplier}
-                            onChange={(e) => updateSpecialRule(selectedGame, 'firstTwoBetsMultiplier', Number(e.target.value))}
-                            className="bg-gray-700 border-gray-600 text-white"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="regularMultiplier" className="text-white">Regular multiplier (after first 2 bets)</Label>
-                          <Input
-                            id="regularMultiplier"
-                            type="number"
-                            step="0.1"
-                            value={currentGame.specialRules.regularMultiplier}
-                            onChange={(e) => updateSpecialRule(selectedGame, 'regularMultiplier', Number(e.target.value))}
-                            className="bg-gray-700 border-gray-600 text-white"
-                          />
-                        </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="boxingking-firsttwobetsmultiplier" className="text-white">First Two Bets Multiplier</Label>
+                        <Input 
+                          type="number"
+                          id="boxingking-firsttwobetsmultiplier"
+                          value={gameSettings.games.BoxingKing.specialRules.firstTwoBetsMultiplier}
+                          onChange={(e) => handleUpdateSetting('BoxingKing', 'specialRules.firstTwoBetsMultiplier', Number(e.target.value))}
+                          className="bg-casino-dark border-gray-700 text-white"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="boxingking-regularmultiplier" className="text-white">Regular Multiplier</Label>
+                        <Input 
+                          type="number"
+                          id="boxingking-regularmultiplier"
+                          value={gameSettings.games.BoxingKing.specialRules.regularMultiplier}
+                          onChange={(e) => handleUpdateSetting('BoxingKing', 'specialRules.regularMultiplier', Number(e.target.value))}
+                          className="bg-casino-dark border-gray-700 text-white"
+                        />
                       </div>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-gray-800 border-gray-700 mt-6">
-              <CardHeader>
-                <CardTitle className="text-white">Game Statistics</CardTitle>
-                <CardDescription>View performance metrics for this game</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <div className="text-sm text-gray-400">Total Bets</div>
-                    <div className="text-2xl font-bold text-white">0</div>
                   </div>
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <div className="text-sm text-gray-400">House Profit</div>
-                    <div className="text-2xl font-bold text-green-500">0</div>
-                  </div>
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <div className="text-sm text-gray-400">Actual Win %</div>
-                    <div className="text-2xl font-bold text-blue-500">0%</div>
+                  
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="boxingking-isactive" className="text-white">Is Active</Label>
+                    <Switch 
+                      id="boxingking-isactive"
+                      checked={gameSettings.games.BoxingKing.isActive}
+                      onCheckedChange={(checked) => handleUpdateSetting('BoxingKing', 'isActive', checked)}
+                    />
                   </div>
                 </div>
-                
-                <Table className="mt-6">
-                  <TableHeader>
-                    <TableRow className="border-gray-700">
-                      <TableHead className="text-gray-400">Date</TableHead>
-                      <TableHead className="text-gray-400">User</TableHead>
-                      <TableHead className="text-gray-400">Bet Amount</TableHead>
-                      <TableHead className="text-gray-400">Result</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow className="border-gray-700">
-                      <TableCell className="text-gray-300" colSpan={4}>
-                        No bet history data available
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </main>
+              </TabsContent>
+
+              <TabsContent value="MoneyGram">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="moneygram-winrate" className="text-white">Win Rate (%)</Label>
+                      <Input 
+                        type="number"
+                        id="moneygram-winrate"
+                        value={gameSettings.games.MoneyGram.winRate}
+                        onChange={(e) => handleUpdateSetting('MoneyGram', 'winRate', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="moneygram-minbet" className="text-white">Min Bet</Label>
+                      <Input 
+                        type="number"
+                        id="moneygram-minbet"
+                        value={gameSettings.games.MoneyGram.minBet}
+                        onChange={(e) => handleUpdateSetting('MoneyGram', 'minBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="moneygram-maxbet" className="text-white">Max Bet</Label>
+                      <Input 
+                        type="number"
+                        id="moneygram-maxbet"
+                        value={gameSettings.games.MoneyGram.maxBet}
+                        onChange={(e) => handleUpdateSetting('MoneyGram', 'maxBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="moneygram-maxwin" className="text-white">Max Win</Label>
+                      <Input 
+                        type="number"
+                        id="moneygram-maxwin"
+                        value={gameSettings.games.MoneyGram.maxWin}
+                        onChange={(e) => handleUpdateSetting('MoneyGram', 'maxWin', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="moneygram-isactive" className="text-white">Is Active</Label>
+                    <Switch 
+                      id="moneygram-isactive"
+                      checked={gameSettings.games.MoneyGram.isActive}
+                      onCheckedChange={(checked) => handleUpdateSetting('MoneyGram', 'isActive', checked)}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="CoinUp">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="coinup-winrate" className="text-white">Win Rate (%)</Label>
+                      <Input 
+                        type="number"
+                        id="coinup-winrate"
+                        value={gameSettings.games.CoinUp.winRate}
+                        onChange={(e) => handleUpdateSetting('CoinUp', 'winRate', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="coinup-minbet" className="text-white">Min Bet</Label>
+                      <Input 
+                        type="number"
+                        id="coinup-minbet"
+                        value={gameSettings.games.CoinUp.minBet}
+                        onChange={(e) => handleUpdateSetting('CoinUp', 'minBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="coinup-maxbet" className="text-white">Max Bet</Label>
+                      <Input 
+                        type="number"
+                        id="coinup-maxbet"
+                        value={gameSettings.games.CoinUp.maxBet}
+                        onChange={(e) => handleUpdateSetting('CoinUp', 'maxBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="coinup-maxwin" className="text-white">Max Win</Label>
+                      <Input 
+                        type="number"
+                        id="coinup-maxwin"
+                        value={gameSettings.games.CoinUp.maxWin}
+                        onChange={(e) => handleUpdateSetting('CoinUp', 'maxWin', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="coinup-isactive" className="text-white">Is Active</Label>
+                    <Switch 
+                      id="coinup-isactive"
+                      checked={gameSettings.games.CoinUp.isActive}
+                      onCheckedChange={(checked) => handleUpdateSetting('CoinUp', 'isActive', checked)}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="SuperAce">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="superace-winrate" className="text-white">Win Rate (%)</Label>
+                      <Input 
+                        type="number"
+                        id="superace-winrate"
+                        value={gameSettings.games.SuperAce.winRate}
+                        onChange={(e) => handleUpdateSetting('SuperAce', 'winRate', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="superace-minbet" className="text-white">Min Bet</Label>
+                      <Input 
+                        type="number"
+                        id="superace-minbet"
+                        value={gameSettings.games.SuperAce.minBet}
+                        onChange={(e) => handleUpdateSetting('SuperAce', 'minBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="superace-maxbet" className="text-white">Max Bet</Label>
+                      <Input 
+                        type="number"
+                        id="superace-maxbet"
+                        value={gameSettings.games.SuperAce.maxBet}
+                        onChange={(e) => handleUpdateSetting('SuperAce', 'maxBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="superace-maxwin" className="text-white">Max Win</Label>
+                      <Input 
+                        type="number"
+                        id="superace-maxwin"
+                        value={gameSettings.games.SuperAce.maxWin}
+                        onChange={(e) => handleUpdateSetting('SuperAce', 'maxWin', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="superace-isactive" className="text-white">Is Active</Label>
+                    <Switch 
+                      id="superace-isactive"
+                      checked={gameSettings.games.SuperAce.isActive}
+                      onCheckedChange={(checked) => handleUpdateSetting('SuperAce', 'isActive', checked)}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="default">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="default-winrate" className="text-white">Win Rate (%)</Label>
+                      <Input 
+                        type="number"
+                        id="default-winrate"
+                        value={gameSettings.games.default.winRate}
+                        onChange={(e) => handleUpdateSetting('default', 'winRate', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="default-minbet" className="text-white">Min Bet</Label>
+                      <Input 
+                        type="number"
+                        id="default-minbet"
+                        value={gameSettings.games.default.minBet}
+                        onChange={(e) => handleUpdateSetting('default', 'minBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="default-maxbet" className="text-white">Max Bet</Label>
+                      <Input 
+                        type="number"
+                        id="default-maxbet"
+                        value={gameSettings.games.default.maxBet}
+                        onChange={(e) => handleUpdateSetting('default', 'maxBet', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="default-maxwin" className="text-white">Max Win</Label>
+                      <Input 
+                        type="number"
+                        id="default-maxwin"
+                        value={gameSettings.games.default.maxWin}
+                        onChange={(e) => handleUpdateSetting('default', 'maxWin', Number(e.target.value))}
+                        className="bg-casino-dark border-gray-700 text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="default-isactive" className="text-white">Is Active</Label>
+                    <Switch 
+                      id="default-isactive"
+                      checked={gameSettings.games.default.isActive}
+                      onCheckedChange={(checked) => handleUpdateSetting('default', 'isActive', checked)}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={handleSaveSettings} disabled={isLoading} className="bg-green-600 hover:bg-green-700 text-white font-bold">
+              {isLoading ? 'Saving...' : 'Save Settings'}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
       <Footer />
     </div>
   );
