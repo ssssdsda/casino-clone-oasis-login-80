@@ -88,6 +88,10 @@ async function getGameSettings() {
       MoneyGram: { winRate: 20, minBet: 10, maxBet: 1000, maxWin: 5000, isActive: true },
       CoinUp: { winRate: 30, minBet: 5, maxBet: 500, maxWin: 3000, isActive: true },
       SuperAce: { winRate: 25, minBet: 10, maxBet: 500, maxWin: 5000, isActive: true },
+      SuperElement: { winRate: 25, minBet: 10, maxBet: 800, maxWin: 6000, isActive: true },
+      Plinko: { winRate: 40, minBet: 5, maxBet: 300, maxWin: 3000, isActive: true },
+      Aviator: { winRate: 15, minBet: 20, maxBet: 1000, maxWin: 10000, isActive: true },
+      GoldenBasin: { winRate: 22, minBet: 10, maxBet: 500, maxWin: 4000, isActive: true },
       // Default values for other games
       default: { winRate: 25, minBet: 1, maxBet: 100, maxWin: 1000, isActive: true }
     }
@@ -170,7 +174,7 @@ export const shouldBetWin = async (userId: string, gameType: string = 'default',
     { winRate: 25, specialRules: null };
   
   let shouldWin = false;
-  const winRate = (gameSettings.winRate || 25) / 100; // Convert percentage to decimal, with fallback
+  const winRate = (gameSettings.winRate !== undefined ? gameSettings.winRate : 25) / 100; // Convert percentage to decimal, with fallback
   
   // Apply special rules for specific games
   if (gameType === 'BoxingKing' && gameSettings.specialRules) {

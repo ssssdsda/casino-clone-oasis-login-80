@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
@@ -11,46 +11,171 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/LanguageContext';
+import { saveGameSettings } from '@/utils/bettingSystem';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const GameOddsAdmin = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
   
   // State for game settings
-  const [payoutMultiplier, setPayoutMultiplier] = useState(1.0);
-  const [winProbability, setWinProbability] = useState(30);
-  const [jackpotProbability, setJackpotProbability] = useState(1);
-  const [maxBet, setMaxBet] = useState(100);
-  const [minBet, setMinBet] = useState(1);
-  const [houseEdge, setHouseEdge] = useState(5);
-  const [enableRealMoney, setEnableRealMoney] = useState(true);
-  const [gameActive, setGameActive] = useState(true);
+  const [gameSettings, setGameSettings] = useState({
+    games: {
+      BoxingKing: { 
+        winRate: 20, 
+        minBet: 10,
+        maxBet: 1000,
+        maxWin: 10000,
+        isActive: true,
+        specialRules: { 
+          firstTwoBetsWin: true,
+          firstTwoBetsMultiplier: 2,
+          regularMultiplier: 0.7
+        } 
+      },
+      MoneyGram: { winRate: 20, minBet: 10, maxBet: 1000, maxWin: 5000, isActive: true },
+      CoinUp: { winRate: 30, minBet: 5, maxBet: 500, maxWin: 3000, isActive: true },
+      SuperAce: { winRate: 25, minBet: 10, maxBet: 500, maxWin: 5000, isActive: true },
+      // Added new games
+      SuperElement: { winRate: 25, minBet: 10, maxBet: 800, maxWin: 6000, isActive: true },
+      Plinko: { winRate: 40, minBet: 5, maxBet: 300, maxWin: 3000, isActive: true },
+      Aviator: { winRate: 15, minBet: 20, maxBet: 1000, maxWin: 10000, isActive: true },
+      GoldenBasin: { winRate: 22, minBet: 10, maxBet: 500, maxWin: 4000, isActive: true },
+      // Default values for other games
+      default: { winRate: 25, minBet: 1, maxBet: 100, maxWin: 1000, isActive: true }
+    }
+  });
   
-  // Handle save settings
-  const handleSaveSettings = () => {
-    // Here we would save to Firebase
-    toast({
-      title: t('settingsSaved'),
-      description: t('gameSettingsUpdated'),
+  const [selectedGame, setSelectedGame] = useState('BoxingKing');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Load game settings from Firebase
+  useEffect(() => {
+    const fetchGameSettings = async () => {
+      try {
+        const settingsRef = doc(db, "admin", "gameSettings");
+        const settingsDoc = await getDoc(settingsRef);
+        
+        if (settingsDoc.exists() && settingsDoc.data().games) {
+          setGameSettings(settingsDoc.data());
+          console.log("Game settings loaded from Firebase:", settingsDoc.data());
+        }
+      } catch (error) {
+        console.error("Error fetching game settings:", error);
+      }
+    };
+    
+    fetchGameSettings();
+  }, []);
+  
+  // Handle game selection change
+  const handleGameChange = (game) => {
+    setSelectedGame(game);
+  };
+  
+  // Update specific game setting
+  const updateGameSetting = (game, setting, value) => {
+    setGameSettings(prev => {
+      // Create a deep copy to avoid mutation
+      const updated = JSON.parse(JSON.stringify(prev));
+      
+      // Ensure the game exists in settings
+      if (!updated.games[game]) {
+        updated.games[game] = { ...updated.games.default };
+      }
+      
+      // Update the specific setting
+      if (setting.includes('.')) {
+        // Handle nested properties like specialRules.firstTwoBetsWin
+        const [parent, child] = setting.split('.');
+        if (!updated.games[game][parent]) {
+          updated.games[game][parent] = {};
+        }
+        updated.games[game][parent][child] = value;
+      } else {
+        updated.games[game][setting] = value;
+      }
+      
+      return updated;
     });
+  };
+
+  // Handle save settings
+  const handleSaveSettings = async () => {
+    setIsLoading(true);
+    
+    try {
+      const success = await saveGameSettings(gameSettings);
+      
+      if (success) {
+        toast({
+          title: t('settingsSaved'),
+          description: t('gameSettingsUpdated'),
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to save settings",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle reset to defaults
   const handleResetDefaults = () => {
-    setPayoutMultiplier(1.0);
-    setWinProbability(30);
-    setJackpotProbability(1);
-    setMaxBet(100);
-    setMinBet(1);
-    setHouseEdge(5);
-    setEnableRealMoney(true);
-    setGameActive(true);
+    const defaultSettings = {
+      winRate: 25,
+      minBet: 10,
+      maxBet: 500,
+      maxWin: 5000,
+      isActive: true
+    };
+    
+    if (selectedGame === 'BoxingKing') {
+      defaultSettings.specialRules = {
+        firstTwoBetsWin: true,
+        firstTwoBetsMultiplier: 2,
+        regularMultiplier: 0.7
+      };
+    }
+    
+    // Update the selected game with default values
+    setGameSettings(prev => {
+      const updated = JSON.parse(JSON.stringify(prev));
+      updated.games[selectedGame] = defaultSettings;
+      return updated;
+    });
     
     toast({
       title: t('settingsReset'),
       description: t('defaultSettingsRestored'),
     });
   };
+
+  // Get current game settings
+  const getCurrentGameSettings = () => {
+    // Safely access game settings with fallbacks
+    return gameSettings?.games?.[selectedGame] || gameSettings?.games?.default || {
+      winRate: 25,
+      minBet: 10,
+      maxBet: 500,
+      maxWin: 5000,
+      isActive: true
+    };
+  };
+
+  const currentGame = getCurrentGameSettings();
 
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
@@ -66,6 +191,30 @@ const GameOddsAdmin = () => {
           </TabsList>
           
           <TabsContent value="settings">
+            {/* Game selector */}
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>{t('selectGame')}</CardTitle>
+                <CardDescription>{t('chooseGameToEdit')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {Object.keys(gameSettings.games)
+                    .filter(game => game !== 'default') // Hide default from buttons
+                    .map((game) => (
+                      <Button
+                        key={game}
+                        variant={selectedGame === game ? "default" : "outline"}
+                        onClick={() => handleGameChange(game)}
+                        className={selectedGame === game ? "bg-green-600" : ""}
+                      >
+                        {game}
+                      </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
@@ -76,44 +225,75 @@ const GameOddsAdmin = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <Label>{t('winProbability')}</Label>
-                      <span className="text-casino-accent">{winProbability}%</span>
+                      <span className="text-casino-accent">{currentGame.winRate}%</span>
                     </div>
                     <Slider 
-                      value={[winProbability]} 
+                      value={[currentGame.winRate]} 
                       min={5} 
                       max={70} 
                       step={1} 
-                      onValueChange={(value) => setWinProbability(value[0])}
+                      onValueChange={(value) => updateGameSetting(selectedGame, 'winRate', value[0])}
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label>{t('jackpotProbability')}</Label>
-                      <span className="text-casino-accent">{jackpotProbability}%</span>
+                  {selectedGame === 'BoxingKing' && (
+                    <div>
+                      <div className="mt-4 mb-2 font-semibold">Special Rules for Boxing King</div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>First 2 bets always win</Label>
+                          <Switch 
+                            checked={currentGame.specialRules?.firstTwoBetsWin || false} 
+                            onCheckedChange={(checked) => 
+                              updateGameSetting(selectedGame, 'specialRules.firstTwoBetsWin', checked)
+                            }
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>First 2 bets multiplier</Label>
+                          <div className="flex items-center gap-2">
+                            <Input 
+                              type="number" 
+                              value={currentGame.specialRules?.firstTwoBetsMultiplier || 2} 
+                              onChange={(e) => 
+                                updateGameSetting(
+                                  selectedGame, 
+                                  'specialRules.firstTwoBetsMultiplier', 
+                                  parseFloat(e.target.value) || 2
+                                )
+                              } 
+                              className="bg-gray-800"
+                            />
+                            <span>x</span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Regular multiplier</Label>
+                          <div className="flex items-center gap-2">
+                            <Input 
+                              type="number" 
+                              step="0.1"
+                              min="0.1"
+                              max="5"
+                              value={currentGame.specialRules?.regularMultiplier || 0.7} 
+                              onChange={(e) => 
+                                updateGameSetting(
+                                  selectedGame, 
+                                  'specialRules.regularMultiplier', 
+                                  parseFloat(e.target.value) || 0.7
+                                )
+                              } 
+                              className="bg-gray-800"
+                            />
+                            <span>x</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <Slider 
-                      value={[jackpotProbability]} 
-                      min={0.1} 
-                      max={5} 
-                      step={0.1} 
-                      onValueChange={(value) => setJackpotProbability(value[0])}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label>{t('houseEdge')}</Label>
-                      <span className="text-casino-accent">{houseEdge}%</span>
-                    </div>
-                    <Slider 
-                      value={[houseEdge]} 
-                      min={1} 
-                      max={20} 
-                      step={0.5} 
-                      onValueChange={(value) => setHouseEdge(value[0])}
-                    />
-                  </div>
+                  )}
                 </CardContent>
               </Card>
               
@@ -123,29 +303,13 @@ const GameOddsAdmin = () => {
                   <CardDescription>{t('adjustBetsAndMultipliers')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>{t('payoutMultiplier')}</Label>
-                    <div className="flex">
-                      <Input 
-                        type="number" 
-                        value={payoutMultiplier} 
-                        onChange={(e) => setPayoutMultiplier(parseFloat(e.target.value) || 1.0)} 
-                        min={0.1} 
-                        max={10} 
-                        step={0.1} 
-                        className="bg-gray-800"
-                      />
-                      <span className="flex items-center ml-2 text-gray-300">x</span>
-                    </div>
-                  </div>
-                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>{t('minBet')}</Label>
                       <Input 
                         type="number" 
-                        value={minBet} 
-                        onChange={(e) => setMinBet(parseInt(e.target.value) || 1)} 
+                        value={currentGame.minBet} 
+                        onChange={(e) => updateGameSetting(selectedGame, 'minBet', parseInt(e.target.value) || 1)} 
                         min={1} 
                         className="bg-gray-800"
                       />
@@ -155,12 +319,23 @@ const GameOddsAdmin = () => {
                       <Label>{t('maxBet')}</Label>
                       <Input 
                         type="number" 
-                        value={maxBet} 
-                        onChange={(e) => setMaxBet(parseInt(e.target.value) || 100)} 
+                        value={currentGame.maxBet} 
+                        onChange={(e) => updateGameSetting(selectedGame, 'maxBet', parseInt(e.target.value) || 100)} 
                         min={10} 
                         className="bg-gray-800"
                       />
                     </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>{t('maxWin')}</Label>
+                    <Input 
+                      type="number" 
+                      value={currentGame.maxWin} 
+                      onChange={(e) => updateGameSetting(selectedGame, 'maxWin', parseInt(e.target.value) || 1000)} 
+                      min={100} 
+                      className="bg-gray-800"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -173,12 +348,10 @@ const GameOddsAdmin = () => {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <Label>{t('gameActive')}</Label>
-                    <Switch checked={gameActive} onCheckedChange={setGameActive} />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label>{t('enableRealMoney')}</Label>
-                    <Switch checked={enableRealMoney} onCheckedChange={setEnableRealMoney} />
+                    <Switch 
+                      checked={currentGame.isActive} 
+                      onCheckedChange={(checked) => updateGameSetting(selectedGame, 'isActive', checked)} 
+                    />
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-end space-x-2 bg-gray-800 rounded-b-lg">
@@ -188,8 +361,11 @@ const GameOddsAdmin = () => {
                   >
                     {t('resetToDefaults')}
                   </Button>
-                  <Button onClick={handleSaveSettings}>
-                    {t('saveSettings')}
+                  <Button 
+                    onClick={handleSaveSettings} 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? t('saving') + '...' : t('saveSettings')}
                   </Button>
                 </CardFooter>
               </Card>

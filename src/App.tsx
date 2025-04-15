@@ -37,46 +37,10 @@ import PlinkoGame from "./pages/PlinkoGame";
 import FruityBonanzaGame from "./pages/FruityBonanzaGame";
 import Register from "./pages/Register";
 import GameOddsManagement from './pages/GameOddsManagement';
+import GameOddsAdmin from './pages/GameOddsAdmin';
 import Admin from './pages/Admin';
 
 const queryClient = new QueryClient();
-
-const routes = [
-  <Route path="/" element={<Index />} />,
-  <Route path="/admin" element={<Admin />} />,
-  <Route path="/admin/images" element={<ImagesChanger />} />,
-  <Route path="/game/spin" element={<SpinGame />} />,
-  <Route path="/admin/spin-control" element={<SpinControl />} />,
-  <Route path="/game/megaspin" element={<MegaSpin />} />,
-  <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />,
-  <Route path="/game/moneygram" element={<MoneyGram />} />,
-  <Route path="/game/aviator" element={<AviatorGame />} />,
-  <Route path="/game/aviator-control" element={<AviatorControl />} />,
-  <Route path="/game/boxing-king" element={<BoxingKingGame />} />,
-  <Route path="/game/fortune-gems" element={<FortuneGemsGame />} />,
-  <Route path="/game/coin-up" element={<CoinUpGame />} />,
-  <Route path="/game/golden-basin" element={<GoldenBasinGame />} />,
-  <Route path="/game/super-element" element={<SuperElementGame />} />,
-  <Route path="/withdrawal" element={<Withdrawal />} />,
-  <Route path="/deposit" element={<Deposit />} />,
-  <Route path="/bonus" element={<Bonus />} />,
-  <Route path="/admin/bonus-control" element={<BonusControl />} />,
-  <Route path="/game/live-cricket" element={<LiveCricket />} />,
-  <Route path="/game/live-football" element={<LiveFootball />} />,
-  <Route path="/game/super-ace" element={<SuperAce />} />,
-  <Route path="/game/super-ace-casino" element={<SuperAceCasinoGame />} />,
-  <Route path="/game/777coins" element={<CoinsGame />} />,
-  <Route path="/admin/popup-customizer" element={<PopupCustomizer />} />,
-  <Route path="/admin/withdrawal-manager" element={<WithdrawalManager />} />,
-  <Route path="/referral" element={<ReferralProgram />} />,
-  <Route path="/game/plinko" element={<PlinkoGame />} />,
-  <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />,
-  <Route path="/register" element={<Register />} />,
-  <Route path="/signup" element={<Register />} />,
-  <Route path="/admin/game-odds" element={<GameOddsManagement />} />,
-  <Route path="/game-odds" element={<GameOddsManagement />} />,
-  <Route path="*" element={<NotFound />} />
-];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -87,7 +51,43 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              {routes}
+              <Route path="/" element={<Index />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/images" element={<ImagesChanger />} />
+              <Route path="/game/spin" element={<SpinGame />} />
+              <Route path="/admin/spin-control" element={<SpinControl />} />
+              <Route path="/game/megaspin" element={<MegaSpin />} />
+              <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />
+              <Route path="/game/moneygram" element={<MoneyGram />} />
+              <Route path="/game/aviator" element={<AviatorGame />} />
+              <Route path="/game/aviator-control" element={<AviatorControl />} />
+              <Route path="/game/boxing-king" element={<BoxingKingGame />} />
+              <Route path="/game/fortune-gems" element={<FortuneGemsGame />} />
+              <Route path="/game/coin-up" element={<CoinUpGame />} />
+              <Route path="/game/golden-basin" element={<GoldenBasinGame />} />
+              <Route path="/game/super-element" element={<SuperElementGame />} />
+              <Route path="/withdrawal" element={<Withdrawal />} />
+              <Route path="/deposit" element={<Deposit />} />
+              <Route path="/bonus" element={<Bonus />} />
+              <Route path="/admin/bonus-control" element={<BonusControl />} />
+              <Route path="/game/live-cricket" element={<LiveCricket />} />
+              <Route path="/game/live-football" element={<LiveFootball />} />
+              <Route path="/game/super-ace" element={<SuperAce />} />
+              <Route path="/game/super-ace-casino" element={<SuperAceCasinoGame />} />
+              <Route path="/game/777coins" element={<CoinsGame />} />
+              <Route path="/admin/popup-customizer" element={<PopupCustomizer />} />
+              <Route path="/admin/withdrawal-manager" element={<WithdrawalManager />} />
+              <Route path="/referral" element={<ReferralProgram />} />
+              <Route path="/game/plinko" element={<PlinkoGame />} />
+              <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/signup" element={<Register />} />
+              <Route path="/admin/game-odds" element={<GameOddsAdmin />} />
+              <Route path="/game-odds" element={<GameOddsManagement />} />
+              {/* Support referral links */}
+              <Route path="/ref/:referralCode" element={<Index />} />
+              {/* Catch all route - must be last */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
