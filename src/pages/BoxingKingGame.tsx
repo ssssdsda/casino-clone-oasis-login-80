@@ -122,16 +122,16 @@ const BoxingKingGame = () => {
         });
         
         if (i === 4) {
-          setTimeout(() => {
-            const shouldWin = shouldBetWin(user.id, 'BoxingKing', bet);
+          setTimeout(async () => {
+            const shouldWin = await shouldBetWin(user.id, 'BoxingKing', bet);
             
             if (shouldWin) {
               const userBetCount = user.id ? (window as any).userBetCounts?.[user.id]?.['BoxingKing'] || 1 : 1;
-              const { winAmount, winLines } = forceWinningCombination(newReels, bet, userBetCount);
-              setWinAmount(winAmount);
-              setWinLines(winLines);
+              const winResult = await forceWinningCombination(newReels, bet, userBetCount);
+              setWinAmount(winResult.winAmount);
+              setWinLines(winResult.winLines);
               
-              updateUserBalance(user.balance - bet + winAmount);
+              updateUserBalance(user.balance - bet + winResult.winAmount);
               
               if (!muted && winSound.current) {
                 winSound.current.currentTime = 0;
@@ -139,7 +139,7 @@ const BoxingKingGame = () => {
               }
               
               toast("You Won!", {
-                description: `You won ${winAmount.toFixed(2)}!`,
+                description: `You won ${winResult.winAmount.toFixed(2)}!`,
                 style: { backgroundColor: "rgb(22, 163, 74)", color: "white", border: "1px solid rgb(21, 128, 61)" }
               });
             } else {
@@ -155,7 +155,7 @@ const BoxingKingGame = () => {
     }
   };
   
-  const forceWinningCombination = (reels, betAmount, betCount) => {
+  const forceWinningCombination = async (reels, betAmount, betCount) => {
     const winSymbol = symbols[Math.floor(Math.random() * symbols.length)];
     const row = 1;
     
@@ -167,7 +167,7 @@ const BoxingKingGame = () => {
     
     const symbolValue = winSymbol.value || 5;
     const winMultiplier = betCount <= 2 ? 2 : 0.7;
-    const winAmount = calculateWinAmount(betAmount, symbolValue / 10, 'BoxingKing', betCount);
+    const winAmount = await calculateWinAmount(betAmount, symbolValue / 10, 'BoxingKing', betCount);
     
     const winLines = [{
       positions: [
