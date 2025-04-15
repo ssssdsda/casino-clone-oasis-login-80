@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Header from '@/components/Header';
@@ -12,12 +11,30 @@ const NotFound = () => {
   const navigate = useNavigate();
   const db = getFirestore();
   
-  // Enhanced error logging and referral code recovery
+  // Enhanced 404 handling with referral code recovery
   useEffect(() => {
     console.error(
       "404 Error: User attempted to access non-existent route:",
       location.pathname
     );
+    
+    // Track 404 errors in Firebase
+    const track404Error = async () => {
+      try {
+        const errorId = `error_404_${Date.now()}`;
+        await setDoc(doc(db, "errors", errorId), {
+          path: location.pathname,
+          fullUrl: window.location.href,
+          timestamp: new Date(),
+          userAgent: navigator.userAgent
+        });
+        console.log("404 error tracked in Firebase");
+      } catch (err) {
+        console.error("Error tracking 404:", err);
+      }
+    };
+    
+    track404Error();
     
     // Try to extract a referral code from the path
     const attemptReferralCodeExtraction = async () => {
@@ -37,16 +54,16 @@ const NotFound = () => {
       }
       
       if (isReferralPath) {
-        // Extract possible referral code using various methods
-        
         // Method 1: Split by slashes and look for code after ref keyword
         const pathParts = path.split('/');
         for (let i = 0; i < pathParts.length; i++) {
           const part = pathParts[i].toLowerCase();
           if (refKeywords.includes(part) && i + 1 < pathParts.length) {
             possibleRefCode = pathParts[i + 1];
-            console.log(`Found possible referral code after ${part}: ${possibleRefCode}`);
-            break;
+            if (possibleRefCode && possibleRefCode !== 'undefined') {
+              console.log(`Found possible referral code after ${part}: ${possibleRefCode}`);
+              break;
+            }
           }
         }
         
@@ -54,7 +71,7 @@ const NotFound = () => {
         if (!possibleRefCode) {
           const refRegex = /\/(?:ref|r|referral)[\/=]?([a-zA-Z0-9_-]+)/i;
           const match = path.match(refRegex);
-          if (match && match[1]) {
+          if (match && match[1] && match[1] !== 'undefined') {
             possibleRefCode = match[1];
             console.log("Found possible referral code using regex:", possibleRefCode);
           }
@@ -82,7 +99,7 @@ const NotFound = () => {
           // Automatic redirection to register page with the recovered code
           setTimeout(() => {
             navigate(`/register?ref=${possibleRefCode}`);
-          }, 500);
+          }, 300);
         }
       }
     };
@@ -97,7 +114,7 @@ const NotFound = () => {
   
   // Go to homepage
   const handleHome = () => {
-    navigate('/');
+    navigate('/', {replace: true});
   };
   
   // Retry the current URL (useful for temporary server issues)

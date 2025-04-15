@@ -1,21 +1,15 @@
 
 # Enable rewrite engine
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-  
-  # If the request is not for a real file or directory
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  
-  # Handle specific routes for referrals explicitly
-  RewriteRule ^referral/([^/]+)/?$ /index.html [L]
-  RewriteRule ^ref/([^/]+)/?$ /index.html [L]
-  RewriteRule ^r/([^/]+)/?$ /index.html [L]
-  
-  # Rewrite all non-file/directory requests to index.html for SPA routing
-  RewriteRule . /index.html [L]
-</IfModule>
+RewriteEngine On
+RewriteBase /
+
+# Allow direct access to actual files
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Handle SPA routing - Redirect all other requests to index.html
+RewriteRule ^ index.html [L]
 
 # Force HTTPS
 <IfModule mod_rewrite.c>

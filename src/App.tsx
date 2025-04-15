@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -42,14 +41,21 @@ import Admin from './pages/Admin';
 
 const queryClient = new QueryClient();
 
-// Create ReferralHandler component for handling direct referral links
+// Enhanced ReferralHandler component with additional error handling
 const ReferralHandler = ({ code }: { code: string }) => {
   console.log("ReferralHandler: Processing referral code:", code);
   
-  // Store the referral code in localStorage
-  if (code && code !== 'undefined') {
-    localStorage.setItem('referralCode', code);
-    console.log("ReferralHandler: Saved referral code to localStorage:", code);
+  try {
+    // Store the referral code in localStorage
+    if (code && code !== 'undefined') {
+      localStorage.setItem('referralCode', code);
+      console.log("ReferralHandler: Saved referral code to localStorage:", code);
+      
+      // Track this referral click for analytics (if applicable)
+      // You can add Firebase logging code here
+    }
+  } catch (error) {
+    console.error("Error in ReferralHandler:", error);
   }
   
   // Redirect to register page
@@ -102,10 +108,10 @@ const App = () => (
               <Route path="/admin/game-odds" element={<GameOddsAdmin />} />
               <Route path="/game-odds" element={<GameOddsManagement />} />
               
-              {/* Enhanced referral link handling - dedicated handler for direct links */}
-              <Route path="/referral/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2]} />} />
-              <Route path="/ref/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2]} />} />
-              <Route path="/r/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2]} />} />
+              {/* Enhanced referral link handling - dedicated handlers for direct links */}
+              <Route path="/referral/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2] || ''} />} />
+              <Route path="/ref/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2] || ''} />} />
+              <Route path="/r/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2] || ''} />} />
               
               {/* Default 404 handler */}
               <Route path="*" element={<NotFound />} />
