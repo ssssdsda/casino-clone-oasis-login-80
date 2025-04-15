@@ -8,12 +8,13 @@
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   
-  # Handle referral links specifically
+  # Handle specific routes for referrals explicitly
+  RewriteRule ^referral/([^/]+)/?$ /index.html [L]
   RewriteRule ^ref/([^/]+)/?$ /index.html [L]
   RewriteRule ^r/([^/]+)/?$ /index.html [L]
   
   # Rewrite all non-file/directory requests to index.html for SPA routing
-  RewriteRule ^(.*)$ index.html [QSA,L]
+  RewriteRule . /index.html [L]
 </IfModule>
 
 # Force HTTPS
