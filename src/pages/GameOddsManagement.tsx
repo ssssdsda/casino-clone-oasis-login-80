@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -12,10 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { SaveAll, Percent, ChevronDown, BarChart3, Dice1, RefreshCcw } from "lucide-react";
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { saveGameSettings } from '@/utils/bettingSystem';
 
 interface GameSettings {
   winRate: number;
@@ -140,7 +142,6 @@ const defaultSettings: GlobalSettings = {
 const GameOddsManagement: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
   
   const [settings, setSettings] = useState<GlobalSettings>(defaultSettings);
   const [selectedGame, setSelectedGame] = useState<string>("BoxingKing");
@@ -160,6 +161,7 @@ const GameOddsManagement: React.FC = () => {
       if (settingsDoc.exists()) {
         setSettings(settingsDoc.data() as GlobalSettings);
       } else {
+        // If no settings exist yet, save the defaults to Firebase
         await setDoc(settingsRef, defaultSettings);
       }
     } catch (error) {
@@ -182,15 +184,17 @@ const GameOddsManagement: React.FC = () => {
     };
     
     try {
-      const settingsRef = doc(db, "admin", "gameSettings");
-      await setDoc(settingsRef, updatedSettings);
+      // Save settings to Firebase using the utility function
+      const success = await saveGameSettings(updatedSettings);
       
-      toast({
-        title: "Settings Saved",
-        description: "Game odds settings have been updated successfully",
-      });
-      
-      localStorage.setItem('gameOddsSettings', JSON.stringify(updatedSettings));
+      if (success) {
+        toast({
+          title: "Settings Saved",
+          description: "Game odds settings have been updated successfully",
+        });
+      } else {
+        throw new Error("Failed to save settings");
+      }
       
     } catch (error) {
       console.error("Error saving game settings:", error);

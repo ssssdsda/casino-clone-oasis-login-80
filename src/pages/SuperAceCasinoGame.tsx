@@ -218,10 +218,13 @@ const SuperAceCasinoGame = () => {
             const superAceSettings = data.games.SuperAce;
             setGameSettings(superAceSettings);
             
+            console.log("Loaded SuperAce settings:", superAceSettings);
+            
             // Set initial bet to minBet if current bet is lower
             setGameState(prev => ({
               ...prev,
-              bet: prev.bet < superAceSettings.minBet ? superAceSettings.minBet : prev.bet
+              bet: prev.bet < superAceSettings.minBet ? superAceSettings.minBet : 
+                   prev.bet > superAceSettings.maxBet ? superAceSettings.maxBet : prev.bet
             }));
           }
         } else {
@@ -233,12 +236,13 @@ const SuperAceCasinoGame = () => {
     };
     
     loadGameSettings();
-  }, [user?.balance]);
+  }, [user]);
   
   const handleSpin = async () => {
     if (gameState.isSpinning || !user) {
       if (!user) {
-        toast("Login Required", {
+        toast({
+          title: "Login Required",
           description: "Please login to play",
           className: "bg-red-600 text-white border-red-700",
         });
@@ -247,8 +251,18 @@ const SuperAceCasinoGame = () => {
     }
     
     if (gameState.balance < gameState.bet) {
-      toast("Insufficient Balance", {
+      toast({
+        title: "Insufficient Balance",
         description: "Please deposit more to play",
+        className: "bg-red-600 text-white border-red-700",
+      });
+      return;
+    }
+    
+    if (!gameSettings.isActive) {
+      toast({
+        title: "Game Unavailable",
+        description: "This game is currently unavailable",
         className: "bg-red-600 text-white border-red-700",
       });
       return;
@@ -307,12 +321,14 @@ const SuperAceCasinoGame = () => {
       }));
       
       if (totalWin > 0) {
-        toast("You Won!", {
+        toast({
+          title: "You Won!",
           description: `You won ${totalWin}!`,
           className: "bg-red-600 text-white border-red-700"
         });
       } else if (newBetCount > 2) {
-        toast("No Win", {
+        toast({
+          title: "No Win",
           description: "Better luck next time!",
           className: "bg-red-600 text-white border-red-700"
         });
@@ -342,7 +358,10 @@ const SuperAceCasinoGame = () => {
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h1 className="text-3xl font-bold text-yellow-500">Super Ace</h1>
-          <button className="absolute right-2 top-2 p-2 text-yellow-500">
+          <button 
+            className="absolute right-2 top-2 p-2 text-yellow-500"
+            onClick={() => navigate('/game-odds')}
+          >
             <Settings className="h-6 w-6" />
           </button>
         </div>

@@ -4,7 +4,7 @@
  * Controls winning odds for casino games to ensure fair play and player satisfaction
  */
 
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Store user session data to track bets across sessions
@@ -42,6 +42,7 @@ async function getGameSettings() {
       const data = settingsDoc.data();
       gameSettingsCache = data;
       lastCacheTime = now;
+      console.log("Game settings loaded from Firebase:", data);
       return data;
     }
   } catch (error) {
@@ -84,6 +85,31 @@ async function getGameSettings() {
     }
   };
 }
+
+/**
+ * Save game settings to Firebase
+ * @param settings The game settings to save
+ * @returns Promise resolving to true if save was successful
+ */
+export const saveGameSettings = async (settings: any): Promise<boolean> => {
+  try {
+    const settingsRef = doc(db, "admin", "gameSettings");
+    await setDoc(settingsRef, settings);
+    
+    // Update cache
+    gameSettingsCache = settings;
+    lastCacheTime = Date.now();
+    
+    // Also update localStorage as backup
+    localStorage.setItem('gameOddsSettings', JSON.stringify(settings));
+    
+    console.log("Game settings saved to Firebase successfully");
+    return true;
+  } catch (error) {
+    console.error("Error saving game settings to Firebase:", error);
+    return false;
+  }
+};
 
 /**
  * Determines if a bet should win based on game type and predetermined win rates:
@@ -210,12 +236,76 @@ export const generateReferralCode = (userId: string): string => {
  */
 export const trackReferral = async (referrerId: string, referredId: string): Promise<boolean> => {
   try {
-    // In a real implementation, this would store the referral in the database
-    // which is handled by Firebase Firestore in the AuthContext
+    // Store the referral in Firebase
+    const referralRef = doc(db, "referrals", `${referrerId}_${referredId}`);
+    await setDoc(referralRef, {
+      referrer: referrerId,
+      referred: referredId,
+      timestamp: Date.now(),
+      bonusPaid: false
+    });
+    
     console.log(`User ${referrerId} referred user ${referredId}`);
     return true;
   } catch (error) {
     console.error("Error tracking referral:", error);
+    return false;
+  }
+};
+
+/**
+ * Process referral bonus for a user after they make a deposit
+ * 
+ * @param userId ID of the user who made a deposit
+ * @param depositAmount Amount deposited
+ * @returns Whether the bonus was processed successfully
+ */
+export const processReferralBonus = async (userId: string, depositAmount: number): Promise<boolean> => {
+  try {
+    // Get the user's referrer
+    const userRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists() || !userDoc.data().referredBy) {
+      return false; // No referrer found
+    }
+    
+    const referrerId = userDoc.data().referredBy;
+    
+    // Check if bonus was already paid
+    const referralRef = doc(db, "referrals", `${referrerId}_${userId}`);
+    const referralDoc = await getDoc(referralRef);
+    
+    if (referralDoc.exists() && referralDoc.data().bonusPaid) {
+      return false; // Bonus already paid
+    }
+    
+    // Update referral document to mark bonus as paid
+    await setDoc(referralRef, {
+      referrer: referrerId,
+      referred: userId,
+      timestamp: Date.now(),
+      bonusPaid: true,
+      bonusAmount: 119,
+      depositAmount: depositAmount
+    }, { merge: true });
+    
+    // Add bonus to referrer's balance
+    const referrerRef = doc(db, "users", referrerId);
+    const referrerDoc = await getDoc(referrerRef);
+    
+    if (referrerDoc.exists()) {
+      const currentBalance = referrerDoc.data().balance || 0;
+      await setDoc(referrerRef, {
+        balance: currentBalance + 119
+      }, { merge: true });
+      
+      console.log(`Added ৳119 referral bonus to user ${referrerId}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error processing referral bonus:", error);
     return false;
   }
 };
