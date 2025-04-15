@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -148,27 +147,9 @@ const GameOddsManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Check if user is admin
   useEffect(() => {
-    if (!user || !isAdmin(user)) {
-      toast({
-        title: "Access Denied",
-        description: "You need admin privileges to access this page",
-        variant: "destructive",
-      });
-      navigate('/');
-    } else {
-      loadSettings();
-    }
-  }, [user, navigate]);
-
-  const isAdmin = (user: any) => {
-    return user && (
-      user.email?.includes('admin') || 
-      user.username?.includes('admin') || 
-      user.role === 'admin'
-    );
-  };
+    loadSettings();
+  }, []);
 
   const loadSettings = async () => {
     setIsLoading(true);
@@ -179,7 +160,6 @@ const GameOddsManagement: React.FC = () => {
       if (settingsDoc.exists()) {
         setSettings(settingsDoc.data() as GlobalSettings);
       } else {
-        // If no document exists yet, use the defaults and save them
         await setDoc(settingsRef, defaultSettings);
       }
     } catch (error) {
@@ -210,7 +190,6 @@ const GameOddsManagement: React.FC = () => {
         description: "Game odds settings have been updated successfully",
       });
       
-      // Also save to localStorage as a backup
       localStorage.setItem('gameOddsSettings', JSON.stringify(updatedSettings));
       
     } catch (error) {
@@ -395,7 +374,6 @@ const GameOddsManagement: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Boxing King special settings */}
                   {selectedGame === "BoxingKing" && currentGame.specialRules && (
                     <div className="border rounded-md border-gray-700 p-4 bg-gray-900/50">
                       <h3 className="text-white font-medium mb-4">Special Rules for Boxing King</h3>

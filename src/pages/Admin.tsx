@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -182,7 +183,7 @@ const Admin = () => {
           </TabsContent>
         </Tabs>
         
-        <Link to="/admin/game-odds" className="block">
+        <Link to="/admin/game-odds" className="block mt-4">
           <Card className="hover:bg-gray-800 transition-colors">
             <CardHeader>
               <CardTitle className="flex items-center">

@@ -36,11 +36,13 @@ import PlinkoGame from "./pages/PlinkoGame";
 import FruityBonanzaGame from "./pages/FruityBonanzaGame";
 import Register from "./pages/Register";
 import GameOddsManagement from './pages/GameOddsManagement';
+import Admin from './pages/Admin';
 
 const queryClient = new QueryClient();
 
 const routes = [
   <Route path="/" element={<Index />} />,
+  <Route path="/admin" element={<Admin />} />,
   <Route path="/admin/images" element={<ImagesChanger />} />,
   <Route path="/game/spin" element={<SpinGame />} />,
   <Route path="/admin/spin-control" element={<SpinControl />} />,
