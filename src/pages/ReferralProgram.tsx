@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,44 +95,26 @@ const ReferralProgram = () => {
       const success = await processReferralBonus(dummyUserId, 1000);
       
       if (success) {
-        toast({
-          title: "Referral Test Success",
-          description: "Referral bonus of ৳119 has been added to your balance!",
-        });
+        toast.success("Referral bonus of ৳119 has been added to your balance!");
         
         // Force refresh user data
         setTimeout(() => {
           window.location.reload();
         }, 2000);
       } else {
-        toast({
-          title: "Referral Test Failed",
-          description: "Could not process the referral bonus",
-          variant: "destructive"
-        });
+        toast.error("Could not process the referral bonus");
       }
     } catch (error) {
       console.error("Error testing referral:", error);
-      toast({
-        title: "Error",
-        description: "Could not test the referral system",
-        variant: "destructive"
-      });
+      toast.error("Could not test the referral system");
     }
   };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink).then(() => {
-      toast({
-        title: "Link Copied!",
-        description: "Your referral link has been copied to clipboard.",
-      });
+      toast.success("Your referral link has been copied to clipboard.");
     }).catch(err => {
-      toast({
-        title: "Copy Failed",
-        description: "Could not copy the referral link",
-        variant: "destructive"
-      });
+      toast.error("Could not copy the referral link");
     });
   };
 
@@ -147,10 +128,7 @@ const ReferralProgram = () => {
         console.error('Error: ', err);
       });
     } else {
-      toast({
-        title: "Share Not Supported",
-        description: "Your browser doesn't support the Web Share API. Please copy the link manually.",
-      });
+      toast.error("Your browser doesn't support the Web Share API. Please copy the link manually.");
     }
   };
 

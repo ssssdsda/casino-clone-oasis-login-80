@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Settings, ArrowLeft, Volume2, VolumeX, RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -78,16 +78,14 @@ const BoxingKingGame = () => {
     if (spinning) return;
     
     if (!user) {
-      toast("Login Required", {
-        description: "Please login to play",
+      toast.error("Please login to play", {
         style: { backgroundColor: "rgb(220, 38, 38)", color: "white", border: "1px solid rgb(185, 28, 28)" }
       });
       return;
     }
     
     if (user.balance < bet) {
-      toast("Insufficient Balance", {
-        description: "Please deposit more funds to play",
+      toast.error("Please deposit more funds to play", {
         style: { backgroundColor: "rgb(220, 38, 38)", color: "white", border: "1px solid rgb(185, 28, 28)" }
       });
       return;
@@ -138,8 +136,7 @@ const BoxingKingGame = () => {
                 winSound.current.play().catch(err => console.error("Error playing sound:", err));
               }
               
-              toast("You Won!", {
-                description: `You won ${winResult.winAmount.toFixed(2)}!`,
+              toast.success(`You won ${winResult.winAmount.toFixed(2)}!`, {
                 style: { backgroundColor: "rgb(22, 163, 74)", color: "white", border: "1px solid rgb(21, 128, 61)" }
               });
             } else {

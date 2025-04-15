@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -63,21 +62,14 @@ export function RegisterButton(props: any) {
     e.preventDefault();
     
     if (!email || !password || !username) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
+      toast.error("Please fill in all fields");
       return;
     }
     
     try {
       await register(email, password, username, referralCode);
       setOpen(false);
-      toast({
-        title: "Registration Successful!",
-        description: "You've received signup bonus!",
-        variant: "default",
+      toast.success("Registration Successful! You've received signup bonus!", {
         className: "bg-green-600 text-white font-bold"
       });
       
@@ -92,11 +84,7 @@ export function RegisterButton(props: any) {
     e.preventDefault();
     
     if (!phoneNumber || !phonePassword || !phoneUsername) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
+      toast.error("Please fill in all fields");
       return;
     }
     
@@ -108,10 +96,7 @@ export function RegisterButton(props: any) {
       await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
       setOpen(false);
       
-      toast({
-        title: "Registration Successful!",
-        description: `Welcome! You've received signup bonus!`,
-        variant: "default",
+      toast.success(`Welcome! You've received signup bonus!`, {
         className: "bg-green-600 text-white font-bold"
       });
       
