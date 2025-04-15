@@ -21,7 +21,7 @@ export function WelcomePopup() {
     title: 'Welcome',
     description: "We're thrilled to have you join our casino community!",
     imageUrl: 'https://images.unsplash.com/photo-1542297566-39ea5e9dafa5?auto=format&fit=crop&w=500&h=300',
-    messageText: 'Enjoy our selection of exciting games and try your luck!',
+    messageText: 'Deposit now and get 100% bonus. Low turnover requirements and you can withdraw amounts as low as ৳200!',
     buttonText: 'Start Playing',
   });
   
@@ -34,7 +34,10 @@ export function WelcomePopup() {
         const settingsSnap = await getDoc(settingsRef);
         
         if (settingsSnap.exists()) {
-          setPopupSettings(settingsSnap.data() as any);
+          const data = settingsSnap.data() as any;
+          // Override messageText with our required message
+          data.messageText = 'Deposit now and get 100% bonus. Low turnover requirements and you can withdraw amounts as low as ৳200!';
+          setPopupSettings(data);
         }
       } catch (error) {
         console.error("Error loading popup settings:", error);
