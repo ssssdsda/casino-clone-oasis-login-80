@@ -1,679 +1,456 @@
+
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Volume2, VolumeX, RefreshCw, Settings, Info } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
-import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/components/ui/sonner';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Settings } from 'lucide-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-const cardSuits = ["hearts", "diamonds", "clubs", "spades"];
-const cardRanks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+// Types
+type CardSuit = 'hearts' | 'diamonds' | 'clubs' | 'spades' | 'scatter';
+type CardValue = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | '';
 
-const createDeck = () => {
-  const deck = [];
-  for (let suit of cardSuits) {
-    for (let rank of cardRanks) {
-      deck.push({ suit, rank });
+interface CardType {
+  suit: CardSuit;
+  value: CardValue;
+  isGolden?: boolean;
+}
+
+interface GameSettings {
+  winRate: number;
+  minBet: number;
+  maxBet: number;
+  maxWin: number;
+  isActive: boolean;
+}
+
+// Utils
+const SUITS: CardSuit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
+const VALUES: CardValue[] = ['A', 'K', 'Q', 'J', '10', '9'];
+const SCATTER_PROBABILITY = 0.05;
+const GOLDEN_CARD_PROBABILITY = 0.15;
+const MULTIPLIERS = [1, 2, 3, 5];
+
+const generateRandomCard = (): CardType => {
+  if (Math.random() < SCATTER_PROBABILITY) {
+    return {
+      suit: 'scatter',
+      value: '',
+      isGolden: false
+    };
+  }
+  
+  const suit = SUITS[Math.floor(Math.random() * SUITS.length)];
+  const value = VALUES[Math.floor(Math.random() * VALUES.length)];
+  const isGolden = Math.random() < GOLDEN_CARD_PROBABILITY;
+  
+  return { suit, value, isGolden };
+};
+
+const generateCardGrid = (): CardType[][] => {
+  const grid: CardType[][] = [];
+  for (let i = 0; i < 4; i++) {
+    const row: CardType[] = [];
+    for (let j = 0; j < 4; j++) {
+      row.push(generateRandomCard());
     }
+    grid.push(row);
   }
-  return deck;
+  return grid;
 };
 
-const shuffle = (deck) => {
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-};
-
-const calculateHandValue = (hand) => {
-  let hasAce = false;
-  let value = 0;
-  
-  for (let card of hand) {
-    let cardValue = parseInt(card.rank);
-    if (card.rank === "J" || card.rank === "Q" || card.rank === "K") {
-      cardValue = 10;
-    } else if (card.rank === "A") {
-      hasAce = true;
-      cardValue = 11;
+// Components
+const PlayingCard = ({ 
+  suit, 
+  value,
+  isGolden = false,
+  isSpinning = false,
+  isHighlighted = false
+}: {
+  suit: CardSuit;
+  value: CardValue;
+  isGolden?: boolean;
+  isSpinning?: boolean;
+  isHighlighted?: boolean;
+}) => {
+  const getSuitSymbol = (suit: CardSuit) => {
+    switch (suit) {
+      case 'hearts': return '♥';
+      case 'diamonds': return '♦';
+      case 'clubs': return '♣';
+      case 'spades': return '♠';
+      case 'scatter': return '★';
+      default: return '';
     }
-    value += cardValue;
-  }
-  
-  if (hasAce && value > 21) {
-    value -= 10;
-  }
-  
-  return value;
+  };
+
+  const getSuitColor = (suit: CardSuit) => {
+    switch (suit) {
+      case 'hearts':
+      case 'diamonds':
+        return 'text-red-600';
+      case 'scatter':
+        return 'text-yellow-500';
+      default:
+        return 'text-gray-900';
+    }
+  };
+
+  const isScatter = suit === 'scatter';
+
+  return (
+    <div className={`
+      relative rounded-md overflow-hidden w-full pb-[125%] shadow-md transition-all duration-300
+      ${isHighlighted ? 'ring-2 ring-yellow-400 animate-pulse' : ''}
+      ${isGolden ? 'bg-gradient-to-b from-yellow-300 to-yellow-600' : 'bg-white'}
+      ${isSpinning ? 'animate-spin' : ''}
+    `}>
+      <div className={`
+        absolute inset-0 flex flex-col items-center p-1
+        ${isGolden ? 'bg-yellow-100/90' : 'bg-white'}
+      `}>
+        <div className="absolute top-1 left-1 flex flex-col items-center">
+          <span className={`text-sm font-bold ${getSuitColor(suit)}`}>
+            {value}
+          </span>
+          <span className={`text-lg ${getSuitColor(suit)}`}>
+            {getSuitSymbol(suit)}
+          </span>
+        </div>
+
+        <div className="flex-grow flex items-center justify-center">
+          <span className={`
+            text-4xl transform
+            ${getSuitColor(suit)}
+            ${isScatter ? 'animate-pulse' : ''}
+          `}>
+            {getSuitSymbol(suit)}
+          </span>
+        </div>
+
+        <div className="absolute bottom-1 right-1 flex flex-col items-center rotate-180">
+          <span className={`text-sm font-bold ${getSuitColor(suit)}`}>
+            {value}
+          </span>
+          <span className={`text-lg ${getSuitColor(suit)}`}>
+            {getSuitSymbol(suit)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 };
 
+const CardGrid = ({ 
+  cards, 
+  isSpinning,
+  winningLines = []
+}: {
+  cards: CardType[][];
+  isSpinning: boolean;
+  winningLines?: number[][];
+}) => {
+  return (
+    <div className="grid grid-cols-4 gap-1 p-2 relative">
+      {cards.map((row, rowIndex) => (
+        row.map((card, colIndex) => (
+          <div key={`${rowIndex}-${colIndex}`} className="relative">
+            <PlayingCard 
+              suit={card.suit} 
+              value={card.value} 
+              isGolden={card.isGolden} 
+              isSpinning={isSpinning} 
+              isHighlighted={winningLines.some(line => 
+                line.some(pos => pos === rowIndex * 4 + colIndex)
+              )}
+            />
+          </div>
+        ))
+      ))}
+    </div>
+  );
+};
+
+// Main Game Component
 const SuperAceCasinoGame = () => {
   const navigate = useNavigate();
   const { user, updateUserBalance } = useAuth();
   
-  const [loading, setLoading] = useState(true);
-  const [deck, setDeck] = useState([]);
-  const [playerHand, setPlayerHand] = useState([]);
-  const [dealerHand, setDealerHand] = useState([]);
-  const [bet, setBet] = useState(10);
-  const [minBet, setMinBet] = useState(10);
-  const [maxBet, setMaxBet] = useState(500);
-  const [gamePhase, setGamePhase] = useState(null); // 'player', 'dealer', null
-  const [gameResult, setGameResult] = useState(null); // { outcome: 'win' | 'lose' | 'push', message: string }
-  const [dealingCards, setDealingCards] = useState(false);
-  const [currentAnimation, setCurrentAnimation] = useState(null); // 'deal', 'hit', null
-  const [showSettings, setShowSettings] = useState(false);
-  const [showRules, setShowRules] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [insurance, setInsurance] = useState(false);
-  const [showInsurance, setShowInsurance] = useState(false);
+  const [gameState, setGameState] = useState({
+    balance: 0,
+    bet: 2,
+    multiplier: 1,
+    cards: generateCardGrid(),
+    isSpinning: false,
+    isTurboMode: false,
+    winningLines: [] as number[][],
+    lastWin: 0,
+    betCount: 0
+  });
+
+  const [gameSettings, setGameSettings] = useState<GameSettings>({
+    winRate: 25,
+    minBet: 1,
+    maxBet: 100,
+    maxWin: 1000,
+    isActive: true
+  });
   
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000);
+    if (user) {
+      setGameState(prev => ({ ...prev, balance: user.balance }));
+    }
     
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
-  
-  useEffect(() => {
+    // Load game settings from Firebase
     const loadGameSettings = async () => {
       try {
-        const localSettings = localStorage.getItem('gameOddsSettings');
-        let settings;
+        const settingsRef = doc(db, "admin", "gameSettings");
+        const settingsDoc = await getDoc(settingsRef);
         
-        if (localSettings) {
-          settings = JSON.parse(localSettings);
-        }
-        
-        if (settings && settings.games && settings.games.SuperAce) {
-          const superAceSettings = settings.games.SuperAce;
-          setMinBet(superAceSettings.minBet || 10);
-          setMaxBet(superAceSettings.maxBet || 500);
-          setBet(superAceSettings.minBet || 10);
-          console.log("SuperAce game settings loaded:", superAceSettings);
+        if (settingsDoc.exists()) {
+          const data = settingsDoc.data();
+          if (data.games && data.games.SuperAce) {
+            const superAceSettings = data.games.SuperAce;
+            setGameSettings(superAceSettings);
+            
+            // Set initial bet to minBet if current bet is lower
+            setGameState(prev => ({
+              ...prev,
+              bet: prev.bet < superAceSettings.minBet ? superAceSettings.minBet : prev.bet
+            }));
+          }
+        } else {
+          console.log("No game settings found, using defaults");
         }
       } catch (error) {
         console.error("Error loading game settings:", error);
-        setMinBet(10);
-        setMaxBet(500);
-        setBet(10);
       }
     };
     
     loadGameSettings();
-  }, []);
+  }, [user?.balance]);
   
-  const changeBet = (newBet) => {
-    if (dealingCards || newBet < minBet || newBet > maxBet) return;
-    setBet(newBet);
-  };
-  
-  const handleDeal = async () => {
-    if (dealingCards) return;
+  const handleSpin = async () => {
+    if (gameState.isSpinning || !user) {
+      if (!user) {
+        toast("Login Required", {
+          description: "Please login to play",
+          className: "bg-red-600 text-white border-red-700",
+        });
+      }
+      return;
+    }
     
-    if (!user) {
-      toast.error("Please login to play", {
-        style: { backgroundColor: "rgb(220, 38, 38)", color: "white", border: "1px solid rgb(185, 28, 28)" }
+    if (gameState.balance < gameState.bet) {
+      toast("Insufficient Balance", {
+        description: "Please deposit more to play",
+        className: "bg-red-600 text-white border-red-700",
       });
       return;
     }
     
-    if (user.balance < bet) {
-      toast.error("Insufficient balance", {
-        style: { backgroundColor: "rgb(220, 38, 38)", color: "white", border: "1px solid rgb(185, 28, 28)" }
-      });
-      return;
-    }
+    const newBalance = gameState.balance - gameState.bet;
     
-    updateUserBalance(user.balance - bet);
+    updateUserBalance(newBalance);
     
-    setDealingCards(true);
-    setPlayerHand([]);
-    setDealerHand([]);
-    setGameResult(null);
-    setCurrentAnimation('deal');
+    const newBetCount = gameState.betCount + 1;
     
-    const newDeck = createDeck();
-    shuffle(newDeck);
+    setGameState(prev => ({
+      ...prev,
+      balance: newBalance,
+      isSpinning: true,
+      winningLines: [],
+      lastWin: 0,
+      betCount: newBetCount
+    }));
     
-    const initialPlayerCard = newDeck.pop();
-    setPlayerHand([initialPlayerCard]);
+    const spinDuration = gameState.isTurboMode ? 500 : 1500;
     
-    setTimeout(() => {
-      const initialDealerCard = newDeck.pop();
-      setDealerHand([initialDealerCard]);
+    setTimeout(async () => {
+      const newCards = generateCardGrid();
       
-      setTimeout(() => {
-        const secondPlayerCard = newDeck.pop();
-        setPlayerHand(prev => [...prev, secondPlayerCard]);
+      const shouldWin = await shouldBetWin(user?.id || 'anonymous', 'SuperAce', gameState.bet);
+      
+      let totalWin = 0;
+      if (shouldWin) {
+        // Use the multiplier from the selected option
+        const multiplier = MULTIPLIERS[gameState.multiplier];
+        totalWin = await calculateWinAmount(gameState.bet, multiplier, 'SuperAce');
         
-        setTimeout(() => {
-          const secondDealerCard = newDeck.pop();
-          setDealerHand(prev => [...prev, secondDealerCard]);
-          
-          setTimeout(async () => {
-            const playerValue = calculateHandValue([initialPlayerCard, secondPlayerCard]);
-            const dealerValue = calculateHandValue([initialDealerCard, secondDealerCard]);
-            
-            if (playerValue === 21 && dealerValue === 21) {
-              setGameResult({ outcome: 'push', message: 'Push! Both have Blackjack.' });
-              updateUserBalance(user.balance);
-              setDealingCards(false);
-              setCurrentAnimation(null);
-              return;
-            } else if (playerValue === 21) {
-              const winAmount = Math.floor(bet * 2.5);
-              setGameResult({ outcome: 'win', message: 'Blackjack! You win!', amount: winAmount });
-              updateUserBalance(user.balance - bet + winAmount);
-              
-              toast.success(`Blackjack! You won ${winAmount.toFixed(2)}!`, {
-                style: { backgroundColor: "rgb(22, 163, 74)", color: "white", border: "1px solid rgb(21, 128, 61)" }
-              });
-              
-              setDealingCards(false);
-              setCurrentAnimation(null);
-              return;
-            } else if (dealerValue === 21) {
-              setGameResult({ outcome: 'lose', message: 'Dealer has Blackjack! You lose.' });
-              setDealingCards(false);
-              setCurrentAnimation(null);
-              return;
-            }
-            
-            setGamePhase('player');
-            setDealingCards(false);
-            setCurrentAnimation(null);
-          }, 500);
-        }, 500);
-      }, 500);
-    }, 500);
-    
-    setDeck(newDeck);
-  };
-  
-  const handleHit = () => {
-    if (gamePhase !== 'player' || dealingCards) return;
-    
-    setDealingCards(true);
-    setCurrentAnimation('hit');
-    
-    setTimeout(() => {
-      const newCard = deck.pop();
-      setPlayerHand(prev => [...prev, newCard]);
-      
-      const newValue = calculateHandValue([...playerHand, newCard]);
-      
-      if (newValue > 21) {
-        setGameResult({ outcome: 'lose', message: 'Bust! You lose.' });
-        setGamePhase('dealer');
+        // Cap the win at the maximum win setting
+        totalWin = Math.min(totalWin, gameSettings.maxWin);
       }
       
-      setDealingCards(false);
-      setCurrentAnimation(null);
-    }, 500);
-  };
-  
-  const handleStand = () => {
-    if (gamePhase !== 'player' || dealingCards) return;
-    
-    setGamePhase('dealer');
-    setDealingCards(true);
-    setCurrentAnimation('deal');
-    
-    const dealerPlay = async () => {
-      let dealerValue = calculateHandValue(dealerHand);
-      let newDealerHand = [...dealerHand];
+      const finalBalance = newBalance + totalWin;
       
-      while (dealerValue < 17) {
-        const newCard = deck.pop();
-        newDealerHand.push(newCard);
-        dealerValue = calculateHandValue(newDealerHand);
-        setDealerHand(newDealerHand);
-        await new Promise(resolve => setTimeout(resolve, 500));
+      if (totalWin > 0) {
+        updateUserBalance(finalBalance);
       }
       
-      setDealingCards(false);
-      setCurrentAnimation(null);
+      const fakeWinningLines = shouldWin ? [
+        [0, 1, 2, 3],
+        [4, 5, 6, 7]
+      ] : [];
       
-      const playerValue = calculateHandValue(playerHand);
+      setGameState(prev => ({
+        ...prev,
+        cards: newCards,
+        isSpinning: false,
+        lastWin: totalWin,
+        balance: finalBalance,
+        winningLines: fakeWinningLines
+      }));
       
-      if (dealerValue > 21) {
-        const winAmount = bet * 2;
-        setGameResult({ outcome: 'win', message: 'Dealer Busts! You win!', amount: winAmount });
-        updateUserBalance(user.balance - bet + winAmount);
-      } else if (dealerValue > playerValue) {
-        setGameResult({ outcome: 'lose', message: 'Dealer wins!' });
-      } else if (dealerValue < playerValue) {
-        const winAmount = bet * 2;
-        setGameResult({ outcome: 'win', message: 'You win!', amount: winAmount });
-        updateUserBalance(user.balance - bet + winAmount);
-      } else {
-        setGameResult({ outcome: 'push', message: 'Push!' });
-        updateUserBalance(user.balance);
+      if (totalWin > 0) {
+        toast("You Won!", {
+          description: `You won ${totalWin}!`,
+          className: "bg-red-600 text-white border-red-700"
+        });
+      } else if (newBetCount > 2) {
+        toast("No Win", {
+          description: "Better luck next time!",
+          className: "bg-red-600 text-white border-red-700"
+        });
       }
-    };
-    
-    dealerPlay();
+    }, spinDuration);
   };
-  
-  const handleDoubleDown = () => {
-    if (gamePhase !== 'player' || dealingCards) return;
-    
-    if (user.balance < bet) {
-      toast.error("Insufficient balance to double down", {
-        style: { backgroundColor: "rgb(220, 38, 38)", color: "white", border: "1px solid rgb(185, 28, 28)" }
-      });
-      return;
+
+  // Enforce min and max bet limits from game settings
+  const adjustBet = (newBet: number) => {
+    if (newBet < gameSettings.minBet) {
+      return gameSettings.minBet;
+    } else if (newBet > gameSettings.maxBet) {
+      return gameSettings.maxBet;
     }
-    
-    updateUserBalance(user.balance - bet);
-    setBet(bet * 2);
-    setDealingCards(true);
-    setCurrentAnimation('hit');
-    
-    setTimeout(() => {
-      const newCard = deck.pop();
-      setPlayerHand(prev => [...prev, newCard]);
-      
-      const newValue = calculateHandValue([...playerHand, newCard]);
-      
-      if (newValue > 21) {
-        setGameResult({ outcome: 'lose', message: 'Bust! You lose.' });
-        setGamePhase('dealer');
-      } else {
-        setGamePhase('dealer');
-        
-        const dealerPlay = async () => {
-          let dealerValue = calculateHandValue(dealerHand);
-          let newDealerHand = [...dealerHand];
-          
-          while (dealerValue < 17) {
-            const newCard = deck.pop();
-            newDealerHand.push(newCard);
-            dealerValue = calculateHandValue(newDealerHand);
-            setDealerHand(newDealerHand);
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-          
-          setDealingCards(false);
-          setCurrentAnimation(null);
-          
-          const playerValue = calculateHandValue(playerHand);
-          
-          if (dealerValue > 21) {
-            const winAmount = bet * 2;
-            setGameResult({ outcome: 'win', message: 'Dealer Busts! You win!', amount: winAmount });
-            updateUserBalance(user.balance - bet + winAmount);
-          } else if (dealerValue > playerValue) {
-            setGameResult({ outcome: 'lose', message: 'Dealer wins!' });
-          } else if (dealerValue < playerValue) {
-            const winAmount = bet * 2;
-            setGameResult({ outcome: 'win', message: 'You win!', amount: winAmount });
-            updateUserBalance(user.balance - bet + winAmount);
-          } else {
-            setGameResult({ outcome: 'push', message: 'Push!' });
-            updateUserBalance(user.balance);
-          }
-        };
-        
-        dealerPlay();
-      }
-      
-      setDealingCards(false);
-      setCurrentAnimation(null);
-    }, 500);
+    return newBet;
   };
-  
-  const handleInsurance = () => {
-    if (user.balance < bet / 2) {
-      toast.error("Insufficient balance for insurance", {
-        style: { backgroundColor: "rgb(220, 38, 38)", color: "white", border: "1px solid rgb(185, 28, 28)" }
-      });
-      return;
-    }
-    
-    const insuranceBet = bet / 2;
-    updateUserBalance(user.balance - insuranceBet);
-    setInsurance(true);
-    
-    const dealerHasBlackjack = calculateHandValue(dealerHand) === 21;
-    
-    if (dealerHasBlackjack) {
-      const insuranceWin = insuranceBet * 2;
-      updateUserBalance(user.balance - insuranceBet + insuranceWin);
-      
-      toast.success(`Insurance bet won! Received ${insuranceWin.toFixed(2)}`, {
-        style: { backgroundColor: "rgb(22, 163, 74)", color: "white", border: "1px solid rgb(21, 128, 61)" }
-      });
-      
-      setGameResult({ outcome: 'lose', message: 'Dealer has Blackjack! Insurance paid.' });
-      setDealingCards(false);
-      setCurrentAnimation(null);
-    } else {
-      toast.error("Dealer doesn't have Blackjack. Insurance lost.", {
-        style: { backgroundColor: "rgb(220, 38, 38)", color: "white", border: "1px solid rgb(185, 28, 28)" }
-      });
-      setShowInsurance(false);
-    }
-  };
-  
-  const getCardImage = (card) => {
-    return `/cards/${card.rank}_of_${card.suit}.png`;
-  };
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-green-900 to-black flex flex-col items-center justify-center p-4">
-        <motion.h1 
-          className="text-4xl font-bold text-green-500 mb-6"
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          Super Ace
-        </motion.h1>
-        <motion.div 
-          className="w-32 h-32 border-8 border-green-500 border-t-transparent rounded-full"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        />
-        <p className="text-green-400 mt-6">Loading game...</p>
-      </div>
-    );
-  }
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-900 to-black flex flex-col">
-      <div className="bg-black bg-opacity-50 p-4 flex justify-between items-center">
-        <button 
-          className="text-green-500"
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft className="h-6 w-6" />
-        </button>
-        <h1 className="text-xl md:text-3xl font-bold text-green-500">Super Ace</h1>
-        <div className="flex gap-3">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-black">
+      <Header />
+      <div className="max-w-md mx-auto w-full flex flex-col flex-grow bg-gray-900">
+        <div className="py-2 text-center relative">
           <button 
-            className="text-green-500"
-            onClick={() => setMuted(!muted)}
+            onClick={() => navigate('/')} 
+            className="absolute left-2 top-2 p-2 text-yellow-500"
           >
-            {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+            <ArrowLeft className="h-6 w-6" />
           </button>
-          <button 
-            className="text-green-500"
-            onClick={() => setShowRules(true)}
-          >
-            <Info className="h-6 w-6" />
+          <h1 className="text-3xl font-bold text-yellow-500">Super Ace</h1>
+          <button className="absolute right-2 top-2 p-2 text-yellow-500">
+            <Settings className="h-6 w-6" />
           </button>
         </div>
-      </div>
-      
-      <div className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute top-0 right-0 w-32 h-32 blur-xl bg-red-500 opacity-20 rounded-full" />
-          <div className="absolute bottom-0 left-0 w-40 h-40 blur-xl bg-blue-500 opacity-20 rounded-full" />
-        </div>
         
-        <div className="relative w-full max-w-3xl aspect-[16/10] bg-green-900 rounded-lg overflow-hidden border-4 border-green-700 shadow-2xl z-10">
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-700 to-slate-900 z-0">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500" />
-            <div className="absolute top-0 bottom-0 left-0 w-1 bg-red-500" />
-            <div className="absolute top-0 bottom-0 right-0 w-1 bg-blue-500" />
-            
-            <div className="absolute top-2 left-2 w-4 h-4 rounded-full bg-gradient-to-br from-gray-300 to-gray-600" />
-            <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-gradient-to-bl from-gray-300 to-gray-600" />
-            <div className="absolute bottom-2 left-2 w-4 h-4 rounded-full bg-gradient-to-tr from-gray-300 to-gray-600" />
-            <div className="absolute bottom-2 right-2 w-4 h-4 rounded-full bg-gradient-to-tl from-gray-300 to-gray-600" />
-          </div>
-          
-          <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-20">
-            <div className="text-2xl font-bold text-green-500 drop-shadow-md">
-              Super <span className="text-green-400">ACE</span>
-            </div>
-          </div>
-          
-          <div className="absolute inset-4 top-12 bg-green-950 rounded overflow-hidden flex flex-col justify-center">
-            <div className="flex justify-center mb-2">
-              <div className="text-yellow-400 font-bold text-lg">Dealer</div>
-            </div>
-            <div className="flex justify-center gap-4">
-              {dealerHand.map((card, index) => (
-                <motion.div
-                  key={`dealer-card-${index}`}
-                  className="relative w-24 h-36 rounded-md overflow-hidden"
-                  initial={{ opacity: 0, y: -50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.2 }}
-                >
-                  <img
-                    src={getCardImage(card)}
-                    alt={`${card.rank} of ${card.suit}`}
-                    className="w-full h-full object-cover"
-                  />
-                </motion.div>
-              ))}
-            </div>
-            
-            <div className="flex justify-center mt-4">
-              <div className="text-yellow-400 font-bold text-lg">Player</div>
-            </div>
-            <div className="flex justify-center gap-4">
-              {playerHand.map((card, index) => (
-                <motion.div
-                  key={`player-card-${index}`}
-                  className="relative w-24 h-36 rounded-md overflow-hidden"
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.2 }}
-                >
-                  <img
-                    src={getCardImage(card)}
-                    alt={`${card.rank} of ${card.suit}`}
-                    className="w-full h-full object-cover"
-                  />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-            <AnimatePresence>
-              {gameResult && (
-                <motion.div 
-                  className="bg-black bg-opacity-70 px-6 py-2 rounded-full text-yellow-400 font-bold"
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                >
-                  {gameResult.message} {gameResult.amount ? `Win: ${gameResult.amount.toFixed(2)}` : ''}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-        
-        <div className="w-full max-w-3xl mt-4 bg-black bg-opacity-50 p-4 rounded-xl z-10 flex justify-between items-center">
-          <div>
-            <div className="text-xs text-gray-400">BALANCE</div>
-            <div className="text-green-400 font-bold">{user?.balance?.toFixed(2) || '0.00'}</div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col items-center">
-              <div className="text-xs text-gray-400">BET</div>
-              <div className="flex items-center bg-green-950 rounded">
-                <button 
-                  className="px-3 py-1 text-green-500 hover:bg-green-900 rounded-l"
-                  onClick={() => changeBet(Math.max(minBet, bet - 5))}
-                  disabled={dealingCards || bet <= minBet}
-                >-</button>
-                <span className="px-3 py-1 text-green-400 font-bold">{bet}</span>
-                <button 
-                  className="px-3 py-1 text-green-500 hover:bg-green-900 rounded-r"
-                  onClick={() => changeBet(Math.min(maxBet, bet + 5))}
-                  disabled={dealingCards || bet >= maxBet}
-                >+</button>
-              </div>
-            </div>
-            
-            {!gamePhase && (
-              <Button
-                onClick={handleDeal}
-                disabled={dealingCards || !user || (user && user.balance < bet)}
-                className="bg-green-500 hover:bg-green-400 text-black font-bold rounded-full h-14 w-14 p-0 ml-4"
-              >
-                {dealingCards ? (
-                  <RefreshCw className="h-6 w-6 animate-spin" />
-                ) : (
-                  <div>Deal</div>
-                )}
-              </Button>
-            )}
-            
-            {gamePhase === 'player' && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleHit}
-                  disabled={dealingCards}
-                  className="bg-blue-500 hover:bg-blue-400 text-black font-bold rounded-full h-12 w-12 p-0"
-                >
-                  Hit
-                </Button>
-                <Button
-                  onClick={handleStand}
-                  disabled={dealingCards}
-                  className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-full h-12 w-12 p-0"
-                >
-                  Stand
-                </Button>
-                <Button
-                  onClick={handleDoubleDown}
-                  disabled={dealingCards || user.balance < bet}
-                  className="bg-purple-500 hover:bg-purple-400 text-black font-bold rounded-full h-12 w-12 p-0"
-                >
-                  Double
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          <div>
-            <div className="text-xs text-gray-400">POTENTIAL WIN</div>
-            <div className="text-green-400 font-bold">{(bet * 2).toFixed(2)}</div>
-          </div>
-        </div>
-      </div>
-      
-      <Dialog open={showRules} onOpenChange={setShowRules}>
-        <DialogContent className="max-w-md bg-green-950 text-white border border-green-700">
-          <DialogHeader>
-            <DialogTitle className="text-yellow-400 text-xl">Super Ace Rules</DialogTitle>
-            <DialogDescription className="text-gray-300">
-              Learn how to play and win at Super Ace!
-            </DialogDescription>
-          </DialogHeader>
-          
-          <ScrollArea className="h-[60vh] pr-4">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-yellow-400 text-lg font-bold">How to Play</h3>
-                <p className="text-gray-300 mt-1">
-                  1. Set your bet amount using the + and - buttons<br/>
-                  2. Click the deal button to start the game<br/>
-                  3. Choose to hit or stand to get the best hand<br/>
-                  4. Beat the dealer without busting to win!
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-yellow-400 text-lg font-bold">Objective</h3>
-                <p className="text-gray-300 mt-1">
-                  The goal of Super Ace is to have a hand value closer to 21 than the dealer, without exceeding 21.
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-yellow-400 text-lg font-bold">Card Values</h3>
-                <p className="text-gray-300 mt-1">
-                  • Ace: 1 or 11 (depending on which value benefits the hand)<br/>
-                  • 2-10: Face value<br/>
-                  • Jack, Queen, King: 10
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-yellow-400 text-lg font-bold">Game Actions</h3>
-                <div className="mt-2 space-y-2">
-                  <div>
-                    <p className="font-bold text-yellow-300">Deal</p>
-                    <p className="text-sm text-gray-300">Starts a new game by dealing two cards to both the player and the dealer.</p>
-                  </div>
-                  
-                  <div>
-                    <p className="font-bold text-yellow-300">Hit</p>
-                    <p className="text-sm text-gray-300">Adds another card to your hand. Be careful not to exceed 21!</p>
-                  </div>
-                  
-                  <div>
-                    <p className="font-bold text-yellow-300">Stand</p>
-                    <p className="text-sm text-gray-300">Ends your turn, and the dealer will play their hand.</p>
-                  </div>
-                  
-                  <div>
-                    <p className="font-bold text-yellow-300">Double Down</p>
-                    <p className="text-sm text-gray-300">Doubles your bet and receives one more card. You must stand after doubling down.</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-yellow-400 text-lg font-bold">Payouts</h3>
-                <p className="text-gray-300 mt-1">
-                  • Winning Hand: 2x your bet<br/>
-                  • Blackjack (natural 21): 2.5x your bet
-                </p>
-              </div>
-            </div>
-          </ScrollArea>
-          
-          <div className="flex justify-center mt-4">
-            <Button 
-              onClick={() => setShowRules(false)}
-              className="bg-yellow-500 text-black hover:bg-yellow-400"
+        <div className="flex justify-center space-x-1 py-2">
+          {MULTIPLIERS.map((multiplier, index) => (
+            <button
+              key={index}
+              onClick={() => setGameState(prev => ({ ...prev, multiplier: index }))}
+              className={`
+                px-3 py-1 rounded-full font-bold text-lg transition-all
+                ${gameState.multiplier === index 
+                  ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 text-white shadow-lg transform scale-110' 
+                  : 'bg-gradient-to-b from-gray-300 to-gray-500 text-gray-800 hover:from-yellow-300 hover:to-yellow-500'}
+              `}
             >
-              Got it!
+              ×{MULTIPLIERS[index]}
+            </button>
+          ))}
+        </div>
+        
+        <div className="flex-grow overflow-hidden relative rounded-lg mx-2 mb-2 bg-gradient-to-b from-blue-900 to-blue-700">
+          <CardGrid 
+            cards={gameState.cards} 
+            isSpinning={gameState.isSpinning}
+            winningLines={gameState.winningLines}
+          />
+        </div>
+
+        <div className="px-3 py-1 mb-2 bg-gray-800 rounded-md mx-2">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 text-sm">Min Bet: {gameSettings.minBet}</span>
+            <span className="text-gray-400 text-sm">Max Bet: {gameSettings.maxBet}</span>
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-b from-gray-800 to-black rounded-t-xl pb-4">
+          <div className="flex justify-between items-center px-4 py-2">
+            <div className="text-white text-lg">
+              Win <span className="ml-2 text-yellow-500 font-bold">{gameState.lastWin}</span>
+            </div>
+            <div className="text-white text-lg">
+              Balance <span className="ml-2 text-yellow-500 font-bold">{gameState.balance}</span>
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center px-4">
+            <div className="flex items-center">
+              <Button 
+                onClick={() => setGameState(prev => ({ 
+                  ...prev, 
+                  bet: adjustBet(Math.max(gameSettings.minBet, prev.bet - 1)) 
+                }))}
+                className="rounded-full p-2 bg-gray-700 text-white h-10 w-10"
+                disabled={gameState.isSpinning || gameState.bet <= gameSettings.minBet}
+                variant="outline"
+              >
+                -
+              </Button>
+              <div className="bg-transparent text-center p-2">
+                <div className="text-white text-sm">Bet</div>
+                <div className="text-yellow-500 font-bold">{gameState.bet}</div>
+              </div>
+              <Button 
+                onClick={() => setGameState(prev => ({ 
+                  ...prev, 
+                  bet: adjustBet(Math.min(gameSettings.maxBet, prev.bet + 1)) 
+                }))}
+                className="rounded-full p-2 bg-gray-700 text-white h-10 w-10"
+                disabled={gameState.isSpinning || gameState.bet >= gameSettings.maxBet}
+                variant="outline"
+              >
+                +
+              </Button>
+            </div>
+            
+            <Button 
+              className={`
+                rounded-full h-20 w-20 text-white border-4 border-yellow-600
+                ${gameState.isSpinning 
+                  ? 'bg-yellow-700 animate-pulse' 
+                  : 'bg-gradient-to-b from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500'}
+              `}
+              onClick={handleSpin}
+              disabled={gameState.isSpinning || gameState.balance < gameState.bet || !gameSettings.isActive}
+              variant="ghost"
+            >
+              SPIN
+            </Button>
+            
+            <Button 
+              className={`
+                rounded-full p-3
+                ${gameState.isTurboMode 
+                  ? 'bg-yellow-500 text-white' 
+                  : 'bg-gray-700 text-yellow-400'}
+              `}
+              onClick={() => setGameState(prev => ({ ...prev, isTurboMode: !prev.isTurboMode }))}
+              disabled={gameState.isSpinning}
+              variant="ghost"
+              title="Turbo Mode"
+            >
+              TURBO
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-      
-      <style>{`
-        @keyframes slide-reel {
-          0% { transform: translateY(0); }
-          25% { transform: translateY(-10px); }
-          50% { transform: translateY(10px); }
-          100% { transform: translateY(0); }
-        }
-        .animate-slide-reel {
-          animation: slide-reel 0.5s ease-in-out infinite;
-        }
-      `}</style>
+        </div>
+      </div>
+      <Footer />
     </div>
   );
 };
