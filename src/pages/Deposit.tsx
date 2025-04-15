@@ -17,8 +17,8 @@ import { useLanguage } from '@/context/LanguageContext';
 
 const firestore = getFirestore(app);
 
-// Preset deposit amounts
-const DEPOSIT_AMOUNTS = [100, 200, 300, 500, 600, 800, 1000, 1200, 1500, 2000];
+// Preset deposit amounts - removed 600 and 1200
+const DEPOSIT_AMOUNTS = [100, 200, 300, 500, 800, 1000, 1500, 2000];
 
 const Deposit = () => {
   const navigate = useNavigate();
@@ -152,19 +152,23 @@ const Deposit = () => {
       return;
     }
     
-    // Set payment URL based on selected amount
+    // Set payment URL based on selected amount with updated links
     if (amount === 100) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt100/OO0xWr');
     } else if (amount === 200) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt200/cAVSkv');
     } else if (amount === 300) {
-      setPaymentURL('89d238df-a6ab-48f3-b04c-2c788248f0d0');
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt300/89d238df');
     } else if (amount === 500) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt500/2taUT3');
+    } else if (amount === 800) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt800/37Pk5h');
     } else if (amount === 1000) {
-      setPaymentURL('b7a39122-0062-4d4a-b799-11908caf422b');
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt1000/b7a39122');
     } else if (amount === 1500) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt1500/BktX0l');
+    } else if (amount === 2000) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt2000/DWE6A9');
     } else {
       // For other amounts, use the generic format
       setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
@@ -355,33 +359,37 @@ const Deposit = () => {
       </main>
       <Footer />
       
-      {/* bKash Payment Dialog */}
+      {/* bKash Payment Dialog - Improved styling */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogTitle>{t('bKashPayment')}</DialogTitle>
-          <DialogDescription>
+        <DialogContent className="sm:max-w-md bg-gray-800 border-casino-accent">
+          <DialogTitle className="text-white text-xl">
+            {t('bKashPayment')}
+          </DialogTitle>
+          <DialogDescription className="text-gray-300">
             {t('completePayment')} {amount}{t('currency')} {t('paymentMethod')}
           </DialogDescription>
           <div className="flex flex-col items-center justify-center p-4 space-y-4">
             <img src="/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png" alt="bKash" className="w-16 h-16" />
             
             {/* Timer display */}
-            <div className="bg-gray-800 px-4 py-2 rounded-full">
+            <div className="bg-gray-900 px-4 py-2 rounded-full border border-gray-700">
               <p className="text-center text-white">
                 Window closes in: <span className="font-mono font-bold text-yellow-400">{formatRemainingTime()}</span>
               </p>
             </div>
             
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-gray-300">
               {t('paymentRedirectInfo')}
             </p>
             <div className="flex space-x-4">
               <Button 
                 variant="outline" 
+                className="border-red-600 text-red-500 hover:bg-red-900/20"
                 onClick={() => setPaymentDialogOpen(false)}>
                 {t('cancel')}
               </Button>
               <Button 
+                className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => {
                   window.open(paymentURL, "_blank");
                   // Record the deposit in Firebase

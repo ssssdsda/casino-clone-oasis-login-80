@@ -42,7 +42,7 @@ const Header = () => {
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
-                    <Menu className="h-5 w-5 text-gray-300" />
+                    <Menu className="h-5 w-5 text-white" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="bg-casino border-casino-accent">
@@ -57,11 +57,11 @@ const Header = () => {
                     </div>
                     
                     <Button variant="ghost" className="flex items-center justify-start">
-                      <Headphones className="h-4 w-4 mr-2 text-gray-300" />
+                      <Headphones className="h-4 w-4 mr-2 text-white" />
                       <span className="text-white">{t('customerSupport')}</span>
                     </Button>
                     
-                    {isAuthenticated && (
+                    {isAuthenticated && isHomePage && (
                       <Button 
                         variant="outline" 
                         className="flex items-center justify-start bg-gradient-to-r from-purple-700 to-orange-600 border-purple-500 text-white"
@@ -87,7 +87,7 @@ const Header = () => {
                           className="flex items-center justify-start"
                           onClick={logout}
                         >
-                          <LogOut className="h-4 w-4 mr-2 text-gray-300" />
+                          <LogOut className="h-4 w-4 mr-2 text-white" />
                           <span className="text-white">Logout</span>
                         </Button>
                       </div>
@@ -116,7 +116,7 @@ const Header = () => {
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full">
-                      <Globe className="h-4 w-4 md:h-5 md:w-5 text-gray-300" />
+                      <Globe className="h-4 w-4 md:h-5 md:w-5 text-white" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-40 p-0">
@@ -140,31 +140,33 @@ const Header = () => {
                 </Popover>
                 
                 <Button variant="ghost" size="icon" className="rounded-full">
-                  <Headphones className="h-4 w-4 md:h-5 md:w-5 text-gray-300" />
+                  <Headphones className="h-4 w-4 md:h-5 md:w-5 text-white" />
                 </Button>
               </>
             )}
 
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="bg-green-800 hover:bg-green-700 border-green-600 text-white text-xs px-2 py-1 h-auto"
-                    onClick={() => navigate('/deposit')}
-                  >
-                    <Wallet className="mr-1 h-3 w-3" />
-                    {t('deposit')}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="bg-red-800 hover:bg-red-700 border-red-600 text-white text-xs px-2 py-1 h-auto"
-                    onClick={() => navigate('/withdrawal')}
-                  >
-                    <Wallet className="mr-1 h-3 w-3" />
-                    {t('withdraw')}
-                  </Button>
-                </div>
+                {isHomePage && (
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="bg-green-800 hover:bg-green-700 border-green-600 text-white text-xs px-2 py-1 h-auto"
+                      onClick={() => navigate('/deposit')}
+                    >
+                      <Wallet className="mr-1 h-3 w-3" />
+                      {t('deposit')}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="bg-red-800 hover:bg-red-700 border-red-600 text-white text-xs px-2 py-1 h-auto"
+                      onClick={() => navigate('/withdrawal')}
+                    >
+                      <Wallet className="mr-1 h-3 w-3" />
+                      {t('withdraw')}
+                    </Button>
+                  </div>
+                )}
                 <div className="bg-casino-dark rounded-full px-2 py-1 flex items-center">
                   <User className="h-3 w-3 text-casino-accent mr-1" />
                   <span className="text-xs font-medium mr-1 text-white">{user?.username}</span>
@@ -176,7 +178,7 @@ const Header = () => {
                   className="rounded-full"
                   onClick={logout}
                 >
-                  <LogOut className="h-4 w-4 text-gray-300" />
+                  <LogOut className="h-4 w-4 text-white" />
                 </Button>
               </div>
             ) : (

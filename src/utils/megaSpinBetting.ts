@@ -14,8 +14,21 @@
 // Track how many bets each user has made
 const userBetCounts: Record<string, number> = {};
 
-// Define winning pattern
-const DEFAULT_PATTERN = [1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0];
+// Define winning pattern: 1 = win, 0 = lose
+const DEFAULT_PATTERN = [
+  // First 2 bets win
+  1, 1,
+  // Next 2 bets lose
+  0, 0,
+  // Next 3 bets win
+  1, 1, 1,
+  // Next 5 bets lose
+  0, 0, 0, 0, 0,
+  // Win 1 bet
+  1,
+  // Lose 2 bets
+  0, 0
+];
 
 /**
  * Determines if the user's bet should win based on the specified pattern

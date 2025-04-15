@@ -10,6 +10,7 @@ const Footer = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
+  const isHomePage = location.pathname === '/';
   
   if (!isMobile) {
     return (
@@ -46,10 +47,12 @@ const Footer = () => {
           <span className="text-xs">Bonus</span>
         </button>
         
-        {/* Highlight the referral button */}
-        <div className="scale-110 transform -translate-y-1">
-          <ReferralButton />
-        </div>
+        {/* Highlight the referral button - only on homepage */}
+        {isHomePage && (
+          <div className="scale-110 transform -translate-y-1">
+            <ReferralButton />
+          </div>
+        )}
         
         <button 
           className="flex flex-col items-center justify-center py-1 px-3 rounded-md text-gray-300"
