@@ -1,3 +1,4 @@
+
 /**
  * Betting System Utility
  * Controls winning odds for casino games to ensure fair play and player satisfaction
@@ -8,46 +9,73 @@ let betHistory: Array<{
   userId: string;
   didWin: boolean;
   timestamp: number;
+  gameType: string;
 }> = [];
 
-// Track how many bets each user has made in the current session
-const userBetCounts: Record<string, number> = {};
+// Track how many bets each user has made in the current session per game
+const userBetCounts: Record<string, Record<string, number>> = {};
 
 /**
- * Determines if a bet should win based on the specific pattern requested
- * - First bet: Always wins
- * - Second bet: Always loses
- * - Third bet: Always wins
- * - Fourth bet: Always loses
- * - Fifth and subsequent bets: Always lose
+ * Determines if a bet should win based on game type and predetermined win rates:
+ * - Boxing King: 20% win rate with first 2 bets higher payout
+ * - Money Gram: 20% win rate
+ * - Coin Up: 30% win rate
  * 
  * @param userId The ID of the user placing the bet
+ * @param gameType The type of game being played
  * @param betAmount The bet amount placed by the user
  * @returns Whether this bet should win
  */
-export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
-  // Initialize bet count for new users
+export const shouldBetWin = (userId: string, gameType: string, betAmount = 10): boolean => {
+  // Initialize game counts for new users
   if (!userBetCounts[userId]) {
-    userBetCounts[userId] = 0;
+    userBetCounts[userId] = {};
   }
   
-  // Increment bet count
-  userBetCounts[userId]++;
-  const betCount = userBetCounts[userId];
+  if (!userBetCounts[userId][gameType]) {
+    userBetCounts[userId][gameType] = 0;
+  }
   
-  // Apply the specific pattern:
-  // 1st bet: Win
-  // 3rd bet: Win
-  // All other bets: Lose
-  const shouldWin = betCount === 1 || betCount === 3;
+  // Increment bet count for this game type
+  userBetCounts[userId][gameType]++;
+  const betCount = userBetCounts[userId][gameType];
   
-  console.log(`Bet ${betCount} - Following pattern: ${shouldWin ? 'Win' : 'Loss'}`);
+  let shouldWin = false;
+  let winRate = 0;
+  
+  // Set win rate based on game type
+  if (gameType === 'BoxingKing') {
+    winRate = 0.2; // 20% win rate
+    
+    // First two bets have special pattern
+    if (betCount === 1 || betCount === 2) {
+      shouldWin = true; // First 2 bets always win with higher payouts
+    } else {
+      // After first 2 bets, use normal win rate
+      shouldWin = Math.random() < winRate;
+    }
+  } 
+  else if (gameType === 'MoneyGram') {
+    winRate = 0.2; // 20% win rate
+    shouldWin = Math.random() < winRate;
+  } 
+  else if (gameType === 'CoinUp') {
+    winRate = 0.3; // 30% win rate
+    shouldWin = Math.random() < winRate;
+  }
+  else {
+    // Default pattern from before for other games
+    shouldWin = betCount === 1 || betCount === 3;
+  }
+  
+  console.log(`Game: ${gameType}, Bet ${betCount} - Win Rate: ${winRate}, Result: ${shouldWin ? 'Win' : 'Loss'}`);
   
   // Add to history
   betHistory.push({
     userId,
     didWin: shouldWin,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    gameType
   });
   
   // Keep history manageable
@@ -59,14 +87,31 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
 };
 
 /**
- * Calculates a winning amount with improved scaling
+ * Calculates a winning amount with special rules based on game type
  * @param betAmount The original bet amount
  * @param multiplier The game's standard multiplier
- * @returns A winning amount with better scaling for larger bets
+ * @param gameType The type of game being played
+ * @param betCount Number of bets user has made
+ * @returns A winning amount based on game rules
  */
-export const calculateWinAmount = (betAmount: number, multiplier: number): number => {
+export const calculateWinAmount = (
+  betAmount: number, 
+  multiplier: number, 
+  gameType?: string, 
+  betCount?: number
+): number => {
   // Calculate the standard win amount
   let winAmount = betAmount * multiplier;
+  
+  // Special rules for Boxing King
+  if (gameType === 'BoxingKing' && betCount !== undefined) {
+    // First 2 bets have higher payout
+    if (betCount === 1 || betCount === 2) {
+      winAmount = betAmount * multiplier * 2; // Double payout for first 2 bets
+    } else {
+      winAmount = betAmount * multiplier * 0.7; // Reduced payout after first 2 bets
+    }
+  }
   
   // Higher cap for larger bets (instead of strict 100 cap)
   const maxWin = Math.max(150, betAmount * 3);

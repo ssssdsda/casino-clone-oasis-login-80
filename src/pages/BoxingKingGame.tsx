@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, ArrowLeft, Volume2, VolumeX, RefreshCw, Info } from 'lucide-react';
@@ -8,6 +7,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Define symbols for the reels
 const symbols = [
   { id: "blue-fist", name: "Blue Fist", image: "/lovable-uploads/8f9f67ea-c522-40f0-856a-b28bf290cf13.png", value: 5 },
   { id: "red-boxer", name: "Red Boxer", image: "/lovable-uploads/2992c4bb-7e84-4c02-af61-e0b2ebb7aa4c.png", value: 10 },
@@ -28,7 +27,6 @@ const symbols = [
   { id: "boxing-shorts", name: "Boxing Shorts", image: "/lovable-uploads/8f9f67ea-c522-40f0-856a-b28bf290cf13.png", value: 5 },
 ];
 
-// Create the initial state of the reels
 const createInitialReels = () => {
   const reels = [];
   for (let i = 0; i < 5; i++) {
@@ -46,7 +44,6 @@ const BoxingKingGame = () => {
   const navigate = useNavigate();
   const { user, updateUserBalance } = useAuth();
   
-  // Game state
   const [loading, setLoading] = useState(true);
   const [spinning, setSpinning] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -58,12 +55,10 @@ const BoxingKingGame = () => {
   const spinSound = useRef(null);
   const winSound = useRef(null);
   
-  // Initialize sounds
   useEffect(() => {
     spinSound.current = new Audio('/sounds/spin.mp3');
     winSound.current = new Audio('/sounds/win.mp3');
     
-    // Loading simulation
     const timer = setTimeout(() => {
       setLoading(false);
     }, 2000);
@@ -73,14 +68,12 @@ const BoxingKingGame = () => {
     };
   }, []);
 
-  // Handle betting amount change
   const changeBet = (amount) => {
     if (spinning) return;
     const newBet = Math.max(1, Math.min(100, bet + amount));
     setBet(newBet);
   };
   
-  // Handle spin
   const handleSpin = () => {
     if (spinning) return;
     
@@ -100,10 +93,8 @@ const BoxingKingGame = () => {
       return;
     }
     
-    // Deduct bet from balance
     updateUserBalance(user.balance - bet);
     
-    // Play spin sound if not muted
     if (!muted && spinSound.current) {
       spinSound.current.currentTime = 0;
       spinSound.current.play().catch(err => console.error("Error playing sound:", err));
@@ -113,7 +104,6 @@ const BoxingKingGame = () => {
     setWinAmount(0);
     setWinLines([]);
     
-    // Generate new symbols for each reel with animation delay
     const newReels = [];
     
     for (let i = 0; i < 5; i++) {
@@ -124,7 +114,6 @@ const BoxingKingGame = () => {
       }
       newReels.push(reel);
       
-      // Update reels with delay for animation effect
       setTimeout(() => {
         setReels(prevReels => {
           const updatedReels = [...prevReels];
@@ -132,18 +121,18 @@ const BoxingKingGame = () => {
           return updatedReels;
         });
         
-        // After last reel stops, calculate winnings
         if (i === 4) {
           setTimeout(() => {
-            const { winAmount, winLines } = calculateWinnings(newReels, bet);
-            setWinAmount(winAmount);
-            setWinLines(winLines);
+            const shouldWin = shouldBetWin(user.uid, 'BoxingKing', bet);
             
-            if (winAmount > 0) {
-              // Update balance with winnings
+            if (shouldWin) {
+              const userBetCount = user.uid ? (window as any).userBetCounts?.[user.uid]?.['BoxingKing'] || 1 : 1;
+              const { winAmount, winLines } = forceWinningCombination(newReels, bet, userBetCount);
+              setWinAmount(winAmount);
+              setWinLines(winLines);
+              
               updateUserBalance(user.balance - bet + winAmount);
               
-              // Play win sound if not muted
               if (!muted && winSound.current) {
                 winSound.current.currentTime = 0;
                 winSound.current.play().catch(err => console.error("Error playing sound:", err));
@@ -153,85 +142,45 @@ const BoxingKingGame = () => {
                 description: `You won ${winAmount.toFixed(2)}!`,
                 style: { backgroundColor: "rgb(22, 163, 74)", color: "white", border: "1px solid rgb(21, 128, 61)" }
               });
+            } else {
+              const { winAmount, winLines } = { winAmount: 0, winLines: [] };
+              setWinAmount(winAmount);
+              setWinLines(winLines);
             }
             
             setSpinning(false);
           }, 500);
         }
-      }, (i + 1) * 300); // Stagger the reel stops
+      }, (i + 1) * 300);
     }
   };
   
-  // Calculate winnings based on symbol combinations
-  const calculateWinnings = (reels, betAmount) => {
-    let totalWin = 0;
-    const winLines = [];
+  const forceWinningCombination = (reels, betAmount, betCount) => {
+    const winSymbol = symbols[Math.floor(Math.random() * symbols.length)];
+    const row = 1;
     
-    // Check horizontal lines (3 rows)
-    for (let row = 0; row < 3; row++) {
-      let symbolsInLine = [];
-      for (let col = 0; col < 5; col++) {
-        symbolsInLine.push({ symbol: reels[col][row], position: { row, col } });
-      }
-      
-      // Check for matches (at least 3 of the same symbol)
-      const firstSymbol = symbolsInLine[0].symbol.id;
-      
-      // Count wilds and matching symbols
-      let matchCount = 0;
-      let wildCount = 0;
-      let matches = [];
-      
-      for (let i = 0; i < symbolsInLine.length; i++) {
-        const symbol = symbolsInLine[i].symbol;
-        if (symbol.id === firstSymbol || symbol.id === "wild") {
-          matchCount++;
-          if (symbol.id === "wild") wildCount++;
-          matches.push(symbolsInLine[i].position);
-        } else {
-          break;
-        }
-      }
-      
-      // Calculate win amount based on matches
-      if (matchCount >= 3) {
-        const symbolValue = symbols.find(s => s.id === firstSymbol)?.value || 1;
-        const win = betAmount * symbolValue * Math.pow(2, matchCount - 3);
-        totalWin += win;
-        
-        winLines.push({
-          positions: matches,
-          win: win
-        });
-      }
+    for (let col = 0; col < 3; col++) {
+      reels[col][row] = winSymbol;
     }
     
-    // Check for scatter symbols
-    let scatterCount = 0;
-    let scatterPositions = [];
+    setReels([...reels]);
     
-    for (let col = 0; col < 5; col++) {
-      for (let row = 0; row < 3; row++) {
-        if (reels[col][row].id === "scatter") {
-          scatterCount++;
-          scatterPositions.push({ row, col });
-        }
-      }
-    }
+    const symbolValue = winSymbol.value || 5;
+    const winMultiplier = betCount <= 2 ? 2 : 0.7;
+    const winAmount = calculateWinAmount(betAmount, symbolValue / 10, 'BoxingKing', betCount);
     
-    if (scatterCount >= 3) {
-      const scatterWin = betAmount * 5 * scatterCount;
-      totalWin += scatterWin;
-      winLines.push({
-        positions: scatterPositions,
-        win: scatterWin
-      });
-    }
+    const winLines = [{
+      positions: [
+        { row: row, col: 0 },
+        { row: row, col: 1 },
+        { row: row, col: 2 }
+      ],
+      win: winAmount
+    }];
     
-    return { winAmount: totalWin, winLines };
+    return { winAmount, winLines };
   };
   
-  // Loading screen
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-indigo-900 to-black flex flex-col items-center justify-center p-4">
@@ -254,7 +203,6 @@ const BoxingKingGame = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-900 to-black flex flex-col">
-      {/* Game header */}
       <div className="bg-black bg-opacity-50 p-4 flex justify-between items-center">
         <button 
           className="text-yellow-500"
@@ -279,48 +227,38 @@ const BoxingKingGame = () => {
         </div>
       </div>
       
-      {/* Game content */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        {/* Background elements */}
         <div className="absolute inset-0 z-0">
           <div className="absolute top-0 right-0 w-32 h-32 blur-xl bg-red-500 opacity-20 rounded-full" />
           <div className="absolute bottom-0 left-0 w-40 h-40 blur-xl bg-blue-500 opacity-20 rounded-full" />
         </div>
         
-        {/* Game board */}
         <div className="relative w-full max-w-3xl aspect-[16/10] bg-indigo-900 rounded-lg overflow-hidden border-4 border-indigo-700 shadow-2xl z-10">
-          {/* Game frame with metallic look */}
           <div className="absolute inset-0 bg-gradient-to-b from-slate-700 to-slate-900 z-0">
-            {/* Ring ropes visual effect */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500" />
             <div className="absolute top-0 bottom-0 left-0 w-1 bg-red-500" />
             <div className="absolute top-0 bottom-0 right-0 w-1 bg-blue-500" />
             
-            {/* Corner screws */}
             <div className="absolute top-2 left-2 w-4 h-4 rounded-full bg-gradient-to-br from-gray-300 to-gray-600" />
             <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-gradient-to-bl from-gray-300 to-gray-600" />
             <div className="absolute bottom-2 left-2 w-4 h-4 rounded-full bg-gradient-to-tr from-gray-300 to-gray-600" />
             <div className="absolute bottom-2 right-2 w-4 h-4 rounded-full bg-gradient-to-tl from-gray-300 to-gray-600" />
           </div>
           
-          {/* Game logo */}
           <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-20">
             <div className="text-2xl font-bold text-yellow-500 drop-shadow-md">
               Boxing <span className="text-yellow-400">KING</span>
             </div>
           </div>
           
-          {/* Reels container */}
           <div className="absolute inset-4 top-12 bg-indigo-950 rounded overflow-hidden flex">
             {reels.map((reel, reelIndex) => (
               <div 
                 key={`reel-${reelIndex}`}
                 className="flex-1 border-r-2 border-indigo-800 last:border-r-0"
               >
-                {/* Reel content */}
                 <div className="w-full h-full relative">
-                  {/* Symbols in the reel */}
                   <div className={`flex flex-col h-full`}>
                     {reel.map((symbol, symbolIndex) => (
                       <motion.div 
@@ -339,10 +277,8 @@ const BoxingKingGame = () => {
                             : {}
                         }
                       >
-                        {/* Symbol background with glow effect */}
                         <div className="absolute inset-0 m-1 rounded-md bg-gradient-to-b from-indigo-700 to-indigo-900" />
                         
-                        {/* Symbol image */}
                         <div className="absolute inset-0 m-1 rounded-md overflow-hidden flex items-center justify-center">
                           <img 
                             src={symbol.image} 
@@ -351,7 +287,6 @@ const BoxingKingGame = () => {
                           />
                         </div>
                         
-                        {/* Highlight for win lines */}
                         {winLines.some(line => 
                           line.positions.some(pos => 
                             pos.col === reelIndex && pos.row === symbolIndex
@@ -371,7 +306,6 @@ const BoxingKingGame = () => {
             ))}
           </div>
           
-          {/* Paylines and win indicators */}
           <div className="absolute bottom-2 left-0 right-0 flex justify-center">
             <AnimatePresence>
               {winAmount > 0 && (
@@ -388,7 +322,6 @@ const BoxingKingGame = () => {
           </div>
         </div>
         
-        {/* Game controls */}
         <div className="w-full max-w-3xl mt-4 bg-black bg-opacity-50 p-4 rounded-xl z-10 flex justify-between items-center">
           <div>
             <div className="text-xs text-gray-400">BALANCE</div>
@@ -436,7 +369,6 @@ const BoxingKingGame = () => {
           </div>
         </div>
         
-        {/* Symbols carousel */}
         <div className="w-full max-w-3xl mt-4 z-10">
           <ScrollArea className="w-full whitespace-nowrap rounded-lg bg-black bg-opacity-30 p-2">
             <div className="flex space-x-4 p-2">
@@ -454,7 +386,6 @@ const BoxingKingGame = () => {
         </div>
       </div>
       
-      {/* Game Rules Dialog */}
       <Dialog open={showRules} onOpenChange={setShowRules}>
         <DialogContent className="max-w-md bg-indigo-950 text-white border border-indigo-700">
           <DialogHeader>
