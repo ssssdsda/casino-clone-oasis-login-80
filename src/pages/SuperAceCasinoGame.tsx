@@ -69,7 +69,7 @@ const SuperAceCasinoGame = () => {
   const [dealerHand, setDealerHand] = useState([]);
   const [bet, setBet] = useState(10);
   const [minBet, setMinBet] = useState(10);
-  const [maxBet, setMaxBet] = useState 500;
+  const [maxBet, setMaxBet] = useState(500);
   const [gamePhase, setGamePhase] = useState(null); // 'player', 'dealer', null
   const [gameResult, setGameResult] = useState(null); // { outcome: 'win' | 'lose' | 'push', message: string }
   const [dealingCards, setDealingCards] = useState(false);
@@ -90,11 +90,9 @@ const SuperAceCasinoGame = () => {
     };
   }, []);
   
-  // Function to load game settings
   useEffect(() => {
     const loadGameSettings = async () => {
       try {
-        // Try to get settings from localStorage first (faster)
         const localSettings = localStorage.getItem('gameOddsSettings');
         let settings;
         
@@ -102,18 +100,15 @@ const SuperAceCasinoGame = () => {
           settings = JSON.parse(localSettings);
         }
         
-        // If we have settings for SuperAce, use them
         if (settings && settings.games && settings.games.SuperAce) {
           const superAceSettings = settings.games.SuperAce;
           setMinBet(superAceSettings.minBet || 10);
           setMaxBet(superAceSettings.maxBet || 500);
-          // Set initial bet to min bet or default to 10
           setBet(superAceSettings.minBet || 10);
           console.log("SuperAce game settings loaded:", superAceSettings);
         }
       } catch (error) {
         console.error("Error loading game settings:", error);
-        // Use defaults if something went wrong
         setMinBet(10);
         setMaxBet(500);
         setBet(10);
@@ -145,7 +140,6 @@ const SuperAceCasinoGame = () => {
       return;
     }
     
-    // Deduct bet from balance
     updateUserBalance(user.balance - bet);
     
     setDealingCards(true);
@@ -154,11 +148,9 @@ const SuperAceCasinoGame = () => {
     setGameResult(null);
     setCurrentAnimation('deal');
     
-    // Create a new deck and shuffle it
     const newDeck = createDeck();
     shuffle(newDeck);
     
-    // Deal initial cards with animation
     const initialPlayerCard = newDeck.pop();
     setPlayerHand([initialPlayerCard]);
     
@@ -175,19 +167,16 @@ const SuperAceCasinoGame = () => {
           setDealerHand(prev => [...prev, secondDealerCard]);
           
           setTimeout(async () => {
-            // Check for natural blackjack
             const playerValue = calculateHandValue([initialPlayerCard, secondPlayerCard]);
             const dealerValue = calculateHandValue([initialDealerCard, secondDealerCard]);
             
             if (playerValue === 21 && dealerValue === 21) {
-              // Push - return bet
               setGameResult({ outcome: 'push', message: 'Push! Both have Blackjack.' });
               updateUserBalance(user.balance);
               setDealingCards(false);
               setCurrentAnimation(null);
               return;
             } else if (playerValue === 21) {
-              // Player blackjack
               const winAmount = Math.floor(bet * 2.5);
               setGameResult({ outcome: 'win', message: 'Blackjack! You win!', amount: winAmount });
               updateUserBalance(user.balance - bet + winAmount);
@@ -200,14 +189,12 @@ const SuperAceCasinoGame = () => {
               setCurrentAnimation(null);
               return;
             } else if (dealerValue === 21) {
-              // Dealer blackjack
               setGameResult({ outcome: 'lose', message: 'Dealer has Blackjack! You lose.' });
               setDealingCards(false);
               setCurrentAnimation(null);
               return;
             }
             
-            // Game continues
             setGamePhase('player');
             setDealingCards(false);
             setCurrentAnimation(null);
@@ -248,7 +235,6 @@ const SuperAceCasinoGame = () => {
     setDealingCards(true);
     setCurrentAnimation('deal');
     
-    // Dealer's AI
     const dealerPlay = async () => {
       let dealerValue = calculateHandValue(dealerHand);
       let newDealerHand = [...dealerHand];
@@ -264,7 +250,6 @@ const SuperAceCasinoGame = () => {
       setDealingCards(false);
       setCurrentAnimation(null);
       
-      // Determine the winner
       const playerValue = calculateHandValue(playerHand);
       
       if (dealerValue > 21) {
@@ -313,7 +298,6 @@ const SuperAceCasinoGame = () => {
       } else {
         setGamePhase('dealer');
         
-        // Dealer's AI
         const dealerPlay = async () => {
           let dealerValue = calculateHandValue(dealerHand);
           let newDealerHand = [...dealerHand];
@@ -329,7 +313,6 @@ const SuperAceCasinoGame = () => {
           setDealingCards(false);
           setCurrentAnimation(null);
           
-          // Determine the winner
           const playerValue = calculateHandValue(playerHand);
           
           if (dealerValue > 21) {
@@ -368,11 +351,9 @@ const SuperAceCasinoGame = () => {
     updateUserBalance(user.balance - insuranceBet);
     setInsurance(true);
     
-    // Check if dealer has blackjack
     const dealerHasBlackjack = calculateHandValue(dealerHand) === 21;
     
     if (dealerHasBlackjack) {
-      // Insurance pays 2:1
       const insuranceWin = insuranceBet * 2;
       updateUserBalance(user.balance - insuranceBet + insuranceWin);
       
@@ -380,7 +361,6 @@ const SuperAceCasinoGame = () => {
         style: { backgroundColor: "rgb(22, 163, 74)", color: "white", border: "1px solid rgb(21, 128, 61)" }
       });
       
-      // Continue with dealer blackjack
       setGameResult({ outcome: 'lose', message: 'Dealer has Blackjack! Insurance paid.' });
       setDealingCards(false);
       setCurrentAnimation(null);
