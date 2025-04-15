@@ -13,12 +13,13 @@ let betHistory: Array<{
 // Track how many bets each user has made in the current session
 const userBetCounts: Record<string, number> = {};
 
-// Track the specific pattern of wins and losses
-const userBetPatterns: Record<string, number[]> = {};
-
 /**
- * Determines if a bet should win based on randomized but fair odds
- * Win chance is set to approximately 10% as requested
+ * Determines if a bet should win based on the specific pattern requested
+ * - First bet: Always wins
+ * - Second bet: Always loses
+ * - Third bet: Always wins
+ * - Fourth bet: Always loses
+ * - Fifth and subsequent bets: Always lose
  * 
  * @param userId The ID of the user placing the bet
  * @param betAmount The bet amount placed by the user
@@ -28,37 +29,19 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
   // Initialize bet count for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = 0;
-    // Pattern with low win rate (approximately 10% win rate)
-    userBetPatterns[userId] = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0];
   }
   
   // Increment bet count
   userBetCounts[userId]++;
   const betCount = userBetCounts[userId];
   
-  // Low base win chance (10%)
-  let winChance = 0.10;
+  // Apply the specific pattern:
+  // 1st bet: Win
+  // 3rd bet: Win
+  // All other bets: Lose
+  const shouldWin = betCount === 1 || betCount === 3;
   
-  // No adjustments based on bet amount to keep consistent 10% win rate
-  
-  // First bet might have slightly better odds just to keep players engaged
-  if (betCount === 1) {
-    winChance = 0.15; // First bet has 15% chance to win
-  }
-  
-  // Use pattern for predictability in the early game
-  const patternLength = userBetPatterns[userId].length;
-  if (betCount <= patternLength) {
-    const shouldWin = userBetPatterns[userId][betCount - 1] === 1;
-    console.log(`Bet ${betCount} - Following pattern: ${shouldWin ? 'Win' : 'Loss'}`);
-    return shouldWin;
-  }
-  
-  // After the pattern, use probability system with 10% win rate
-  const random = Math.random();
-  const shouldWin = random < winChance;
-  
-  console.log(`Bet ${betCount} - Probability: ${winChance.toFixed(2)}, Result: ${shouldWin ? 'Win' : 'Loss'}`);
+  console.log(`Bet ${betCount} - Following pattern: ${shouldWin ? 'Win' : 'Loss'}`);
   
   // Add to history
   betHistory.push({
