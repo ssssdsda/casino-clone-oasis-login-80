@@ -4,39 +4,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Plus, Minus, Bell, Settings } from 'lucide-react';
+import { RefreshCw, Plus, Minus, Bell, Settings, Apple, Banana, Cherry, DollarSign, Grape } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-// Fruit symbols for the game - updated with proper image paths
+// Fruit symbols for the game with proper icons
 const symbols = [
-  { id: 'bell', value: 'bell', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 0, col: 0 },
-  { id: 'watermelon', value: 'watermelon', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 0, col: 1 },
-  { id: 'star', value: 'star', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 0, col: 2 },
-  { id: 'cherry', value: 'cherry', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 0, col: 3 },
-  { id: 'orange', value: 'orange', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 0, col: 4 },
-  { id: 'diamond20', value: '20', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 1, col: 0 },
-  { id: 'A1', value: 'A', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 1, col: 1 },
-  { id: '10', value: '10', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 1, col: 2 },
-  { id: 'diamond40', value: '40', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 1, col: 3 },
-  { id: 'purple', value: 'purple', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 1, col: 4 },
-  { id: 'diamond60', value: '60', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 2, col: 0 },
-  { id: 'A2', value: 'A', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 2, col: 1 },
-  { id: 'Q1', value: 'Q', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 2, col: 2 },
-  { id: 'major', value: 'MAJOR', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 2, col: 3 },
-  { id: 'K', value: 'K', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 2, col: 4 },
-  { id: 'Q2', value: 'Q', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 3, col: 0 },
-  { id: 'purple2', value: 'purple', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 3, col: 1 },
-  { id: 'Q3', value: 'Q', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 3, col: 2 },
-  { id: 'watermelon2', value: 'watermelon', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 3, col: 3 },
-  { id: 'wild', value: '7WILD', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 3, col: 4 },
-  { id: 'orange2', value: 'orange', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 4, col: 0 },
-  { id: 'cherry2', value: 'cherry', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 4, col: 1 },
-  { id: 'A3', value: 'A', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 4, col: 2 },
-  { id: 'orange3', value: 'orange', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 4, col: 3 },
-  { id: 'A4', value: 'A', img: '/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png', row: 4, col: 4 },
+  { id: 'cherry', value: 'cherry', icon: Cherry, color: 'text-red-500', value: 5 },
+  { id: 'apple', value: 'apple', icon: Apple, color: 'text-green-500', value: 3 },
+  { id: 'banana', value: 'banana', icon: Banana, color: 'text-yellow-400', value: 4 },
+  { id: 'grape', value: 'grape', icon: Grape, color: 'text-purple-500', value: 4 },
+  { id: 'bell', value: 'bell', icon: Bell, color: 'text-yellow-500', value: 5 },
+  { id: 'dollar', value: 'dollar', icon: DollarSign, color: 'text-green-400', value: 10 },
+  { id: 'seven', value: '7', icon: () => (
+    <div className="bg-red-600 w-full h-full rounded-full flex items-center justify-center">
+      <span className="text-white font-bold text-lg">7</span>
+    </div>
+  ), value: 15 },
+  { id: 'star', value: 'star', icon: () => (
+    <div className="text-yellow-400">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+        <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+      </svg>
+    </div>
+  ), value: 7 }
 ];
 
 type JackpotType = 'GRAND' | 'MAJOR' | 'MINI';
@@ -52,7 +45,7 @@ const FruityBonanzaGame: React.FC = () => {
   const [balance, setBalance] = useState<number>(50);
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [winAmount, setWinAmount] = useState<number>(0);
-  const [reels, setReels] = useState<string[][]>([]);
+  const [reels, setReels] = useState<number[][]>([]);
   const [jackpots, setJackpots] = useState<Jackpot[]>([
     { type: 'GRAND', amount: 2000.00, color: 'bg-red-600' },
     { type: 'MAJOR', amount: 50.00, color: 'bg-pink-500' },
@@ -65,6 +58,9 @@ const FruityBonanzaGame: React.FC = () => {
   const isMobile = useIsMobile();
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const winSound = useRef<HTMLAudioElement | null>(null);
+  
+  // Maintain visible symbols for the reels to prevent scrolling issues
+  const symbolsContainerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     spinSound.current = new Audio('/sounds/spin.mp3');
@@ -91,11 +87,11 @@ const FruityBonanzaGame: React.FC = () => {
   }, [user]);
   
   const generateReels = () => {
-    // Create a 5x5 grid of symbols
-    const newReels: string[][] = Array(5).fill(0).map(() => 
+    // Create a 5x3 grid of symbols (5 reels with 3 visible symbols each)
+    const newReels: number[][] = Array(5).fill(0).map(() => 
       Array(5).fill(0).map(() => {
         const randomSymbolIndex = Math.floor(Math.random() * symbols.length);
-        return symbols[randomSymbolIndex].value;
+        return randomSymbolIndex;
       })
     );
     setReels(newReels);
@@ -144,7 +140,7 @@ const FruityBonanzaGame: React.FC = () => {
       // Generate new symbols for each position
       generateReels();
       
-      // Calculate win (simplified logic for demo)
+      // Calculate win based on updated betting pattern
       calculateWin();
       
       setIsSpinning(false);
@@ -152,8 +148,8 @@ const FruityBonanzaGame: React.FC = () => {
   };
   
   const calculateWin = () => {
-    // Simplified win calculation
-    const shouldWin = Math.random() < 0.2;
+    // Use the improved betting system
+    const shouldWin = shouldBetWin(user?.id || 'anonymous');
     
     if (shouldWin) {
       // Random win amount between 1x and 10x bet
@@ -193,15 +189,32 @@ const FruityBonanzaGame: React.FC = () => {
     setBetAmount(newBetAmount);
   };
   
-  // Simplified Symbol Renderer
-  const renderSymbol = (symbol: string, isSpinning: boolean) => {
+  // Improved symbol rendering to prevent scrolling issues
+  const renderSymbol = (symbolIndex: number, isSpinning: boolean) => {
+    const symbol = symbols[symbolIndex];
+    const IconComponent = symbol.icon;
+    
     return (
       <motion.div
-        className={`w-full h-full bg-cover bg-center rounded-md overflow-hidden ${isSpinning ? 'opacity-75' : ''}`}
-        style={{ backgroundImage: `url('/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png')` }}
-        animate={isSpinning ? { y: [0, 10, 0], opacity: [1, 0.5, 1] } : {}}
-        transition={isSpinning ? { duration: 0.3, repeat: Infinity } : {}}
-      />
+        className={`w-full h-full flex items-center justify-center ${symbol.color}`}
+        animate={isSpinning ? {
+          y: [0, 10, 0],
+          opacity: [1, 0.5, 1]
+        } : {
+          scale: [1, 1.05, 1],
+          rotate: [0, 3, 0],
+        }}
+        transition={isSpinning ? {
+          duration: 0.3,
+          repeat: Infinity
+        } : {
+          duration: 1.5,
+          repeat: Infinity,
+          repeatType: "reverse"
+        }}
+      >
+        <IconComponent size="80%" />
+      </motion.div>
     );
   };
   
@@ -209,9 +222,9 @@ const FruityBonanzaGame: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-blue-900 to-black flex flex-col">
       <Header />
       
-      <main className="flex-1 p-1 md:p-4 max-w-md mx-auto w-full flex flex-col">
+      <main className="flex-1 p-1 md:p-4 max-w-md mx-auto w-full flex flex-col" ref={symbolsContainerRef}>
         {/* Game Title with Image */}
-        <div className="relative w-full h-20 mb-4">
+        <div className="relative w-full h-16 mb-2">
           <img
             src="/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png"
             alt="Fruity Bonanza"
@@ -239,9 +252,9 @@ const FruityBonanzaGame: React.FC = () => {
           {/* Main grid */}
           <div className="grid grid-cols-5 gap-1 p-1">
             {Array(5).fill(0).map((_, row) => (
-              Array(5).fill(0).map((_, col) => (
+              Array(3).fill(0).map((_, col) => (
                 <div key={`symbol-${row}-${col}`} className="aspect-square">
-                  {reels.length > 0 && renderSymbol(reels[row][col], isSpinning)}
+                  {reels.length > 0 && renderSymbol(reels[row][col + 1], isSpinning)}
                 </div>
               ))
             ))}
@@ -291,7 +304,7 @@ const FruityBonanzaGame: React.FC = () => {
           
           <div className="bg-blue-900 rounded-md p-2 text-center">
             <div className="text-white text-xs">TOTAL BET</div>
-            <div className="text-yellow-300 font-bold">₹{(betAmount * 25).toFixed(2)}</div>
+            <div className="text-yellow-300 font-bold">₹{(betAmount * 15).toFixed(2)}</div>
           </div>
         </div>
         
@@ -320,7 +333,7 @@ const FruityBonanzaGame: React.FC = () => {
   );
 };
 
-// Simpler mobile-friendly footer component
+// Simpler mobile-friendly footer component with contact information
 const GameFooter = () => {
   return (
     <footer className="bg-gradient-to-r from-blue-900 to-blue-800 p-2 text-white text-sm">

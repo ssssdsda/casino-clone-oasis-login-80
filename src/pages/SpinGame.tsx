@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -82,7 +81,6 @@ const SpinGame = () => {
   
   useEffect(() => {
     if (!preloaded) {
-      // Initialize the preloaded state without an actual preloadImages function
       setPreloaded(true);
     }
     
@@ -198,7 +196,7 @@ const SpinGame = () => {
       });
       
       let winAmount = 0;
-      if (maxCount >= 3) {
+      if (maxCount >= 3 && shouldWin) {
         const winningIndices: number[] = [];
         newFinalSymbols.forEach((sym, i) => {
           if (sym === maxSymbol) {

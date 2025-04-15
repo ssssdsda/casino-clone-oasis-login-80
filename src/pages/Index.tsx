@@ -49,7 +49,7 @@ const Index = () => {
     {
       id: 'super-elements',
       title: 'Super Elements',
-      image: '/lovable-uploads/722c58de-9fd2-48c9-ba1f-9969bebd1e23.png',
+      image: '/lovable-uploads/29b7d4f3-2eed-413b-97ea-570ab0b7a5a3.png',
       path: '/game/super-element',
       isNew: true
     },
@@ -114,7 +114,7 @@ const Index = () => {
     {
       id: 'super-elements',
       title: 'Super Elements',
-      image: '/lovable-uploads/722c58de-9fd2-48c9-ba1f-9969bebd1e23.png',
+      image: '/lovable-uploads/29b7d4f3-2eed-413b-97ea-570ab0b7a5a3.png',
       path: '/game/super-element',
       isNew: true
     },

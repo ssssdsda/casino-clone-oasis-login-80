@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -302,7 +301,7 @@ const SuperElementGame = () => {
     <div className="min-h-screen bg-gradient-to-b from-blue-900 via-indigo-900 to-purple-900 flex flex-col">
       <Header />
       
-      <div className="relative flex-1 flex flex-col items-center p-4 overflow-hidden">
+      <div className="relative flex-1 flex flex-col items-center p-2 md:p-4 overflow-hidden">
         {/* Background effects */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute w-full h-full bg-[url('/lovable-uploads/11e8d58d-55f9-47e9-a6f4-ca0edee1d33c.png')] bg-cover bg-center opacity-30" />
@@ -310,20 +309,29 @@ const SuperElementGame = () => {
         </div>
         
         <div className="relative z-10 w-full max-w-md flex flex-col h-full">
-          {/* Game title */}
-          <motion.h1 
-            className="text-3xl font-bold text-center text-yellow-400 mb-2"
-            animate={{ 
-              textShadow: [
-                "0 0 8px rgba(234, 179, 8, 0.6)", 
-                "0 0 16px rgba(234, 179, 8, 0.8)", 
-                "0 0 8px rgba(234, 179, 8, 0.6)"
-              ]
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            Super Element
-          </motion.h1>
+          {/* Game title and logo */}
+          <div className="flex flex-col items-center mb-2">
+            <div className="w-full max-w-[200px] h-auto mb-2">
+              <img 
+                src="/lovable-uploads/29b7d4f3-2eed-413b-97ea-570ab0b7a5a3.png" 
+                alt="Super Elements" 
+                className="w-full h-auto object-contain" 
+              />
+            </div>
+            <motion.h1 
+              className="text-2xl md:text-3xl font-bold text-center text-yellow-400 mb-2"
+              animate={{ 
+                textShadow: [
+                  "0 0 8px rgba(234, 179, 8, 0.6)", 
+                  "0 0 16px rgba(234, 179, 8, 0.8)", 
+                  "0 0 8px rgba(234, 179, 8, 0.6)"
+                ]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              Super Element
+            </motion.h1>
+          </div>
           
           {/* Game board */}
           <div className="relative bg-gray-800/80 rounded-lg p-3 border-2 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]">

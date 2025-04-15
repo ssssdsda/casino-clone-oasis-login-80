@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { RISK_LEVELS } from './RiskSelector';
 
@@ -35,8 +35,10 @@ const PlinkoBoard = ({
   const [multiplier, setMultiplier] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [hitPegs, setHitPegs] = useState<number[]>([]);
+  const [animationInProgress, setAnimationInProgress] = useState(false);
 
   const boardRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<number>(0);
 
   // Generate pegs positions
   const generatePegs = (): PegPosition[] => {
@@ -94,15 +96,21 @@ const PlinkoBoard = ({
   };
 
   // Effect to watch for isDropping prop changes to trigger ball drop
-  React.useEffect(() => {
-    if (isDropping) {
+  useEffect(() => {
+    if (isDropping && !animationInProgress) {
       dropBall();
     }
+    
+    return () => {
+      cancelAnimationFrame(animationRef.current);
+    };
   }, [isDropping]);
 
   // Drop a ball from a random position
   const dropBall = () => {
-    if (!boardRef.current) return;
+    if (!boardRef.current || animationInProgress) return;
+    
+    setAnimationInProgress(true);
     
     // Reset previous state
     setMultiplier(null);
@@ -125,100 +133,151 @@ const PlinkoBoard = ({
     simulatePathAndAnimate(newBallPosition);
   };
 
-  // Simulate ball path and animate with peg interactions
+  // Simulate the entire path of the ball at once, with realistic physics
   const simulatePathAndAnimate = (initialPosition: BallPosition) => {
     const pegs = generatePegs();
-    const newPath: {x: number, y: number}[] = [{x: initialPosition.x, y: 0}];
-    const pegHits: number[] = [];
-    
-    let currentPos = { x: initialPosition.x, y: 0 };
     const pegRadius = 1.5; // Radius of pegs in percentage
     const ballRadius = 2.5; // Radius of ball in percentage
     
-    // Move ball down by simulating collision with pegs
-    for (let row = 1; row <= rows; row++) {
-      // Get pegs in current row
-      const rowPegs = pegs.filter(peg => Math.abs(peg.y - (row * (100 / (rows + 1)))) < 1);
+    // Simulate the physics
+    const simulatedPath: {x: number, y: number}[] = [{x: initialPosition.x, y: 0}];
+    const hitPegIndices: number[] = [];
+    
+    let currentPos = { x: initialPosition.x, y: 0 };
+    let velocity = { x: 0, y: 0.5 }; // Initial velocity, mostly downward
+    const gravity = 0.2;
+    
+    // Simulate until ball reaches bottom
+    while (currentPos.y < 100) {
+      // Apply gravity
+      velocity.y += gravity;
       
-      // Move down to this row's y position
-      currentPos.y = row * (100 / (rows + 1));
+      // Update position
+      currentPos.x += velocity.x;
+      currentPos.y += velocity.y;
       
-      // Check for collision with pegs in this row
-      let hitPegIndex = -1;
+      // Boundary checks
+      if (currentPos.x < 5) {
+        currentPos.x = 5;
+        velocity.x = Math.abs(velocity.x) * 0.8; // Bounce with reduced energy
+      } else if (currentPos.x > 95) {
+        currentPos.x = 95;
+        velocity.x = -Math.abs(velocity.x) * 0.8; // Bounce with reduced energy
+      }
       
-      for (let i = 0; i < rowPegs.length; i++) {
-        const peg = rowPegs[i];
+      // Check for collisions with pegs
+      for (let i = 0; i < pegs.length; i++) {
+        const peg = pegs[i];
         const distance = Math.sqrt(
           Math.pow(currentPos.x - peg.x, 2) + 
           Math.pow(currentPos.y - peg.y, 2)
         );
         
-        if (distance < (pegRadius + ballRadius)) {
-          hitPegIndex = i;
-          pegHits.push(pegs.indexOf(peg));
+        if (distance < (pegRadius + ballRadius) && !hitPegIndices.includes(i)) {
+          // Calculate reflection vector
+          const dx = currentPos.x - peg.x;
+          const dy = currentPos.y - peg.y;
+          const normalLength = Math.sqrt(dx * dx + dy * dy);
+          const nx = dx / normalLength;
+          const ny = dy / normalLength;
+          
+          // Adjust ball position to be outside the peg
+          currentPos.x = peg.x + nx * (pegRadius + ballRadius);
+          currentPos.y = peg.y + ny * (pegRadius + ballRadius);
+          
+          // Calculate dot product of velocity and normal
+          const dot = velocity.x * nx + velocity.y * ny;
+          
+          // Reflect velocity
+          velocity.x = (velocity.x - 2 * dot * nx) * 0.7; // 0.7 is energy loss factor
+          velocity.y = (velocity.y - 2 * dot * ny) * 0.7;
+          
+          // Add some randomness to make it more realistic
+          velocity.x += (Math.random() - 0.5) * 0.5;
+          
+          hitPegIndices.push(i);
           break;
         }
       }
       
-      // If hit a peg, deflect left or right
-      if (hitPegIndex !== -1) {
-        // Calculate bounce direction (slightly random)
-        const direction = Math.random() > 0.5 ? 1 : -1;
-        const deflection = (Math.random() * 5 + 5) * direction; // 5-10% deflection
+      // Add position to path
+      simulatedPath.push({...currentPos});
+      
+      // If we're close to the bottom, check for slots
+      if (currentPos.y >= 98) {
+        const slots = generateSlots();
+        let closestSlot = 0;
+        let minDistance = 100;
         
-        currentPos.x = Math.max(5, Math.min(95, currentPos.x + deflection));
+        for (let i = 0; i < slots.length; i++) {
+          const distance = Math.abs(slots[i].position - currentPos.x);
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestSlot = i;
+          }
+        }
+        
+        // Add final point (slot)
+        simulatedPath.push({
+          x: slots[closestSlot].position,
+          y: 100
+        });
+        
+        // Update state with hit pegs
+        setHitPegs(hitPegIndices);
+        
+        // Update result
+        setTimeout(() => {
+          setSelectedSlot(closestSlot);
+          setMultiplier(slots[closestSlot].multiplier);
+          
+          if (onResult) {
+            onResult(slots[closestSlot].multiplier, closestSlot);
+          }
+          
+          setTimeout(() => {
+            setAnimationInProgress(false);
+            if (onDropComplete) {
+              onDropComplete();
+            }
+          }, 1000);
+        }, 1000);
+        
+        break;
       }
-      
-      // Add point to path
-      newPath.push({...currentPos});
     }
     
-    // Determine which slot the ball lands in
-    const slots = generateSlots();
-    let closestSlot = 0;
-    let minDistance = 100;
+    // Animate the ball along the simulated path
+    let startTime: number | null = null;
+    const animationDuration = 3000; // 3 seconds
     
-    for (let i = 0; i < slots.length; i++) {
-      const distance = Math.abs(slots[i].position - currentPos.x);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestSlot = i;
-      }
-    }
-    
-    // Add final point (slot)
-    newPath.push({
-      x: slots[closestSlot].position,
-      y: 100
-    });
-    
-    // Update state with path and hit pegs
-    setHitPegs(pegHits);
-    setBallPosition({
-      ...initialPosition,
-      path: newPath
-    });
-    
-    // After animation, update results
-    setTimeout(() => {
-      // Animation complete
-      setSelectedSlot(closestSlot);
-      setMultiplier(slots[closestSlot].multiplier);
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / animationDuration, 1);
       
-      // Call onResult callback
-      if (onResult) {
-        onResult(slots[closestSlot].multiplier, closestSlot);
+      const pathIndex = Math.floor(progress * (simulatedPath.length - 1));
+      const currentPathPoint = simulatedPath[pathIndex];
+      
+      if (currentPathPoint) {
+        setBallPosition({
+          ...initialPosition,
+          x: currentPathPoint.x,
+          y: currentPathPoint.y
+        });
       }
       
-      // Call onDropComplete callback
-      if (onDropComplete) {
-        setTimeout(onDropComplete, 1000);
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
       }
-    }, 2000); // Animation duration
+    };
+    
+    animationRef.current = requestAnimationFrame(animate);
   };
 
   // Generate components
   const pegs = generatePegs();
+  const slots = generateSlots();
   
   const pegElements = pegs.map((peg, index) => (
     <div
@@ -232,7 +291,7 @@ const PlinkoBoard = ({
     />
   ));
 
-  const slotElements = generateSlots().map((slot, index) => (
+  const slotElements = slots.map((slot, index) => (
     <div
       key={`slot-${index}`}
       className={`absolute bottom-0 w-[8%] h-[15%] flex flex-col items-center justify-end pb-2
@@ -253,19 +312,9 @@ const PlinkoBoard = ({
     <motion.div
       className="absolute w-5 h-5 bg-white rounded-full shadow-lg z-10"
       style={{
-        left: `${ballPosition.path[0].x}%`,
-        top: 0
-      }}
-      animate={{
-        left: ballPosition.path.map(point => `${point.x}%`),
-        top: ballPosition.path.map(point => `${point.y}%`),
-      }}
-      transition={{
-        duration: 2,
-        ease: "linear",
-        times: ballPosition.path.map((_, i) => 
-          i / (ballPosition.path.length - 1)
-        )
+        left: `${ballPosition.x}%`,
+        top: `${ballPosition.y}%`,
+        transform: 'translate(-50%, -50%)'
       }}
     />
   );

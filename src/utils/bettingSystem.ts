@@ -11,15 +11,22 @@ let betHistory: Array<{
   timestamp: number;
 }> = [];
 
-// Track how many bets each user has made
+// Track how many bets each user has made in the current session
 const userBetCounts: Record<string, number> = {};
+
+// Track the specific pattern of wins and losses
+const userBetPatterns: Record<string, number[]> = {};
 
 /**
  * Determines if a bet should win based on the specified pattern:
- * - First bet always wins
- * - Then lose 5 times
- * - Then win occasionally
- * - Cap winnings at 100
+ * - First 2 bets win
+ * - Next 3 bets lose
+ * - Win 1 time
+ * - Lose 2 times
+ * - Win 1 time big
+ * - Lose 5 times
+ * - Win 4 times
+ * - Then rarely win after that
  * 
  * @param userId The ID of the user placing the bet
  * @returns Whether this bet should win
@@ -28,30 +35,26 @@ export const shouldBetWin = (userId: string): boolean => {
   // Initialize bet count for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = 0;
+    userBetPatterns[userId] = [1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0];
   }
   
   // Increment bet count
   userBetCounts[userId]++;
   const betCount = userBetCounts[userId];
   
-  // First bet always wins
-  if (betCount === 1) {
-    console.log("First bet - guaranteed win");
-    return true;
+  // For bets within the predefined pattern, return the predetermined result
+  const patternLength = userBetPatterns[userId].length;
+  if (betCount <= patternLength) {
+    const shouldWin = userBetPatterns[userId][betCount - 1] === 1;
+    console.log(`Bet ${betCount} - Following pattern: ${shouldWin ? 'Win' : 'Loss'}`);
+    return shouldWin;
   }
   
-  // Lose 5 times after first win
-  if (betCount > 1 && betCount <= 6) {
-    console.log(`Bet ${betCount} - guaranteed loss (in losing streak)`);
-    return false;
-  }
-  
-  // After losing streak, win occasionally (1 in 5 chance)
-  // But if bet amount is high, make it harder to win (1 in 10 chance)
+  // After the pattern, win occasionally (1 in 8 chance)
   const randomWinChance = Math.random();
-  const shouldWin = randomWinChance < 0.2; // 20% chance to win
+  const shouldWin = randomWinChance < 0.125; // 12.5% chance to win
   
-  console.log(`Bet ${betCount} - random win chance: ${shouldWin ? 'Win' : 'Loss'}`);
+  console.log(`Bet ${betCount} - Random win chance: ${shouldWin ? 'Win' : 'Loss'}`);
   return shouldWin;
 };
 
