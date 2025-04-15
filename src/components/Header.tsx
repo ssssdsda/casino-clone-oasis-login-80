@@ -19,7 +19,7 @@ const Header = () => {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
   
-  // Use ₹ symbol instead of $ for currency display
+  // Use ৳ symbol for currency display
   const currencySymbol = '৳';
   
   // Format balance to remove decimal part

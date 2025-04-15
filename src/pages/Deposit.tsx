@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +14,7 @@ import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/f
 import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
 import { useLanguage } from '@/context/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const firestore = getFirestore(app);
 
@@ -23,6 +25,7 @@ const Deposit = () => {
   const { toast } = useToast();
   const { user, updateUserBalance } = useAuth();
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   
   const [amount, setAmount] = useState<number>(500);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -218,7 +221,7 @@ const Deposit = () => {
             </motion.div>
             <h2 className="text-2xl font-bold text-white mb-2">{t('depositSuccessful')}</h2>
             <p className="text-gray-300 mb-4">
-              {amount}{t('currency')} {t('amountAddedToAccount')}
+              ৳{amount} {t('amountAddedToAccount')}
             </p>
             <div className="text-sm text-gray-400">
               {t('redirectToGames')}
@@ -240,7 +243,7 @@ const Deposit = () => {
             </motion.div>
             <h2 className="text-2xl font-bold text-white mb-2">{t('depositProcessing')}</h2>
             <p className="text-gray-300 mb-4">
-              {t('processingDescription')} {amount}{t('currency')} {t('processingInfo')}
+              {t('processingDescription')} ৳{amount} {t('processingInfo')}
             </p>
             <div className="bg-gray-900 px-4 py-2 rounded-lg mb-4">
               <div className="text-sm text-gray-400">{t('elapsedTime')}</div>
@@ -256,7 +259,7 @@ const Deposit = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-gray-300 text-sm">{t('availableBalance')}</div>
-                  <div className="text-2xl font-bold text-white">{user?.balance.toFixed(0)}{t('currency')}</div>
+                  <div className="text-2xl font-bold text-white">৳{user?.balance.toFixed(0)}</div>
                 </div>
                 <Wallet className="h-10 w-10 text-blue-300 opacity-50" />
               </div>
@@ -271,7 +274,7 @@ const Deposit = () => {
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-bold text-white mb-4">{t('selectAmount')}</h2>
               
-              <div className="grid grid-cols-5 gap-2">
+              <div className={`grid ${isMobile ? 'grid-cols-4' : 'grid-cols-5'} gap-2`}>
                 {DEPOSIT_AMOUNTS.map((amt) => (
                   <Button
                     key={amt}
@@ -323,12 +326,12 @@ const Deposit = () => {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   </motion.div>
-                  Processing...
+                  {t('processing')}
                 </>
               ) : (
                 <>
                   <PlusCircle className="h-5 w-5 mr-2" />
-                  {t('depositNow')} {amount}{t('currency')}
+                  {t('depositNow')} ৳{amount}
                 </>
               )}
             </Button>
@@ -343,7 +346,7 @@ const Deposit = () => {
             {t('bKashPayment')}
           </DialogTitle>
           <DialogDescription className="text-gray-300">
-            {t('completePayment')} {amount}{t('currency')} {t('paymentMethod')}
+            {t('completePayment')} ৳{amount} {t('paymentMethod')}
           </DialogDescription>
           <div className="flex flex-col items-center justify-center p-4 space-y-4">
             <img src="/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png" alt="bKash" className="w-16 h-16" />
