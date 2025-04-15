@@ -77,20 +77,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const processReferralBonus = async (userId: string) => {
     try {
+      console.log("Processing referral bonus for user:", userId);
+      
       // Get the user who made their first deposit
       const userDoc = await getDoc(doc(db, "users", userId));
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
+        console.log("User data:", userData);
         
         // Check if this user was referred by someone and has a referredBy field
         if (userData.referredBy) {
+          console.log("User was referred by:", userData.referredBy);
+          
           // Get the referrer's user document
           const referrerDoc = await getDoc(doc(db, "users", userData.referredBy));
           
           if (referrerDoc.exists()) {
             const referrerData = referrerDoc.data();
             const newBalance = (referrerData.balance || 0) + REFERRAL_BONUS;
+            
+            console.log("Updating referrer balance from", referrerData.balance, "to", newBalance);
             
             // Update the referrer's balance
             await updateDoc(doc(db, "users", userData.referredBy), {
@@ -105,18 +112,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               timestamp: new Date()
             });
             
+            // Update the user to mark that referral has been processed
+            await updateDoc(doc(db, "users", userId), {
+              referralProcessed: true
+            });
+            
             // Show success message
             toast({
               title: "Referral Bonus Paid!",
-              description: `A referral bonus of ₹${REFERRAL_BONUS} has been paid to your referrer.`,
+              description: `A referral bonus of ৳${REFERRAL_BONUS} has been paid to your referrer.`,
               variant: "default",
               className: "bg-green-600 text-white font-bold"
             });
+            
+            return true;
+          } else {
+            console.log("Referrer document not found");
           }
+        } else {
+          console.log("User was not referred by anyone");
         }
+      } else {
+        console.log("User document not found");
       }
+      
+      return false;
     } catch (error) {
       console.error("Error processing referral bonus:", error);
+      return false;
     }
   };
 
@@ -173,6 +196,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       // Get referral code from parameter or from URL if not provided
       const refCode = referralCode || extractReferralCode();
+      console.log("Register with referral code:", refCode);
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Send email verification
@@ -192,6 +217,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // If there was a referral code, save it
       if (refCode) {
         userData.referredBy = refCode;
+        userData.referralProcessed = false; // Mark as not processed yet
+        
+        // Check if referrer exists
+        const referrerDoc = await getDoc(doc(db, "users", refCode));
+        if (referrerDoc.exists()) {
+          console.log("Referrer found:", refCode);
+          // Update referrer's referred users count
+          await updateDoc(doc(db, "users", refCode), {
+            referralCount: (referrerDoc.data().referralCount || 0) + 1
+          });
+        }
       }
       
       // Add user to firestore
@@ -213,8 +249,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       toast({
         title: "Registration successful!",
-        description: "Please verify your email to complete registration. A verification link has been sent to your email address. You've received ₹89 as a signup bonus!",
+        description: "Please verify your email to complete registration. A verification link has been sent to your email address. You've received ৳89 as a signup bonus!",
       });
+      
+      // If this user was referred by someone, immediately process the referral bonus
+      if (refCode) {
+        await processReferralBonus(userCredential.user.uid);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -270,13 +311,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       // Get referral code from parameter or from URL if not provided
       const refCode = referralCode || extractReferralCode();
+      console.log("Register with phone and referral code:", refCode);
       
       // Store pending registration data
       localStorage.setItem('pendingUsername', username);
       localStorage.setItem('pendingPhone', phoneNumber);
       if (refCode) {
         localStorage.setItem('pendingReferralCode', refCode);
+        console.log("Stored pending referral code:", refCode);
       }
+      
+      // In a real environment, we would send a verification code here
+      // For development purposes, we'll simulate this
       
       toast({
         title: "Success",
@@ -320,15 +366,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const verifyPhoneCode = async (verificationId: string, code: string) => {
     setIsLoading(true);
     try {
-      // For demo purposes, let's simulate a successful verification
-      console.log("Simulating phone verification with code:", code);
+      // Verify that a code was actually provided
+      if (!code || code.length !== 6) {
+        throw new Error("Invalid verification code. Please enter a 6-digit code.");
+      }
+      
+      console.log("Verifying phone with code:", code);
       
       const pendingUsername = localStorage.getItem('pendingUsername');
       const pendingPhone = localStorage.getItem('pendingPhone');
       const pendingReferralCode = localStorage.getItem('pendingReferralCode');
       
-      if (pendingUsername) {
-        // This is a new registration - create mock user
+      if (pendingUsername && pendingPhone) {
+        // This is a new registration - create user
         const mockUserId = "phone-" + Date.now();
         
         // Prepare user data with potential referral information
@@ -344,7 +394,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         // If there was a referral code, save it
         if (pendingReferralCode) {
+          console.log("Including referral code in user data:", pendingReferralCode);
           userData.referredBy = pendingReferralCode;
+          userData.referralProcessed = false; // Mark as not processed yet
+          
+          // Check if referrer exists
+          const referrerDoc = await getDoc(doc(db, "users", pendingReferralCode));
+          if (referrerDoc.exists()) {
+            console.log("Referrer found:", pendingReferralCode);
+            // Update referrer's referred users count
+            await updateDoc(doc(db, "users", pendingReferralCode), {
+              referralCount: (referrerDoc.data().referralCount || 0) + 1
+            });
+          }
         }
         
         // Save user to firestore
@@ -369,10 +431,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         toast({
           title: "Registration Successful!",
-          description: `You've received ₹${PHONE_SIGNUP_BONUS} bonus for verifying your phone number!`,
+          description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for verifying your phone number!`,
           variant: "default",
           className: "bg-green-600 text-white font-bold"
         });
+        
+        // If this user was referred by someone, immediately process the referral bonus
+        if (pendingReferralCode) {
+          await processReferralBonus(mockUserId);
+        }
       } else {
         // This is an existing user logging in - find by phone number
         const mockUserId = "phone-login-" + Date.now();
