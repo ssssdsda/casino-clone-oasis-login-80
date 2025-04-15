@@ -1,6 +1,7 @@
+
 /**
  * Betting System Utility
- * Controls winning odds for casino games to ensure fair play
+ * Controls winning odds for casino games to ensure fair play and player satisfaction
  */
 
 // Store user session data to track bets across sessions
@@ -28,27 +29,27 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
   // Initialize bet count for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = 0;
-    // Pattern with more wins and better distribution
-    userBetPatterns[userId] = [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1];
+    // Pattern with more wins and better distribution (60% win rate)
+    userBetPatterns[userId] = [1, 1, 1, 0, 1, 0, 1, 1, 0, 1];
   }
   
   // Increment bet count
   userBetCounts[userId]++;
   const betCount = userBetCounts[userId];
   
-  // Base win chance (30-45%)
-  let winChance = 0.35;
+  // Higher base win chance (45-60%)
+  let winChance = 0.45;
   
-  // Slight adjustments based on bet amount (but not heavily biased)
+  // Slight adjustments based on bet amount (more balanced)
   if (betAmount <= 50) {
-    winChance += 0.05; // Small bets have slightly better odds (40%)
+    winChance += 0.10; // Small bets have better odds (55%)
   } else if (betAmount > 200) {
-    winChance -= 0.05; // Large bets have slightly lower odds (30%)
+    winChance -= 0.05; // Large bets have slightly lower odds (40%)
   }
   
-  // First 3 bets have better odds to encourage new players
-  if (betCount <= 3) {
-    winChance += 0.2; // First 3 bets have 50-65% chance to win
+  // First 5 bets have even better odds to encourage new players
+  if (betCount <= 5) {
+    winChance += 0.15; // First 5 bets have 60-70% chance to win
   }
   
   // Use pattern for more predictability in the early game
@@ -59,7 +60,7 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
     return shouldWin;
   }
   
-  // After the pattern, use probability system
+  // After the pattern, use probability system with improved win rates
   const random = Math.random();
   const shouldWin = random < winChance;
   
@@ -91,7 +92,7 @@ export const calculateWinAmount = (betAmount: number, multiplier: number): numbe
   let winAmount = betAmount * multiplier;
   
   // Higher cap for larger bets (instead of strict 100 cap)
-  const maxWin = Math.max(100, betAmount * 2);
+  const maxWin = Math.max(150, betAmount * 3);
   
   if (winAmount > maxWin) {
     winAmount = maxWin;
