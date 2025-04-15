@@ -157,11 +157,11 @@ export function RegisterButton(props: any) {
             <TabsList className="grid grid-cols-2 mb-4">
               <TabsTrigger value="email" className="flex items-center gap-1">
                 <Mail className="h-4 w-4" />
-                {t('email')}
+                <span className="text-white">{t('email')}</span>
               </TabsTrigger>
               <TabsTrigger value="phone" className="flex items-center gap-1">
                 <Phone className="h-4 w-4" />
-                {t('phone')}
+                <span className="text-white">{t('phone')}</span>
               </TabsTrigger>
             </TabsList>
             

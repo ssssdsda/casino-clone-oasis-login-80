@@ -104,8 +104,17 @@ export function LoginDialog() {
             });
             return;
           }
+          
           const response = await loginWithPhone(formattedPhone, phonePassword);
-          setVerificationId(response);
+          if (response === "success") {
+            setOpen(false);
+            toast({
+              title: "Success",
+              description: "You've successfully logged in!",
+              variant: "default",
+              className: "bg-green-600 text-white"
+            });
+          }
         } else {
           if (!username) {
             toast({
@@ -184,7 +193,7 @@ export function LoginDialog() {
         <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-[#0e363d] to-[#0a2328] border-casino-accent">
           <DialogHeader>
             <DialogTitle className="text-white text-xl">{activeTab === 'login' ? 'Login to Your Account' : 'Create New Account'}</DialogTitle>
-            <DialogDescription className="text-gray-300">
+            <DialogDescription className="text-white">
               {activeTab === 'login' 
                 ? 'Enter your credentials to access your account.'
                 : 'Create a new account to start playing.'}
@@ -206,11 +215,11 @@ export function LoginDialog() {
               <TabsList className="grid grid-cols-2 mb-4">
                 <TabsTrigger value="email" className="flex items-center gap-1">
                   <Mail className="h-4 w-4" />
-                  Email
+                  <span className="text-white">Email</span>
                 </TabsTrigger>
                 <TabsTrigger value="phone" className="flex items-center gap-1">
                   <Phone className="h-4 w-4" />
-                  Phone
+                  <span className="text-white">Phone</span>
                 </TabsTrigger>
               </TabsList>
               
@@ -301,6 +310,22 @@ export function LoginDialog() {
                           className="bg-casino-dark border-gray-700 text-white"
                         />
                       </div>
+                      
+                      {activeTab === 'login' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="phone-password" className="text-white flex items-center gap-2">
+                            <User className="h-4 w-4" /> Password
+                          </Label>
+                          <Input
+                            id="phone-password"
+                            type="password"
+                            value={phonePassword}
+                            onChange={(e) => setPhonePassword(e.target.value)}
+                            className="bg-casino-dark border-gray-700 text-white"
+                            placeholder="Your password (last 6 digits of phone)"
+                          />
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="space-y-2">
@@ -324,7 +349,7 @@ export function LoginDialog() {
                       }
                       disabled={isLoading}
                     >
-                      {isLoading ? 'Processing...' : showVerification ? 'Verify Code' : activeTab === 'login' ? 'Get Code' : 'Register'}
+                      {isLoading ? 'Processing...' : showVerification ? 'Verify Code' : activeTab === 'login' ? 'Login' : 'Register'}
                     </Button>
                   </DialogFooter>
                 </form>
