@@ -123,10 +123,10 @@ const BoxingKingGame = () => {
         
         if (i === 4) {
           setTimeout(() => {
-            const shouldWin = shouldBetWin(user.uid, 'BoxingKing', bet);
+            const shouldWin = shouldBetWin(user.id, 'BoxingKing', bet);
             
             if (shouldWin) {
-              const userBetCount = user.uid ? (window as any).userBetCounts?.[user.uid]?.['BoxingKing'] || 1 : 1;
+              const userBetCount = user.id ? (window as any).userBetCounts?.[user.id]?.['BoxingKing'] || 1 : 1;
               const { winAmount, winLines } = forceWinningCombination(newReels, bet, userBetCount);
               setWinAmount(winAmount);
               setWinLines(winLines);

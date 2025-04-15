@@ -227,7 +227,7 @@ const SuperAceCasinoGame = () => {
     setTimeout(() => {
       const newCards = generateCardGrid();
       
-      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.id || 'anonymous');
+      const shouldWin = shouldBetWin(user?.id || 'anonymous', 'SuperAce');
       
       let totalWin = 0;
       if (shouldWin) {

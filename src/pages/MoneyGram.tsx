@@ -141,11 +141,12 @@ const MoneyGram = () => {
     setTimeout(() => {
       clearInterval(spinInterval);
       
-      const willWin = user ? shouldBetWin(user.uid, 'MoneyGram', bet) : false;
+      const betAmount = bet;
+      const shouldWin = shouldBetWin(user.id, 'MoneyGram', betAmount);
       
       let finalSymbols;
       
-      if (willWin) {
+      if (shouldWin) {
         const winSymbol = Math.floor(Math.random() * moneySymbols.length);
         
         finalSymbols = Array(3).fill(null).map(() => 

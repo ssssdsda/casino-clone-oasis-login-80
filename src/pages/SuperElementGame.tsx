@@ -179,7 +179,7 @@ const SuperElementGame = () => {
     setTimeout(() => {
       clearInterval(spinInterval);
       
-      const shouldWin = shouldBetWin(user?.id || 'anonymous');
+      const shouldWin = shouldBetWin(user?.id || 'anonymous', 'SuperElement');
       let finalGrid;
       
       if (shouldWin) {

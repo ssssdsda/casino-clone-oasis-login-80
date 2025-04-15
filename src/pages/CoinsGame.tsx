@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Settings, Plus, Minus, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
 
-// Coin UI Component with colorful icons
 interface CoinProps {
   value: number;
   isSpinning: boolean;
@@ -15,13 +13,12 @@ interface CoinProps {
 }
 
 const Coin: React.FC<CoinProps> = ({ value, isSpinning, isSelected }) => {
-  // Function to choose coin color based on value
   const getCoinColor = (value: number) => {
     switch (value) {
-      case 1: return { bg: 'bg-bronze', text: 'text-white' }; // Changed to white
-      case 3: return { bg: 'bg-silver', text: 'text-white' }; // Changed to white
+      case 1: return { bg: 'bg-bronze', text: 'text-white' };
+      case 3: return { bg: 'bg-silver', text: 'text-white' };
       case 5: return { bg: 'bg-gold', text: 'text-yellow-800' };
-      case 6: return { bg: 'bg-purple-500', text: 'text-white' }; // Changed to white
+      case 6: return { bg: 'bg-purple-500', text: 'text-white' };
       case 10: return { bg: 'bg-blue-500', text: 'text-white' };
       case 20: return { bg: 'bg-green-500', text: 'text-white' };
       case 77: return { bg: 'bg-gradient-to-br from-red-500 to-yellow-500', text: 'text-white' };
@@ -53,10 +50,8 @@ const Coin: React.FC<CoinProps> = ({ value, isSpinning, isSelected }) => {
   );
 };
 
-// Define bet levels
 const betLevels = [1, 5, 10, 25, 50, 100];
 
-// Main Game Component
 const CoinsGame: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateUserBalance } = useAuth();
@@ -65,18 +60,16 @@ const CoinsGame: React.FC = () => {
   const [spinning, setSpinning] = useState(false);
   const [coins, setCoins] = useState<number[]>([1, 3, 5, 7, 10, 20, 77, 1]);
   const [selectedCoinIndex, setSelectedCoinIndex] = useState<number | null>(null);
-  const [betLevel, setBetLevel] = useState(0); // Index into betLevels
+  const [betLevel, setBetLevel] = useState(0);
   const [balance, setBalance] = useState(1000);
   const [betCount, setBetCount] = useState(0);
 
-  // Update balance when user changes
   useEffect(() => {
     if (user) {
       setBalance(user.balance);
     }
   }, [user?.balance]);
 
-  // Function to handle coin spinning
   const handleSpin = () => {
     if (spinning) return;
     
@@ -100,62 +93,48 @@ const CoinsGame: React.FC = () => {
       return;
     }
     
-    // Deduct bet amount from balance
     const newBalance = balance - currentBet;
     setBalance(newBalance);
     if (user) {
       updateUserBalance(newBalance);
     }
     
-    // Track bets for the betting system
     const newBetCount = betCount + 1;
     setBetCount(newBetCount);
     
-    // Start spinning
     setSpinning(true);
     setSelectedCoinIndex(null);
     
-    // Determine if this spin should win based on the betting system
-    const shouldWin = shouldBetWin(user?.id || 'anonymous');
+    const shouldWin = shouldBetWin(user?.id || 'anonymous', 'CoinsGame');
     
-    // Generate a random result, but rig it based on shouldWin
     setTimeout(() => {
       let targetIndex: number;
       
       if (shouldWin) {
-        // If should win, choose a winning value (7, 10, 20, or 77)
         const winningValues = [7, 10, 20];
-        // Only occasionally give the jackpot (77)
         if (Math.random() < 0.1) {
           winningValues.push(77);
         }
         const winValue = winningValues[Math.floor(Math.random() * winningValues.length)];
         targetIndex = coins.findIndex(c => c === winValue);
       } else {
-        // If should lose, choose a low value (1, 3, 5)
         const losingValues = [1, 3, 5];
         const loseValue = losingValues[Math.floor(Math.random() * losingValues.length)];
         targetIndex = coins.findIndex(c => c === loseValue);
       }
       
-      // If we couldn't find the target, pick a random position
       if (targetIndex === -1) {
         targetIndex = Math.floor(Math.random() * coins.length);
       }
       
-      // Calculate the win amount
       const winMultiplier = coins[targetIndex];
       const winAmount = calculateWinAmount(currentBet, winMultiplier);
       
-      // Animate spinning and stopping
       animateSpinToIndex(targetIndex, winAmount);
-      
     }, 500);
   };
 
-  // Animate the spin to land on a specific index
   const animateSpinToIndex = (targetIndex: number, winAmount: number) => {
-    // Number of full rotations plus the target index
     const totalRotations = 3 * coins.length + targetIndex;
     
     let currentIndex = 0;
@@ -163,17 +142,13 @@ const CoinsGame: React.FC = () => {
       setSelectedCoinIndex(currentIndex % coins.length);
       currentIndex++;
       
-      // Slow down near the end
-      const remainingSteps = totalRotations - currentIndex;
-      
       if (currentIndex >= totalRotations) {
         clearInterval(interval);
         handleSpinResult(targetIndex, winAmount);
       }
-    }, currentIndex > totalRotations - 10 ? 200 : 100); // Slow down at the end
+    }, currentIndex > totalRotations - 10 ? 200 : 100);
   };
 
-  // Handle the result of the spin
   const handleSpinResult = (landedIndex: number, winAmount: number) => {
     const currentBet = betLevels[betLevel];
     
@@ -183,7 +158,6 @@ const CoinsGame: React.FC = () => {
       const coinValue = coins[landedIndex];
       
       if (coinValue > 1) {
-        // Player wins
         const newBalance = balance + winAmount;
         setBalance(newBalance);
         if (user) {
@@ -197,7 +171,6 @@ const CoinsGame: React.FC = () => {
           className: "bg-green-500 text-white"
         });
       } else {
-        // Player loses
         toast({
           title: "Better luck next time!",
           description: `You landed on ${coinValue}x.`,
@@ -209,7 +182,6 @@ const CoinsGame: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-900 to-indigo-900 text-white">
-      {/* Header */}
       <div className="bg-purple-800 py-2 px-4 flex justify-between items-center">
         <button onClick={() => navigate('/')} className="text-white">
           <ArrowLeft size={24} />
@@ -220,9 +192,7 @@ const CoinsGame: React.FC = () => {
         </button>
       </div>
       
-      {/* Main game content */}
       <div className="max-w-md mx-auto p-4">
-        {/* Balance display */}
         <div className="bg-purple-800 rounded-lg p-3 mb-6 flex justify-between">
           <div>
             <div className="text-xs text-purple-300">BALANCE</div>
@@ -234,16 +204,13 @@ const CoinsGame: React.FC = () => {
           </div>
         </div>
         
-        {/* Coin wheel display - mobile friendly circle */}
         <div className="relative mb-8">
           <div className="aspect-square rounded-full border-8 border-purple-700 bg-purple-800 overflow-hidden flex items-center justify-center p-2">
             <div className="w-full h-full relative">
-              {/* Circular arrangement of coins */}
               <div className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2">
                 {coins.map((coin, index) => {
-                  // Calculate position on the circle
                   const angle = (index / coins.length) * Math.PI * 2 - Math.PI / 2;
-                  const radius = 42; // % of container
+                  const radius = 42;
                   const left = 50 + radius * Math.cos(angle);
                   const top = 50 + radius * Math.sin(angle);
                   
@@ -266,13 +233,11 @@ const CoinsGame: React.FC = () => {
                 })}
               </div>
               
-              {/* Center pointer */}
               <div className="absolute top-0 left-1/2 h-[10%] w-0.5 bg-yellow-400 transform -translate-x-1/2 z-10"></div>
             </div>
           </div>
         </div>
         
-        {/* Bet controls */}
         <div className="grid grid-cols-3 gap-2 mb-6">
           {betLevels.map((bet, index) => (
             <button
@@ -291,7 +256,6 @@ const CoinsGame: React.FC = () => {
           ))}
         </div>
         
-        {/* Spin button */}
         <button
           onClick={handleSpin}
           disabled={spinning || !user || (user && user.balance < betLevels[betLevel])}

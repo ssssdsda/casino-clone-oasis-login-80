@@ -22,11 +22,11 @@ const userBetCounts: Record<string, Record<string, number>> = {};
  * - Coin Up: 30% win rate
  * 
  * @param userId The ID of the user placing the bet
- * @param gameType The type of game being played
- * @param betAmount The bet amount placed by the user
+ * @param gameType The type of game being played (optional)
+ * @param betAmount The bet amount placed by the user (optional)
  * @returns Whether this bet should win
  */
-export const shouldBetWin = (userId: string, gameType: string, betAmount = 10): boolean => {
+export const shouldBetWin = (userId: string, gameType: string = 'default', betAmount = 10): boolean => {
   // Initialize game counts for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = {};

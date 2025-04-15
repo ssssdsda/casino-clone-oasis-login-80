@@ -90,7 +90,7 @@ const CoinUpGame = () => {
     setWinAmount(0);
     
     // Check if this spin should win based on betting system (30% chance)
-    const shouldWin = shouldBetWin(user.uid, 'CoinUp', betAmount);
+    const shouldWin = shouldBetWin(user.id, 'CoinUp', betAmount);
     
     // Generate new grid with random symbols
     let newGrid: string[][] = [[], [], []];
