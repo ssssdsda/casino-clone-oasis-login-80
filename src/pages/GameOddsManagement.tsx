@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -14,12 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { saveGameSettings } from '@/utils/bettingSystem';
-import { useAuth } from '@/context/AuthContext';
-import { toast } from "@/components/ui/sonner";
-import { getDoc, doc, getFirestore, DocumentData } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { getDoc, doc, getFirestore } from 'firebase/firestore';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useNavigate } from 'react-router-dom';
 
 // Define the game settings type for better type safety
 interface GameSettings {
@@ -44,7 +41,6 @@ interface GameSettings {
 }
 
 const GameOddsManagement = () => {
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [gameSettings, setGameSettings] = useState<GameSettings>({
     games: {
@@ -67,7 +63,7 @@ const GameOddsManagement = () => {
     }
   });
   
-  const { user } = useAuth();
+  const { toast } = useToast();
   const db = getFirestore();
   
   useEffect(() => {
@@ -132,28 +128,30 @@ const GameOddsManagement = () => {
       const success = await saveGameSettings(gameSettings);
       
       if (success) {
-        toast("Settings saved successfully!");
+        toast({
+          title: "Settings saved successfully!",
+          description: "Game odds have been updated.",
+        });
       } else {
         // If Firebase save fails, save to localStorage as fallback
         localStorage.setItem('gameOddsSettings', JSON.stringify(gameSettings));
-        toast("Settings saved locally but Firebase update failed");
+        toast({
+          title: "Settings saved locally",
+          description: "Firebase update failed, saved to local storage instead.",
+        });
       }
     } catch (error) {
       console.error("Error saving settings:", error);
       localStorage.setItem('gameOddsSettings', JSON.stringify(gameSettings));
-      toast("Error saving to Firebase, saved locally instead");
+      toast({
+        title: "Error saving to Firebase",
+        description: "Settings saved locally instead.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Protect route for non-admin users
-  useEffect(() => {
-    if (!user || !(user as any).isAdmin) {
-      toast("You need admin privileges to access this page");
-      navigate('/');
-    }
-  }, [user, navigate]);
 
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
@@ -168,7 +166,7 @@ const GameOddsManagement = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="BoxingKing" className="space-y-4">
-              <TabsList className="grid grid-cols-4">
+              <TabsList className="grid grid-cols-5">
                 <TabsTrigger value="BoxingKing">Boxing King</TabsTrigger>
                 <TabsTrigger value="MoneyGram">Money Gram</TabsTrigger>
                 <TabsTrigger value="CoinUp">Coin Up</TabsTrigger>
