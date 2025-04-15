@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { RegisterButton } from '@/components/RegisterButton';
 import Header from '@/components/Header';
@@ -18,15 +18,17 @@ const Register = () => {
   const { isAuthenticated } = useAuth();
   const db = getFirestore();
   
-  // Extract referral code from URL and path parameters when page loads
-  React.useEffect(() => {
+  // Enhanced referral code extraction that handles all possible URL formats
+  useEffect(() => {
     const handleReferralCode = async () => {
-      // Check for referral code in query parameters
-      const urlParams = new URLSearchParams(location.search);
-      let refCode = urlParams.get('ref');
+      let refCode = null;
       
-      // If not in query params, check if it's in the path (for /ref/CODE format)
-      if (!refCode && location.pathname.includes('/ref/')) {
+      // Method 1: Check URL query parameters
+      const urlParams = new URLSearchParams(location.search);
+      refCode = urlParams.get('ref');
+      
+      // Method 2: Check path for /ref/CODE format
+      if (!refCode) {
         const pathParts = location.pathname.split('/');
         const refIndex = pathParts.indexOf('ref');
         if (refIndex !== -1 && refIndex < pathParts.length - 1) {
@@ -34,23 +36,37 @@ const Register = () => {
         }
       }
       
+      // Method 3: Check path for /r/CODE format (short version)
+      if (!refCode) {
+        const pathParts = location.pathname.split('/');
+        const refIndex = pathParts.indexOf('r');
+        if (refIndex !== -1 && refIndex < pathParts.length - 1) {
+          refCode = pathParts[refIndex + 1];
+        }
+      }
+      
+      // If we found a referral code by any method, store it and log the event
       if (refCode) {
-        // Store referral code in localStorage
+        console.log(`Found referral code: ${refCode} via ${location.pathname}`);
         localStorage.setItem('referralCode', refCode);
-        console.log(`Referral code stored: ${refCode}`);
         
-        // Also track this referral view in Firebase for analytics
         try {
+          // Track this referral view in Firebase with additional debugging info
           const referralViewId = `view_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           await setDoc(doc(db, "referralViews", referralViewId), {
             referralCode: refCode,
             timestamp: new Date(),
             userAgent: navigator.userAgent,
-            viewedOn: window.location.href
+            viewedPath: location.pathname,
+            viewedUrl: window.location.href,
+            queryParams: location.search
           });
+          console.log(`Referral view tracked in Firebase: ${referralViewId}`);
         } catch (error) {
           console.error("Error tracking referral view:", error);
         }
+      } else {
+        console.log("No referral code found in URL");
       }
       
       // If user is already logged in, redirect to home page
@@ -63,7 +79,7 @@ const Register = () => {
   }, [location.search, location.pathname, isAuthenticated, navigate, db]);
 
   // Automatically trigger register dialog when the page loads
-  React.useEffect(() => {
+  useEffect(() => {
     // Find and click the register button after a short delay
     const timer = setTimeout(() => {
       const registerButtonElement = document.querySelector('[data-register-button="true"]');
