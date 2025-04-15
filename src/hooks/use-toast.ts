@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -140,6 +141,9 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // Add default styling to toasts
+  const className = props.className ? props.className : "bg-red-600 text-white border-red-700";
+  
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -154,6 +158,7 @@ function toast({ ...props }: Toast) {
     toast: {
       ...props,
       id,
+      className,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()

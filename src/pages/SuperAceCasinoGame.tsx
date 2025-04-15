@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -171,7 +172,7 @@ const SuperAceCasinoGame = () => {
   const { user, updateUserBalance } = useAuth();
   
   const [gameState, setGameState] = useState({
-    balance: user?.balance || 1000,
+    balance: 0,
     bet: 2,
     multiplier: 1,
     cards: generateCardGrid(),
@@ -187,18 +188,34 @@ const SuperAceCasinoGame = () => {
     if (user) {
       setGameState(prev => ({ ...prev, balance: user.balance }));
     }
-  }, [user?.balance, user]);
+  }, [user?.balance]);
   
   const handleSpin = () => {
-    if (gameState.isSpinning || gameState.balance < gameState.bet) return;
+    if (gameState.isSpinning || !user) {
+      if (!user) {
+        toast({
+          title: "Login Required",
+          description: "Please login to play",
+          className: "bg-red-600 text-white border-red-700",
+        });
+      }
+      return;
+    }
     
-    // Deduct bet from balance
+    if (gameState.balance < gameState.bet) {
+      toast({
+        title: "Insufficient Balance",
+        description: "Please deposit more to play",
+        className: "bg-red-600 text-white border-red-700",
+      });
+      return;
+    }
+    
+    // Deduct bet from real balance
     const newBalance = gameState.balance - gameState.bet;
     
     // Update user balance in auth context
-    if (user) {
-      updateUserBalance(newBalance);
-    }
+    updateUserBalance(newBalance);
     
     // Increment bet count
     const newBetCount = gameState.betCount + 1;
@@ -233,7 +250,7 @@ const SuperAceCasinoGame = () => {
       const finalBalance = newBalance + totalWin;
       
       // Update user balance in auth context if there's a win
-      if (user && totalWin > 0) {
+      if (totalWin > 0) {
         updateUserBalance(finalBalance);
       }
       
@@ -253,9 +270,17 @@ const SuperAceCasinoGame = () => {
       }));
       
       if (totalWin > 0) {
-        toast.success(`You won ${totalWin}!`);
+        toast({
+          title: "You Won!",
+          description: `You won ${totalWin}!`,
+          className: "bg-red-600 text-white border-red-700"
+        });
       } else if (newBetCount > 2) {
-        toast.error("Better luck next time!");
+        toast({
+          title: "No Win",
+          description: "Better luck next time!",
+          className: "bg-red-600 text-white border-red-700"
+        });
       }
     }, spinDuration);
   };

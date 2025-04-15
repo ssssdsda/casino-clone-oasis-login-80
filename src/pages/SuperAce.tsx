@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, RotateCw, Plus, Minus, RefreshCw, Heart, Target, Crown } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -188,14 +188,13 @@ const PHASES = {
 
 const SuperAce = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, updateUserBalance } = useAuth();
   
   const [deck, setDeck] = useState([]);
   const [displayedCards, setDisplayedCards] = useState([]);
   const [gamePhase, setGamePhase] = useState(PHASES.BETTING);
   const [bet, setBet] = useState(50);
-  const [balance, setBalance] = useState(user?.balance || 1000);
+  const [balance, setBalance] = useState(0);
   const [result, setResult] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [winAmount, setWinAmount] = useState(0);
@@ -208,6 +207,13 @@ const SuperAce = () => {
       setIsLoading(false);
     }, 1500);
   }, []);
+  
+  // Update balance when user changes
+  useEffect(() => {
+    if (user) {
+      setBalance(user.balance);
+    }
+  }, [user?.balance]);
   
   // Initialize or reset the game
   const initializeGame = () => {
@@ -242,16 +248,31 @@ const SuperAce = () => {
   
   // Deal cards
   const startGame = async () => {
-    if (balance < bet) {
+    if (!user) {
       toast({
-        title: "Insufficient Balance",
-        description: "You don't have enough balance for this bet",
-        variant: "destructive",
+        title: "Login Required",
+        description: "Please login to play",
+        className: "bg-red-600 text-white border-red-700",
       });
       return;
     }
     
-    setBalance(prev => prev - bet);
+    if (balance < bet) {
+      toast({
+        title: "Insufficient Balance",
+        description: "You don't have enough balance for this bet",
+        className: "bg-red-600 text-white border-red-700",
+      });
+      return;
+    }
+    
+    // Deduct from real balance
+    const newBalance = balance - bet;
+    setBalance(newBalance);
+    
+    // Update user balance in auth context
+    updateUserBalance(newBalance);
+    
     setGamePhase(PHASES.DEALING);
     
     // Save bet to Firebase
@@ -261,7 +282,7 @@ const SuperAce = () => {
         betAmount: bet,
         game: "SuperAce",
         timestamp: serverTimestamp(),
-        userBalance: balance - bet
+        userBalance: newBalance
       });
     } catch (error) {
       console.error("Error saving bet: ", error);
@@ -271,7 +292,7 @@ const SuperAce = () => {
     const newDeck = [...deck];
     const drawnCards = [];
     
-    // Draw 16 cards for the 4x4 grid (changed from 25 for 5x5)
+    // Draw 16 cards for the 4x4 grid
     for (let i = 0; i < 16; i++) {
       if (newDeck.length > 0) {
         drawnCards.push(newDeck.pop());
@@ -279,7 +300,7 @@ const SuperAce = () => {
     }
     
     // Add special positions (targets)
-    for (const pos of [5, 10]) { // Changed positions for 4x4 grid
+    for (const pos of [5, 10]) {
       if (drawnCards[pos]) {
         drawnCards[pos].isTarget = true;
       }
@@ -338,7 +359,12 @@ const SuperAce = () => {
     setWinAmount(win);
     
     if (win > 0) {
-      setBalance(prev => prev + win);
+      // Add win amount to real balance
+      const newBalance = balance + win;
+      setBalance(newBalance);
+      
+      // Update user balance in auth context
+      updateUserBalance(newBalance);
       
       // Determine result message based on win amount
       let resultType = 'WIN';
@@ -353,8 +379,7 @@ const SuperAce = () => {
       toast({
         title: win >= bet * 5 ? "Big Win!" : "You Won!",
         description: `${win.toFixed(0)}৳ added to your balance`,
-        variant: "default",
-        className: win >= bet * 10 ? "bg-yellow-600 text-white font-bold" : "bg-green-600 text-white font-bold"
+        className: "bg-red-600 text-white border-red-700"
       });
     } else {
       setResult('LOSE');
@@ -362,7 +387,7 @@ const SuperAce = () => {
       toast({
         title: "No Win",
         description: "Try again!",
-        variant: "destructive",
+        className: "bg-red-600 text-white border-red-700"
       });
     }
   };
@@ -550,7 +575,7 @@ const SuperAce = () => {
             {gamePhase === PHASES.BETTING && (
               <Button
                 onClick={startGame}
-                disabled={isLoading || balance < bet}
+                disabled={isLoading || balance < bet || !user}
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-full h-16 w-16 flex items-center justify-center p-0"
               >
                 <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full h-14 w-14 flex items-center justify-center">
