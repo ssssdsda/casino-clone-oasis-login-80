@@ -1,9 +1,16 @@
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 export const Analytics = () => {
-  const location = useLocation();
+  let location = { pathname: window.location.pathname };
+
+  try {
+    // This will only work inside a Router context
+    location = useLocation();
+  } catch (error) {
+    console.warn('Analytics: Not inside a Router context, using window.location');
+  }
 
   useEffect(() => {
     // Track page views
