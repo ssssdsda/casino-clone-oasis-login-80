@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -6,9 +7,9 @@ import {
   onAuthStateChanged,
   sendEmailVerification
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc, setDoc, getFirestore, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 
 interface User {
   id: string;
@@ -37,7 +38,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const db = getFirestore();
 
 // Signup bonus amounts
 const EMAIL_SIGNUP_BONUS = 89;
@@ -52,11 +52,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [unsubscribeListener, setUnsubscribeListener] = useState<() => void | null>(() => null);
 
   const getUserBalance = async (userId: string) => {
     try {
       const userDoc = await getDoc(doc(db, "users", userId));
-      if (userDoc.exists() && userDoc.data().balance) {
+      if (userDoc.exists() && userDoc.data().balance !== undefined) {
         return userDoc.data().balance;
       }
       return 0;
@@ -81,7 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userData = userDoc.data();
         console.log("User data:", userData);
         
-        if (userData.referredBy) {
+        if (userData.referredBy && !userData.referralProcessed) {
           console.log("User was referred by:", userData.referredBy);
           
           const referrerDoc = await getDoc(doc(db, "users", userData.referredBy));
@@ -119,7 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.log("Referrer document not found");
           }
         } else {
-          console.log("User was not referred by anyone");
+          console.log("User was not referred by anyone or bonus already processed");
         }
       } else {
         console.log("User document not found");
@@ -130,6 +131,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Error processing referral bonus:", error);
       return false;
     }
+  };
+
+  // Set up real-time user data listener
+  const setupUserListener = (userId: string) => {
+    // Clear previous listener if any
+    if (unsubscribeListener) {
+      unsubscribeListener();
+    }
+
+    // Set up real-time listener for user data
+    const userRef = doc(db, "users", userId);
+    const unsubscribe = onSnapshot(
+      userRef,
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const userData = docSnapshot.data();
+          const updatedUser = {
+            ...user,
+            balance: userData.balance || 0,
+            role: userData.role,
+            phoneVerified: userData.phoneVerified,
+            emailVerified: userData.emailVerified,
+            referralCode: userData.referralCode,
+            referredBy: userData.referredBy
+          } as User;
+          
+          setUser(updatedUser);
+          localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
+        }
+      },
+      (error) => {
+        console.error("Error setting up user listener:", error);
+      }
+    );
+
+    setUnsubscribeListener(() => unsubscribe);
   };
 
   useEffect(() => {
@@ -158,26 +195,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           setUser(userData);
           localStorage.setItem('casinoUser', JSON.stringify(userData));
+          
+          // Set up real-time listener for this user
+          setupUserListener(firebaseUser.uid);
         } catch (error) {
           console.error("Error setting user data:", error);
         }
       } else {
         setUser(null);
         localStorage.removeItem('casinoUser');
+        // Clear any listeners
+        if (unsubscribeListener) {
+          unsubscribeListener();
+          setUnsubscribeListener(() => null);
+        }
       }
       setIsLoading(false);
     });
 
+    // Check for stored user on startup
     const storedUser = localStorage.getItem('casinoUser');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        
+        // Set up real-time listener if we have a stored user
+        if (parsedUser && parsedUser.id) {
+          setupUserListener(parsedUser.id);
+        }
       } catch (error) {
         localStorage.removeItem('casinoUser');
       }
     }
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (unsubscribeListener) {
+        unsubscribeListener();
+      }
+    };
   }, []);
 
   const register = async (email: string, password: string, username: string, referralCode?: string) => {
@@ -235,6 +292,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         className: "bg-green-600 text-white"
       });
       
+      // Set up real-time listener for the new user
+      setupUserListener(userCredential.user.uid);
+      
       if (refCode) {
         await processReferralBonus(userCredential.user.uid);
       }
@@ -258,6 +318,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
       const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
       const phoneVerified = userDoc.exists() ? userDoc.data().phoneVerified : false;
+      const referralCode = userDoc.exists() ? userDoc.data().referralCode : userCredential.user.uid;
+      const referredBy = userDoc.exists() ? userDoc.data().referredBy : undefined;
       
       const userData = {
         id: userCredential.user.uid,
@@ -266,11 +328,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         phone: userCredential.user.phoneNumber || undefined,
         balance: userBalance,
         emailVerified: userCredential.user.emailVerified,
-        phoneVerified: phoneVerified
+        phoneVerified: phoneVerified,
+        referralCode: referralCode,
+        referredBy: referredBy
       };
       
       setUser(userData);
       localStorage.setItem('casinoUser', JSON.stringify(userData));
+      
+      // Set up real-time listener
+      setupUserListener(userCredential.user.uid);
       
       toast({
         title: "Success",
@@ -293,7 +360,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loginWithPhone = async (phoneNumber: string, password: string): Promise<string> => {
     setIsLoading(true);
     try {
-      const db = getFirestore();
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("phone", "==", phoneNumber));
       const querySnapshot = await getDocs(q);
@@ -334,6 +400,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       setUser(user);
       localStorage.setItem('casinoUser', JSON.stringify(user));
+      
+      // Set up real-time listener
+      setupUserListener(userId);
       
       toast({
         title: "Success",
@@ -419,6 +488,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(newUserData);
       localStorage.setItem('casinoUser', JSON.stringify(newUserData));
       
+      // Set up real-time listener
+      setupUserListener(mockUserId);
+      
       toast({
         title: "Registration Successful!",
         description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for registering!`,
@@ -456,32 +528,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           bonusApplied = true;
         }
         
-        if (auth.currentUser) {
-          await setDoc(doc(db, "users", auth.currentUser.uid), {
-            balance: actualBalance
-          }, { merge: true });
-          
-          const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            if (userData.referredBy && !userData.referralProcessed) {
-              await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                referralProcessed: true
-              });
-              
-              await processReferralBonus(auth.currentUser.uid);
-            }
+        await updateDoc(doc(db, "users", user.id), {
+          balance: actualBalance
+        });
+        
+        // Process referral bonus if applicable
+        const userDoc = await getDoc(doc(db, "users", user.id));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.referredBy && !userData.referralProcessed) {
+            await updateDoc(doc(db, "users", user.id), {
+              referralProcessed: true
+            });
+            
+            await processReferralBonus(user.id);
           }
         }
         
-        const updatedUser = {
-          ...user,
-          balance: actualBalance
-        };
-        
-        setUser(updatedUser);
-        localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
-        
+        // User state will be updated via the onSnapshot listener
         if (bonusApplied) {
           toast({
             title: "Bonus Applied!",
@@ -503,6 +567,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = () => {
     signOut(auth).then(() => {
+      // Clean up any listeners
+      if (unsubscribeListener) {
+        unsubscribeListener();
+        setUnsubscribeListener(() => null);
+      }
+      
       setUser(null);
       localStorage.removeItem('casinoUser');
       toast({
