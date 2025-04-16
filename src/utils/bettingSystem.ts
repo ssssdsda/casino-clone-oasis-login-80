@@ -4,7 +4,7 @@
  * Controls winning odds for casino games to ensure fair play and player satisfaction
  */
 
-import { getDoc, doc, setDoc } from 'firebase/firestore';
+import { getDoc, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Store user session data to track bets across sessions
@@ -21,6 +21,41 @@ const userBetCounts: Record<string, Record<string, number>> = {};
 // Cache for admin settings
 let gameSettingsCache: any = null;
 let lastCacheTime = 0;
+let gameSettingsListener: any = null;
+
+/**
+ * Initialize real-time listener for game settings
+ * This ensures all games receive updates when admin changes settings
+ */
+export const initGameSettingsListener = () => {
+  if (gameSettingsListener) return; // Only initialize once
+  
+  console.log("Initializing real-time game settings listener");
+  try {
+    const settingsRef = doc(db, "admin", "gameSettings");
+    gameSettingsListener = onSnapshot(settingsRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        console.log("Real-time game settings update:", data);
+        gameSettingsCache = data;
+        lastCacheTime = Date.now();
+        
+        // Dispatch event so games can respond to changes
+        window.dispatchEvent(new CustomEvent('gameSettingsUpdated', { detail: data }));
+        
+        // Store in localStorage as backup
+        localStorage.setItem('gameOddsSettings', JSON.stringify(data));
+      }
+    }, (error) => {
+      console.error("Error setting up game settings listener:", error);
+    });
+  } catch (error) {
+    console.error("Failed to initialize game settings listener:", error);
+  }
+};
+
+// Call this on app initialization
+initGameSettingsListener();
 
 /**
  * Fetches game settings from Firebase or falls back to localStorage
@@ -324,13 +359,15 @@ export const processReferralBonus = async (userId: string, depositAmount: number
       return false; // Bonus already paid
     }
     
+    const referralBonus = 119; // Bonus amount
+    
     // Update referral document to mark bonus as paid
     await setDoc(referralRef, {
       referrer: referrerId,
       referred: userId,
       timestamp: Date.now(),
       bonusPaid: true,
-      bonusAmount: 119,
+      bonusAmount: referralBonus,
       depositAmount: depositAmount
     }, { merge: true });
     
@@ -340,11 +377,13 @@ export const processReferralBonus = async (userId: string, depositAmount: number
     
     if (referrerDoc.exists()) {
       const currentBalance = referrerDoc.data().balance || 0;
+      const newBalance = currentBalance + referralBonus;
+      
       await setDoc(referrerRef, {
-        balance: currentBalance + 119
+        balance: newBalance
       }, { merge: true });
       
-      console.log(`Added ৳119 referral bonus to user ${referrerId}`);
+      console.log(`Added ৳${referralBonus} referral bonus to user ${referrerId}`);
     }
     
     return true;

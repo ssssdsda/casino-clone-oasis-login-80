@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -10,7 +11,18 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc, setDoc, getFirestore, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  getFirestore, 
+  updateDoc, 
+  collection, 
+  query, 
+  where, 
+  getDocs,
+  onSnapshot
+} from 'firebase/firestore';
 
 interface User {
   id: string;
@@ -34,7 +46,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
-  updateUserBalance: (newBalance: number) => void;
+  updateUserBalance: (newBalance: number) => Promise<void>;
   processReferralBonus: (userId: string) => Promise<boolean>;
 }
 
@@ -57,6 +69,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [balanceListener, setBalanceListener] = useState<(() => void) | null>(null);
 
   const getUserBalance = async (userId: string) => {
     try {
@@ -69,6 +82,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Error getting user balance:", error);
       return 0;
     }
+  };
+
+  // Setup real-time balance listener for the current user
+  const setupBalanceListener = (userId: string) => {
+    // Clear any existing listener
+    if (balanceListener) {
+      balanceListener();
+      setBalanceListener(null);
+    }
+
+    console.log("Setting up real-time balance listener for user", userId);
+    
+    // Create new listener
+    const userRef = doc(db, "users", userId);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      if (doc.exists() && user) {
+        const userData = doc.data();
+        const newBalance = userData.balance || 0;
+        
+        // Only update if balance has changed
+        if (user.balance !== newBalance) {
+          console.log(`Real-time balance update: ${user.balance} -> ${newBalance}`);
+          
+          setUser(prevUser => {
+            if (prevUser) {
+              return {
+                ...prevUser,
+                balance: newBalance
+              };
+            }
+            return prevUser;
+          });
+          
+          localStorage.setItem('casinoUser', JSON.stringify({
+            ...user,
+            balance: newBalance
+          }));
+        }
+      }
+    }, (error) => {
+      console.error("Error in balance listener:", error);
+    });
+    
+    setBalanceListener(() => unsubscribe);
+    return unsubscribe;
   };
 
   const extractReferralCode = () => {
@@ -133,7 +191,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               title: "Referral Bonus Paid!",
               description: `A referral bonus of ৳${REFERRAL_BONUS} has been paid to your referrer.`,
               variant: "default",
-              className: "bg-green-600 text-white font-bold"
+              className: "bg-green-600 text-white font-bold",
+              duration: 10000 // 10 seconds
             });
             
             return true;
@@ -187,6 +246,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(userData);
           localStorage.setItem('casinoUser', JSON.stringify(userData));
           resetSessionTimeout();
+          
+          // Setup real-time balance listener
+          setupBalanceListener(firebaseUser.uid);
         } catch (error) {
           console.error("Error setting user data:", error);
         }
@@ -202,6 +264,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser(userData);
             console.log("Restored user from local storage:", userData.username);
             resetSessionTimeout();
+            
+            // Setup balance listener for the stored user
+            if (userData.id) {
+              setupBalanceListener(userData.id);
+            }
           } catch (e) {
             console.error("Error parsing stored user data:", e);
             localStorage.removeItem('casinoUser');
@@ -213,6 +280,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(null);
           localStorage.removeItem('casinoUser');
           localStorage.removeItem('sessionStart');
+          
+          // Clear any active listener
+          if (balanceListener) {
+            balanceListener();
+            setBalanceListener(null);
+          }
         }
       }
       setIsLoading(false);
@@ -222,8 +295,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const storedUser = localStorage.getItem('casinoUser');
     if (storedUser && isSessionValid()) {
       try {
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
         console.log("Initial session restore successful");
+        
+        // Setup balance listener for stored user
+        if (userData.id) {
+          setupBalanceListener(userData.id);
+        }
       } catch (error) {
         console.error("Error restoring initial session:", error);
         localStorage.removeItem('casinoUser');
@@ -244,6 +323,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       window.removeEventListener('keypress', resetOnActivity);
       window.removeEventListener('scroll', resetOnActivity);
       window.removeEventListener('mousemove', resetOnActivity);
+      
+      // Clean up balance listener
+      if (balanceListener) {
+        balanceListener();
+      }
     };
   }, []);
 
@@ -299,17 +383,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: "Registration successful!",
         description: "Please verify your email to complete registration. A verification link has been sent to your email address. You've received ৳89 as a signup bonus!",
         variant: "default",
-        className: "bg-green-600 text-white"
+        className: "bg-green-600 text-white",
+        duration: 10000 // 10 seconds
       });
       
       if (refCode) {
         await processReferralBonus(userCredential.user.uid);
       }
+      
+      // Setup real-time balance listener
+      setupBalanceListener(userCredential.user.uid);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Registration failed",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 10000 // 10 seconds
       });
       throw error;
     } finally {
@@ -328,6 +417,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
       const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
       const phoneVerified = userDoc.exists() ? userDoc.data().phoneVerified : false;
+      const referralCode = userDoc.exists() ? userDoc.data().referralCode : userCredential.user.uid;
+      const referredBy = userDoc.exists() ? userDoc.data().referredBy : undefined;
       
       const userData = {
         id: userCredential.user.uid,
@@ -336,24 +427,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         phone: userCredential.user.phoneNumber || undefined,
         balance: userBalance,
         emailVerified: userCredential.user.emailVerified,
-        phoneVerified: phoneVerified
+        phoneVerified: phoneVerified,
+        referralCode: referralCode,
+        referredBy: referredBy
       };
       
       setUser(userData);
       localStorage.setItem('casinoUser', JSON.stringify(userData));
       resetSessionTimeout();
       
+      // Setup real-time balance listener
+      setupBalanceListener(userCredential.user.uid);
+      
       toast({
         title: "Success",
         description: "Login successful",
         variant: "default",
-        className: "bg-green-600 text-white"
+        className: "bg-green-600 text-white",
+        duration: 10000 // 10 seconds
       });
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Login failed",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 10000 // 10 seconds
       });
       throw error;
     } finally {
@@ -373,7 +471,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         toast({
           title: "Error",
           description: "No account found with this phone number",
-          variant: "destructive"
+          variant: "destructive",
+          duration: 10000
         });
         throw new Error("No account found with this phone number");
       }
@@ -387,7 +486,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         toast({
           title: "Error",
           description: "Incorrect password",
-          variant: "destructive"
+          variant: "destructive",
+          duration: 10000
         });
         throw new Error("Incorrect password");
       }
@@ -407,11 +507,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem('casinoUser', JSON.stringify(user));
       resetSessionTimeout();
       
+      // Setup real-time balance listener
+      setupBalanceListener(userId);
+      
       toast({
         title: "Success",
         description: "Login successful",
         variant: "default",
-        className: "bg-green-600 text-white"
+        className: "bg-green-600 text-white",
+        duration: 10000
       });
       
       return "success";
@@ -420,7 +524,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast({
         title: "Error",
         description: error.message || "Phone login failed",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 10000
       });
       throw error;
     } finally {
@@ -440,7 +545,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         toast({
           title: "Error",
           description: "This phone number is already registered",
-          variant: "destructive"
+          variant: "destructive",
+          duration: 10000
         });
         throw new Error("This phone number is already registered");
       }
@@ -491,11 +597,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(newUserData);
       localStorage.setItem('casinoUser', JSON.stringify(newUserData));
       
+      // Setup real-time balance listener
+      setupBalanceListener(mockUserId);
+      
       toast({
         title: "Registration Successful!",
         description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for registering!`,
         variant: "default",
-        className: "bg-green-600 text-white font-bold"
+        className: "bg-green-600 text-white font-bold",
+        duration: 10000
       });
       
       if (refCode) {
@@ -507,7 +617,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast({
         title: "Error",
         description: error.message || "Phone registration failed",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 10000
       });
       throw error;
     } finally {
@@ -544,6 +655,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               await processReferralBonus(auth.currentUser.uid);
             }
           }
+        } else if (user.id) {
+          // For phone users or when auth.currentUser is not available
+          await setDoc(doc(db, "users", user.id), {
+            balance: actualBalance
+          }, { merge: true });
         }
         
         const updatedUser = {
@@ -559,7 +675,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             title: "Bonus Applied!",
             description: `You've received ৳${DEPOSIT_BONUS_AMOUNT} bonus for depositing ৳${DEPOSIT_BONUS_THRESHOLD}!`,
             variant: "default",
-            className: "bg-green-600 text-white font-bold"
+            className: "bg-green-600 text-white font-bold",
+            duration: 10000
           });
         }
       } catch (error) {
@@ -567,7 +684,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         toast({
           title: "Error",
           description: "Failed to update balance",
-          variant: "destructive"
+          variant: "destructive",
+          duration: 10000
         });
       }
     }
@@ -578,15 +696,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       localStorage.removeItem('casinoUser');
       localStorage.removeItem('sessionStart');
+      
+      // Clear balance listener
+      if (balanceListener) {
+        balanceListener();
+        setBalanceListener(null);
+      }
+      
       toast({
         title: "Logged out",
         description: "You have been logged out successfully",
+        duration: 10000
       });
     }).catch((error) => {
       toast({
         title: "Error",
         description: "Logout failed",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 10000
       });
     });
   };
