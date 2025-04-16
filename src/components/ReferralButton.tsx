@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Users } from "lucide-react";
@@ -11,20 +10,14 @@ const ReferralButton = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   
-  // Enhanced navigation to referral program page with error handling
+  // Direct navigation to referral program page
   const handleClick = () => {
-    try {
-      if (user) {
-        // Push to history instead of directly navigating for better SPA behavior
-        navigate('/referral', { replace: false });
-      } else {
-        // For non-logged in users, direct to registration page
-        navigate('/register', { replace: false });
-      }
-    } catch (error) {
-      console.error("Navigation error:", error);
-      // Fallback: direct browser navigation if React Router fails
-      window.location.href = user ? '/referral' : '/register';
+    // If user is logged in, navigate to referral program page
+    // Otherwise navigate to registration page
+    if (user) {
+      navigate('/referral');
+    } else {
+      navigate('/register');
     }
   };
   

@@ -1,7 +1,2 @@
 
-# Handle SPA routing
 /* /index.html 200
-
-# Specifically handle referral routes
-/ref/* /index.html 200
-/r/* /index.html 200
