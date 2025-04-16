@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -12,10 +11,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Phone, User, Lock, Gift, Percent } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useLocation } from 'react-router-dom';
 
 export function RegisterButton(props: any) {
   const [open, setOpen] = useState(false);
@@ -35,39 +35,46 @@ export function RegisterButton(props: any) {
   const [referralCode, setReferralCode] = useState('');
   
   const { register, registerWithPhone, isLoading } = useAuth();
-  const { toast } = useToast();
+  const location = useLocation();
   const { t } = useLanguage();
 
-  // Load referral code from localStorage if available
+  // Load referral code from URL query params or localStorage if available
   useEffect(() => {
-    const storedReferralCode = localStorage.getItem('referralCode');
-    if (storedReferralCode) {
-      setReferralCode(storedReferralCode);
-      console.log(`Loaded referral code: ${storedReferralCode}`);
+    // Check URL first for ref parameter
+    const urlParams = new URLSearchParams(location.search);
+    const refFromUrl = urlParams.get('ref');
+    
+    if (refFromUrl) {
+      console.log(`Found referral code in URL: ${refFromUrl}`);
+      setReferralCode(refFromUrl);
+      localStorage.setItem('referralCode', refFromUrl);
+    } else {
+      // If not in URL, check localStorage
+      const storedReferralCode = localStorage.getItem('referralCode');
+      if (storedReferralCode) {
+        setReferralCode(storedReferralCode);
+        console.log(`Loaded referral code from localStorage: ${storedReferralCode}`);
+      }
     }
-  }, []);
+  }, [location]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password || !username) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
+      toast.error("Please fill in all fields");
       return;
     }
     
     try {
       await register(email, password, username, referralCode);
       setOpen(false);
-      toast({
-        title: "Registration Successful!",
-        description: "You've received signup bonus!",
-        variant: "default",
+      toast.success("Registration Successful! You've received signup bonus!", {
         className: "bg-green-600 text-white font-bold"
       });
+      
+      // Clear referral code from localStorage after successful registration
+      localStorage.removeItem('referralCode');
     } catch (error) {
       // Error handled in register function
     }
@@ -77,11 +84,7 @@ export function RegisterButton(props: any) {
     e.preventDefault();
     
     if (!phoneNumber || !phonePassword || !phoneUsername) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
+      toast.error("Please fill in all fields");
       return;
     }
     
@@ -93,13 +96,12 @@ export function RegisterButton(props: any) {
       await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
       setOpen(false);
       
-      toast({
-        title: "Registration Successful!",
-        description: `Welcome! You've received signup bonus!`,
-        variant: "default",
+      toast.success(`Welcome! You've received signup bonus!`, {
         className: "bg-green-600 text-white font-bold"
       });
       
+      // Clear referral code from localStorage after successful registration
+      localStorage.removeItem('referralCode');
     } catch (error) {
       // Error handled in phone functions
     }
@@ -212,6 +214,19 @@ export function RegisterButton(props: any) {
                     placeholder="Your password"
                   />
                 </div>
+                {referralCode && (
+                  <div className="space-y-2">
+                    <Label htmlFor="referral-code" className="text-white flex items-center gap-2">
+                      <Gift className="h-4 w-4" /> Referral Code
+                    </Label>
+                    <Input
+                      id="referral-code"
+                      value={referralCode}
+                      readOnly
+                      className="bg-casino-dark border-gray-700 text-white opacity-75"
+                    />
+                  </div>
+                )}
                 <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button 
                     type="submit" 
@@ -264,6 +279,19 @@ export function RegisterButton(props: any) {
                     placeholder="Your password"
                   />
                 </div>
+                {referralCode && (
+                  <div className="space-y-2">
+                    <Label htmlFor="referral-code-phone" className="text-white flex items-center gap-2">
+                      <Gift className="h-4 w-4" /> Referral Code
+                    </Label>
+                    <Input
+                      id="referral-code-phone"
+                      value={referralCode}
+                      readOnly
+                      className="bg-casino-dark border-gray-700 text-white opacity-75"
+                    />
+                  </div>
+                )}
                 <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button 
                     type="submit" 

@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Coins, Settings, RefreshCw, Menu, RotateCw } from 'lucide-react';
+import { shouldBetWin } from '@/utils/bettingSystem';
 
 // Game symbols
 const gameSymbols = [
@@ -89,33 +89,37 @@ const CoinUpGame = () => {
     setSpinning(true);
     setWinAmount(0);
     
-    // Generate new grid with random symbols
-    const newGrid: string[][] = [[], [], []];
+    // Check if this spin should win based on betting system (30% chance)
+    const shouldWin = shouldBetWin(user.id, 'CoinUp', betAmount);
     
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 3; col++) {
-        // Higher chance of empty spaces
-        const randomValue = Math.random();
-        if (randomValue < 0.4) {
-          newGrid[row][col] = 'empty';
-        } else if (randomValue < 0.9) {
-          // Random coin
-          const coins = gameSymbols.filter(s => s.type === 'coin');
-          const randomCoin = coins[Math.floor(Math.random() * coins.length)];
-          newGrid[row][col] = randomCoin.id;
-        } else {
-          // Mystery symbol (rare)
-          newGrid[row][col] = 'mystery';
+    // Generate new grid with random symbols
+    let newGrid: string[][] = [[], [], []];
+    
+    if (shouldWin) {
+      // Generate a winning grid
+      newGrid = generateWinningGrid(buyBonus);
+    } else {
+      // Generate a losing grid
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+          // Higher chance of empty spaces
+          const randomValue = Math.random();
+          if (randomValue < 0.6) {
+            newGrid[row][col] = 'empty';
+          } else if (randomValue < 0.95) {
+            // Random coin but not enough to win
+            const coins = gameSymbols.filter(s => s.type === 'coin');
+            const randomCoin = coins[Math.floor(Math.random() * coins.length)];
+            newGrid[row][col] = randomCoin.id;
+          } else {
+            // Mystery symbol (rare)
+            newGrid[row][col] = 'mystery';
+          }
         }
       }
-    }
-    
-    // Add at least one coin if buying bonus
-    if (buyBonus) {
-      const row = Math.floor(Math.random() * 3);
-      const col = Math.floor(Math.random() * 3);
-      const coinSymbols = gameSymbols.filter(s => s.type === 'coin');
-      newGrid[row][col] = coinSymbols[Math.floor(Math.random() * coinSymbols.length)].id;
+      
+      // Ensure there's no winning combination
+      newGrid = ensureNoWinningCombination(newGrid);
     }
     
     // Calculate win after a delay
@@ -123,11 +127,12 @@ const CoinUpGame = () => {
     
     spinTimeoutRef.current = setTimeout(() => {
       setGrid(newGrid);
-      const winResult = calculateWin(newGrid, betAmount, buyBonus);
-      setWinAmount(winResult);
-      setLastWin(winResult);
       
-      if (winResult > 0) {
+      if (shouldWin) {
+        const winResult = calculateWin(newGrid, betAmount, buyBonus);
+        setWinAmount(winResult);
+        setLastWin(winResult);
+        
         // Update user balance with winnings
         updateUserBalance(user.balance - cost + winResult);
         
@@ -141,10 +146,119 @@ const CoinUpGame = () => {
           title: "Congratulations!",
           description: `You won ${winResult}!`,
         });
+      } else {
+        setWinAmount(0);
+        setLastWin(0);
       }
       
       setSpinning(false);
     }, 2000);
+  };
+  
+  // Generate a winning grid
+  const generateWinningGrid = (buyBonus: boolean): string[][] => {
+    const newGrid: string[][] = [[], [], []];
+    
+    // Fill grid with mostly empty spaces
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        newGrid[row][col] = 'empty';
+      }
+    }
+    
+    // Choose a winning pattern type
+    const patternType = Math.random() < 0.7 ? 'coins' : 'mystery';
+    
+    if (patternType === 'coins') {
+      // Add several coins for a win
+      const coins = gameSymbols.filter(s => s.type === 'coin');
+      
+      // Add 3-4 coins randomly
+      const coinCount = buyBonus ? 4 : 3;
+      const positions = [];
+      
+      // Generate unique positions
+      while (positions.length < coinCount) {
+        const row = Math.floor(Math.random() * 3);
+        const col = Math.floor(Math.random() * 3);
+        
+        if (!positions.some(p => p.row === row && p.col === col)) {
+          positions.push({ row, col });
+        }
+      }
+      
+      // Place coins
+      for (const pos of positions) {
+        const randomCoin = coins[Math.floor(Math.random() * coins.length)];
+        newGrid[pos.row][pos.col] = randomCoin.id;
+      }
+    } else {
+      // Add a mystery symbol for a special win
+      const row = Math.floor(Math.random() * 3);
+      const col = Math.floor(Math.random() * 3);
+      newGrid[row][col] = 'mystery';
+      
+      // Maybe add one coin too
+      if (Math.random() < 0.7) {
+        let diffRow = row;
+        let diffCol = col;
+        
+        while (diffRow === row && diffCol === col) {
+          diffRow = Math.floor(Math.random() * 3);
+          diffCol = Math.floor(Math.random() * 3);
+        }
+        
+        const coins = gameSymbols.filter(s => s.type === 'coin');
+        const randomCoin = coins[Math.floor(Math.random() * coins.length)];
+        newGrid[diffRow][diffCol] = randomCoin.id;
+      }
+    }
+    
+    return newGrid;
+  };
+  
+  // Ensure there's no winning combination on the grid
+  const ensureNoWinningCombination = (grid: string[][]): string[][] => {
+    // Check if the current grid would give a win
+    const tempWin = calculateWin(grid, betAmount, false);
+    
+    // If it would win, remove some coins or mystery symbols
+    if (tempWin > 0) {
+      // Count coins and mystery symbols
+      const coinPositions = [];
+      const mysteryPositions = [];
+      
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+          if (grid[row][col].startsWith('coin-')) {
+            coinPositions.push({ row, col });
+          } else if (grid[row][col] === 'mystery') {
+            mysteryPositions.push({ row, col });
+          }
+        }
+      }
+      
+      // Remove coins until there's no win
+      while (coinPositions.length > 1) {
+        const randomIndex = Math.floor(Math.random() * coinPositions.length);
+        const pos = coinPositions.splice(randomIndex, 1)[0];
+        grid[pos.row][pos.col] = 'empty';
+        
+        // Check if this fixed it
+        if (calculateWin(grid, betAmount, false) === 0) {
+          break;
+        }
+      }
+      
+      // Remove mystery symbols if needed
+      while (mysteryPositions.length > 0 && calculateWin(grid, betAmount, false) > 0) {
+        const randomIndex = Math.floor(Math.random() * mysteryPositions.length);
+        const pos = mysteryPositions.splice(randomIndex, 1)[0];
+        grid[pos.row][pos.col] = 'empty';
+      }
+    }
+    
+    return grid;
   };
   
   // Calculate win

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Minus, Plus, ChevronDown } from 'lucide-react';
@@ -86,7 +85,7 @@ const AviatorGame = () => {
       takeoffSound.current.play().catch(e => console.log("Audio play error:", e));
 
       // Determine if this bet should win based on the rigged system
-      const shouldWinThisBet = shouldBetWin(user?.id || 'anonymous');
+      const shouldWinThisBet = shouldBetWin(user?.id || 'anonymous', 'Aviator');
       
       // Set maximum multiplier based on whether user should win
       const maxMultiplier = shouldWinThisBet 

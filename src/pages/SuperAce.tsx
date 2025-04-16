@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, RotateCw, Plus, Minus, RefreshCw, Heart, Target, Crown } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
+import { db } from '@/lib/firebase';
+import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
 
 const firestore = getFirestore(app);
 
@@ -194,13 +196,45 @@ const SuperAce = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [winAmount, setWinAmount] = useState(0);
   const [feature, setFeature] = useState(1);
+  const [gameSettings, setGameSettings] = useState({
+    winRate: 25,
+    minBet: 10,
+    maxBet: 500,
+    maxWin: 5000,
+    isActive: true
+  });
+
+  const loadGameSettings = useCallback(async () => {
+    try {
+      const settingsRef = doc(db, "admin", "gameSettings");
+      const settingsDoc = await getDoc(settingsRef);
+      
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data();
+        if (data.games && data.games.SuperAce) {
+          setGameSettings(data.games.SuperAce);
+          
+          // Adjust bet if outside allowed range
+          if (bet < data.games.SuperAce.minBet) {
+            setBet(data.games.SuperAce.minBet);
+          } else if (bet > data.games.SuperAce.maxBet) {
+            setBet(data.games.SuperAce.maxBet);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading game settings:", error);
+    }
+  }, [bet]);
 
   useEffect(() => {
     setTimeout(() => {
       initializeGame();
       setIsLoading(false);
     }, 1500);
-  }, []);
+    
+    loadGameSettings();
+  }, [loadGameSettings]);
 
   useEffect(() => {
     if (user) {
@@ -251,6 +285,14 @@ const SuperAce = () => {
       return;
     }
     
+    if (!gameSettings.isActive) {
+      toast("Game Unavailable", {
+        description: "This game is currently unavailable",
+        className: "bg-red-600 text-white border-red-700",
+      });
+      return;
+    }
+    
     const newBalance = balance - bet;
     setBalance(newBalance);
     updateUserBalance(newBalance);
@@ -258,7 +300,7 @@ const SuperAce = () => {
     setGamePhase(PHASES.DEALING);
     
     try {
-      await addDoc(collection(firestore, "bets"), {
+      await addDoc(collection(db, "bets"), {
         userId: user?.id || "anonymous",
         betAmount: bet,
         game: "SuperAce",
@@ -286,8 +328,15 @@ const SuperAce = () => {
     
     setDisplayedCards(drawnCards);
     
-    setTimeout(() => {
-      const win = calculateWin(drawnCards);
+    setTimeout(async () => {
+      const shouldWin = await shouldBetWin(user?.id || 'anonymous', 'SuperAce', bet);
+      let win = 0;
+      
+      if (shouldWin) {
+        win = await calculateWinAmount(bet, 2 * feature, 'SuperAce');
+        win = Math.min(win, gameSettings.maxWin);
+      }
+      
       handleGameResult(win);
     }, 1500);
   };
@@ -355,7 +404,7 @@ const SuperAce = () => {
   };
 
   const changeBet = (amount) => {
-    const newBet = Math.max(10, Math.min(500, bet + amount));
+    const newBet = Math.max(gameSettings.minBet, Math.min(gameSettings.maxBet, bet + amount));
     setBet(newBet);
   };
 
@@ -507,11 +556,17 @@ const SuperAce = () => {
             </div>
           </div>
           
+          <div className="flex justify-between text-xs text-amber-300 mb-2 px-2">
+            <span>Min: {gameSettings.minBet}</span>
+            <span>Max: {gameSettings.maxBet}</span>
+          </div>
+          
           <div className="flex items-center justify-center gap-4 my-1">
             <Button
               variant="ghost"
               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
               onClick={() => changeBet(-10)}
+              disabled={bet <= gameSettings.minBet}
             >
               <Minus className="h-5 w-5" />
             </Button>
@@ -519,7 +574,7 @@ const SuperAce = () => {
             {gamePhase === PHASES.BETTING && (
               <Button
                 onClick={startGame}
-                disabled={isLoading || balance < bet || !user}
+                disabled={isLoading || balance < bet || !user || !gameSettings.isActive}
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-full h-16 w-16 flex items-center justify-center p-0"
               >
                 <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full h-14 w-14 flex items-center justify-center">
@@ -542,6 +597,7 @@ const SuperAce = () => {
               variant="ghost"
               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
               onClick={() => changeBet(10)}
+              disabled={bet >= gameSettings.maxBet}
             >
               <Plus className="h-5 w-5" />
             </Button>

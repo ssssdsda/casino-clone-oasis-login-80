@@ -1,16 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from '@/context/AuthContext';
 import { Copy, Share2, Gift, Users } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
-import { doc, getDoc, collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, getFirestore, addDoc, setDoc } from 'firebase/firestore';
+import { processReferralBonus } from '@/utils/bettingSystem';
 
 const ReferralProgram = () => {
   const { user } = useAuth();
@@ -28,7 +28,7 @@ const ReferralProgram = () => {
     // Generate referral link based on user ID
     if (user) {
       const baseUrl = window.location.origin;
-      // Use the register route for a more standard referral flow
+      // Create a direct link to the register page with ref parameter
       setReferralLink(`${baseUrl}/register?ref=${user.id}`);
       
       // Fetch real referral stats from Firebase
@@ -47,7 +47,7 @@ const ReferralProgram = () => {
             const data = doc.data();
             totalRefs++;
             if (data.bonusPaid) {
-              totalEarned += data.bonusPaid;
+              totalEarned += data.bonusAmount || 119;
             }
           });
           
@@ -76,18 +76,45 @@ const ReferralProgram = () => {
     }
   }, [user, db]);
 
+  // Function to immediately test the referral system (for development only)
+  const testReferralBonus = async () => {
+    if (!user) return;
+    
+    try {
+      // Create a dummy referral
+      const dummyUserId = `test_${Date.now()}`;
+      await setDoc(doc(db, "users", dummyUserId), {
+        username: "TestUser",
+        referredBy: user.id,
+        referralProcessed: false,
+        balance: 100,
+        createdAt: new Date()
+      });
+      
+      // Process the referral bonus
+      const success = await processReferralBonus(dummyUserId, 1000);
+      
+      if (success) {
+        toast.success("Referral bonus of ৳119 has been added to your balance!");
+        
+        // Force refresh user data
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        toast.error("Could not process the referral bonus");
+      }
+    } catch (error) {
+      console.error("Error testing referral:", error);
+      toast.error("Could not test the referral system");
+    }
+  };
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink).then(() => {
-      toast({
-        title: "Link Copied!",
-        description: "Your referral link has been copied to clipboard.",
-      });
+      toast.success("Your referral link has been copied to clipboard.");
     }).catch(err => {
-      toast({
-        title: "Copy Failed",
-        description: "Could not copy the referral link",
-        variant: "destructive"
-      });
+      toast.error("Could not copy the referral link");
     });
   };
 
@@ -101,10 +128,7 @@ const ReferralProgram = () => {
         console.error('Error: ', err);
       });
     } else {
-      toast({
-        title: "Share Not Supported",
-        description: "Your browser doesn't support the Web Share API. Please copy the link manually.",
-      });
+      toast.error("Your browser doesn't support the Web Share API. Please copy the link manually.");
     }
   };
 
@@ -206,10 +230,20 @@ const ReferralProgram = () => {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-gray-900 border-t border-gray-800 flex justify-center">
+            <CardFooter className="bg-gray-900 border-t border-gray-800 flex flex-col space-y-4">
               <p className="text-sm text-gray-300 text-center">
                 Rewards are credited automatically when your friend makes a deposit
               </p>
+              
+              {user && user.email && user.email.includes('admin') && (
+                <Button 
+                  onClick={testReferralBonus} 
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white text-xs"
+                  size="sm"
+                >
+                  Test Referral Bonus (Admin Only)
+                </Button>
+              )}
             </CardFooter>
           </Card>
           
