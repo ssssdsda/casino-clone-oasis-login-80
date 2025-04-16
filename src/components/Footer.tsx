@@ -14,11 +14,11 @@ const Footer = () => {
   const [showSupportOptions, setShowSupportOptions] = useState(false);
   
   const openWhatsApp = () => {
-    window.open('https://wa.me/1234567890', '_blank');
+    window.open('https://wa.me/+855965603197', '_blank');
   };
   
   const openTelegram = () => {
-    window.open('https://t.me/yourusername', '_blank');
+    window.open('https://t.me/shadow3132', '_blank');
   };
   
   // Support chat button that floats in the bottom right corner
@@ -78,7 +78,7 @@ const Footer = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Phone className="h-4 w-4" />
-                  <span>+1-234-567-890</span>
+                  <span>+855965603197</span>
                 </div>
               </div>
               <div className="text-left">
@@ -105,7 +105,7 @@ const Footer = () => {
                       <path d="M12 17v.01"/>
                       <path d="M3 8l1 3 3 3L8 21l3-1 3-3 3 1"/>
                     </svg>
-                    <span>Telegram</span>
+                    <span>@shadow3132</span>
                   </button>
                 </div>
               </div>
@@ -134,7 +134,7 @@ const Footer = () => {
                     <path d="M9 10a.5.5 0 0 1 1 0c0 .97 1.08 1.73 2 1.73a.5.5 0 0 1 0 1c-1.48 0-3-1.14-3-2.73z"/>
                     <path d="M12 16.5c2.28 0 4.5-1.37 4.5-4.74 0-2.48-1.38-4.5-4.5-4.5-2.3 0-4.5 1.38-4.5 4.5 0 3.4 2.24 4.74 4.5 4.74z"/>
                   </svg>
-                  <span>WhatsApp</span>
+                  <span>+855965603197</span>
                 </button>
                 <button 
                   onClick={openTelegram}
@@ -146,12 +146,12 @@ const Footer = () => {
                     <path d="M12 17v.01"/>
                     <path d="M3 8l1 3 3 3L8 21l3-1 3-3 3 1"/>
                   </svg>
-                  <span>Telegram</span>
+                  <span>@shadow3132</span>
                 </button>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <p className="text-xs">support@ck444.com | +1-234-567-890</p>
+              <p className="text-xs">support@ck444.com | +855965603197</p>
               <p className="text-xs mt-1">&copy; 2025 CK444</p>
             </div>
           </div>

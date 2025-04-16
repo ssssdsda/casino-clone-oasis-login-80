@@ -14,10 +14,10 @@ import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/f
 import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
 import { useLanguage } from '@/context/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const firestore = getFirestore(app);
 
-// Preset deposit amounts - removed 600 and 1200
 const DEPOSIT_AMOUNTS = [100, 200, 300, 500, 800, 1000, 1500, 2000];
 
 const Deposit = () => {
@@ -25,6 +25,7 @@ const Deposit = () => {
   const { toast } = useToast();
   const { user, updateUserBalance } = useAuth();
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   
   const [amount, setAmount] = useState<number>(500);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -37,12 +38,10 @@ const Deposit = () => {
   const [paymentURL, setPaymentURL] = useState<string>('');
   const [popupTimer, setPopupTimer] = useState<number>(240); // 4 minutes in seconds
   
-  // Handle amount selection
   const handleAmountSelect = (amt: number) => {
     setAmount(amt);
   };
   
-  // Track elapsed time for pending deposits
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     
@@ -57,7 +56,6 @@ const Deposit = () => {
     };
   }, [depositStatus, isComplete]);
 
-  // Popup timer countdown
   useEffect(() => {
     let popupTimerInterval: NodeJS.Timeout | null = null;
     
@@ -81,7 +79,6 @@ const Deposit = () => {
     };
   }, [paymentDialogOpen, popupTimer]);
   
-  // Listen for deposit status changes
   useEffect(() => {
     if (!depositId) return;
     
@@ -94,7 +91,6 @@ const Deposit = () => {
           setIsProcessing(false);
           setIsComplete(true);
           
-          // Update user balance
           if (updateUserBalance && user) {
             updateUserBalance(user.balance + amount);
           }
@@ -106,7 +102,6 @@ const Deposit = () => {
             className: "bg-green-600 text-white",
           });
           
-          // Redirect back to home after 3 seconds
           setTimeout(() => {
             navigate('/');
           }, 3000);
@@ -125,14 +120,12 @@ const Deposit = () => {
     return () => unsubscribe();
   }, [depositId, amount, navigate, toast, updateUserBalance, user, t]);
   
-  // Format time remaining for popup
   const formatRemainingTime = () => {
     const minutes = Math.floor(popupTimer / 60);
     const seconds = popupTimer % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
   
-  // Handle deposit submission
   const handleSubmit = async () => {
     if (amount <= 0) {
       toast({
@@ -152,7 +145,6 @@ const Deposit = () => {
       return;
     }
     
-    // Set payment URL based on selected amount with updated links
     if (amount === 100) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt100/OO0xWr');
     } else if (amount === 200) {
@@ -170,21 +162,18 @@ const Deposit = () => {
     } else if (amount === 2000) {
       setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt2000/DWE6A9');
     } else {
-      // For other amounts, use the generic format
       setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
     }
     setPaymentDialogOpen(true);
-    setPopupTimer(240); // Reset timer to 4 minutes
+    setPopupTimer(240);
   };
   
-  // Format elapsed time
   const formatElapsedTime = () => {
     const minutes = Math.floor(elapsedTime / 60);
     const seconds = elapsedTime % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
-  // Handle wallet number change
   const handleWalletNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (/^\d*$/.test(value)) {
@@ -196,7 +185,6 @@ const Deposit = () => {
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-gray-950">
       <Header />
       <main className="flex-1 p-4 max-w-md mx-auto">
-        {/* Page Header */}
         <div className="mb-6 flex justify-between items-center">
           <Button
             variant="outline"
@@ -212,12 +200,11 @@ const Deposit = () => {
           
           <div className="bg-gray-800 px-3 py-2 rounded-lg border border-gray-700">
             <div className="text-gray-400 text-xs">{t('balance')}</div>
-            <div className="text-yellow-400 font-bold">{user?.balance.toFixed(0)}{t('currency')}</div>
+            <div className="text-yellow-400 font-bold">৳{user?.balance.toFixed(0)}</div>
           </div>
         </div>
         
         {isComplete ? (
-          // Success Screen
           <motion.div 
             className="bg-gray-800 rounded-xl p-6 flex flex-col items-center text-center"
             initial={{ opacity: 0, y: 20 }}
@@ -234,14 +221,13 @@ const Deposit = () => {
             </motion.div>
             <h2 className="text-2xl font-bold text-white mb-2">{t('depositSuccessful')}</h2>
             <p className="text-gray-300 mb-4">
-              {amount}{t('currency')} {t('amountAddedToAccount')}
+              ৳{amount} {t('amountAddedToAccount')}
             </p>
             <div className="text-sm text-gray-400">
               {t('redirectToGames')}
             </div>
           </motion.div>
         ) : depositStatus === 'pending' ? (
-          // Pending Screen
           <motion.div 
             className="bg-gray-800 rounded-xl p-6 flex flex-col items-center text-center"
             initial={{ opacity: 0, y: 20 }}
@@ -257,7 +243,7 @@ const Deposit = () => {
             </motion.div>
             <h2 className="text-2xl font-bold text-white mb-2">{t('depositProcessing')}</h2>
             <p className="text-gray-300 mb-4">
-              {t('processingDescription')} {amount}{t('currency')} {t('processingInfo')}
+              {t('processingDescription')} ৳{amount} {t('processingInfo')}
             </p>
             <div className="bg-gray-900 px-4 py-2 rounded-lg mb-4">
               <div className="text-sm text-gray-400">{t('elapsedTime')}</div>
@@ -269,29 +255,26 @@ const Deposit = () => {
           </motion.div>
         ) : (
           <div className="space-y-6">
-            {/* Current Balance */}
             <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-4 shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-gray-300 text-sm">{t('availableBalance')}</div>
-                  <div className="text-2xl font-bold text-white">{user?.balance.toFixed(0)}{t('currency')}</div>
+                  <div className="text-2xl font-bold text-white">৳{user?.balance.toFixed(0)}</div>
                 </div>
                 <Wallet className="h-10 w-10 text-blue-300 opacity-50" />
               </div>
             </div>
             
-            {/* Payment Processing Info */}
             <div className="bg-gray-800 rounded-xl p-4 border-l-4 border-yellow-500">
               <p className="text-yellow-300 font-medium mb-1">{t('paymentProcessingTime')}</p>
               <p className="text-gray-300 text-sm">{t('waitForBalance')}</p>
               <p className="text-gray-300 text-sm mt-2">{t('contactSupport')}</p>
             </div>
             
-            {/* Amount Selection */}
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-bold text-white mb-4">{t('selectAmount')}</h2>
               
-              <div className="grid grid-cols-5 gap-2">
+              <div className={`grid ${isMobile ? 'grid-cols-4' : 'grid-cols-5'} gap-2`}>
                 {DEPOSIT_AMOUNTS.map((amt) => (
                   <Button
                     key={amt}
@@ -299,13 +282,12 @@ const Deposit = () => {
                     className={`${amount === amt ? 'bg-green-600 hover:bg-green-700' : 'border-green-700 text-green-500'} text-sm md:text-lg font-bold h-12`}
                     onClick={() => handleAmountSelect(amt)}
                   >
-                    {amt}{t('currency')}
+                    ৳{amt}
                   </Button>
                 ))}
               </div>
             </div>
             
-            {/* Payment Method - bKash Only */}
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-bold text-white mb-4">{t('paymentMethod')}</h2>
               
@@ -327,7 +309,6 @@ const Deposit = () => {
               </div>
             </div>
             
-            {/* Deposit Button */}
             <Button
               className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-6 text-lg font-bold"
               onClick={handleSubmit}
@@ -345,12 +326,12 @@ const Deposit = () => {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   </motion.div>
-                  Processing...
+                  {t('processing')}
                 </>
               ) : (
                 <>
                   <PlusCircle className="h-5 w-5 mr-2" />
-                  {t('depositNow')} {amount}{t('currency')}
+                  {t('depositNow')} ৳{amount}
                 </>
               )}
             </Button>
@@ -359,19 +340,17 @@ const Deposit = () => {
       </main>
       <Footer />
       
-      {/* bKash Payment Dialog - Improved styling */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="sm:max-w-md bg-gray-800 border-casino-accent">
           <DialogTitle className="text-white text-xl">
             {t('bKashPayment')}
           </DialogTitle>
           <DialogDescription className="text-gray-300">
-            {t('completePayment')} {amount}{t('currency')} {t('paymentMethod')}
+            {t('completePayment')} ৳{amount} {t('paymentMethod')}
           </DialogDescription>
           <div className="flex flex-col items-center justify-center p-4 space-y-4">
             <img src="/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png" alt="bKash" className="w-16 h-16" />
             
-            {/* Timer display */}
             <div className="bg-gray-900 px-4 py-2 rounded-full border border-gray-700">
               <p className="text-center text-white">
                 Window closes in: <span className="font-mono font-bold text-yellow-400">{formatRemainingTime()}</span>
@@ -392,13 +371,12 @@ const Deposit = () => {
                 className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => {
                   window.open(paymentURL, "_blank");
-                  // Record the deposit in Firebase
                   addDoc(collection(firestore, "deposits"), {
                     userId: user?.id || "anonymous",
                     amount,
                     paymentMethod: "bkash",
                     walletNumber: walletNumber || null,
-                    status: "pending", // Will be updated once payment is confirmed
+                    status: "pending",
                     timestamp: serverTimestamp()
                   }).then((docRef) => {
                     setDepositId(docRef.id);

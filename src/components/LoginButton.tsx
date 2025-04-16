@@ -14,27 +14,26 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone, Lock } from 'lucide-react';
+import { Mail, Phone, KeyRound } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-export function LoginButton() {
+export function LoginButton(props: any) {
   const [open, setOpen] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('phone');
   
   // Email login state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
   // Phone login state
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('+880');
   const [phonePassword, setPhonePassword] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [verificationId, setVerificationId] = useState('');
-  const [showVerification, setShowVerification] = useState(false);
   
-  const { login, loginWithPhone, verifyPhoneCode, isLoading } = useAuth();
+  const { login, loginWithPhone, isLoading } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +52,9 @@ export function LoginButton() {
       setOpen(false);
       toast({
         title: "Success",
-        description: "You've successfully logged in!",
+        description: "Login successful!",
+        variant: "default",
+        className: "bg-green-600 text-white"
       });
     } catch (error) {
       // Error handled in login function
@@ -63,56 +64,45 @@ export function LoginButton() {
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!showVerification) {
-      if (phoneNumber.length < 10 || !phonePassword) {
-        toast({
-          title: "Error",
-          description: "Please enter a valid phone number and password",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      try {
-        const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
-        
-        // Here we'd use phone + password instead of verification code in a real app
-        // For this demo, we'll simulate the login
+    if (!phoneNumber || phoneNumber === '+880' || phoneNumber.length < 11) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid phone number",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!phonePassword) {
+      toast({
+        title: "Error",
+        description: "Please enter your password",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const result = await loginWithPhone(phoneNumber, phonePassword);
+      if (result) {
+        setOpen(false);
         toast({
           title: "Success",
-          description: "Login successful with phone and password",
+          description: "Login successful!",
+          variant: "default",
+          className: "bg-green-600 text-white"
         });
-        setOpen(false);
-      } catch (error) {
-        // Error handled in phone functions
       }
-    } else {
-      if (!verificationCode) {
-        toast({
-          title: "Error",
-          description: "Please enter verification code",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      try {
-        await verifyPhoneCode(verificationId, verificationCode);
-        setOpen(false);
-        setShowVerification(false);
-      } catch (error) {
-        // Error handled in verification function
-      }
+    } catch (error) {
+      // Error handled in loginWithPhone function
     }
   };
 
   const resetForm = () => {
     setEmail('');
     setPassword('');
-    setPhoneNumber('');
+    setPhoneNumber('+880');
     setPhonePassword('');
-    setVerificationCode('');
-    setShowVerification(false);
   };
 
   return (
@@ -120,6 +110,7 @@ export function LoginButton() {
       <Button 
         onClick={() => setOpen(true)}
         className="bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
+        {...props}
       >
         {t('login')}
       </Button>
@@ -128,58 +119,52 @@ export function LoginButton() {
         setOpen(isOpen);
         if (!isOpen) resetForm();
       }}>
-        <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-[#0e363d] to-[#0a2328] border-casino-accent">
+        <DialogContent className={`${isMobile ? 'w-[95%] p-4' : 'sm:max-w-[425px]'} bg-gradient-to-br from-[#0e363d] to-[#0a2328] border-casino-accent`}>
           <DialogHeader>
             <DialogTitle className="text-white text-xl">{t('login')}</DialogTitle>
-            <DialogDescription className="text-gray-300">
+            <DialogDescription className="text-white">
               Enter your credentials to access your account.
             </DialogDescription>
           </DialogHeader>
-          
-          <Tabs defaultValue="email" value={loginMethod} onValueChange={(v) => setLoginMethod(v as 'email' | 'phone')}>
-            <TabsList className="grid grid-cols-2 mb-4 bg-casino-dark">
-              <TabsTrigger 
-                value="email" 
-                className="flex items-center gap-1 text-white data-[state=active]:bg-casino-accent data-[state=active]:text-black"
-              >
+
+          <Tabs defaultValue="phone" value={loginMethod} onValueChange={(v) => setLoginMethod(v as 'email' | 'phone')}>
+            <TabsList className="grid grid-cols-2 mb-4">
+              <TabsTrigger value="email" className="flex items-center gap-1">
                 <Mail className="h-4 w-4" />
-                {t('email')}
+                <span className="text-white">{t('email')}</span>
               </TabsTrigger>
-              <TabsTrigger 
-                value="phone" 
-                className="flex items-center gap-1 text-white data-[state=active]:bg-casino-accent data-[state=active]:text-black"
-              >
+              <TabsTrigger value="phone" className="flex items-center gap-1">
                 <Phone className="h-4 w-4" />
-                {t('phone')}
+                <span className="text-white">{t('phone')}</span>
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="email">
               <form onSubmit={handleEmailSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-casino-accent" /> {t('email')}
+                  <Label htmlFor="login-email" className="text-white flex items-center gap-2">
+                    <Mail className="h-4 w-4" /> {t('email')}
                   </Label>
                   <Input 
-                    id="email"
+                    id="login-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="bg-casino-dark border-gray-700 text-white"
-                    placeholder="Your email address"
+                    placeholder="your@email.com"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-casino-accent" /> {t('password')}
+                  <Label htmlFor="login-password" className="text-white flex items-center gap-2">
+                    <KeyRound className="h-4 w-4" /> {t('password')}
                   </Label>
                   <Input
-                    id="password"
+                    id="login-password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="bg-casino-dark border-gray-700 text-white"
-                    placeholder="Your password"
+                    placeholder="********"
                   />
                 </div>
                 <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
@@ -197,20 +182,22 @@ export function LoginButton() {
             <TabsContent value="phone">
               <form onSubmit={handlePhoneSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-white flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-casino-accent" /> {t('phone')}
+                  <Label htmlFor="login-phone" className="text-white flex items-center gap-2">
+                    <Phone className="h-4 w-4" /> {t('phone')}
                   </Label>
                   <Input 
-                    id="phone"
-                    placeholder="+1234567890"
+                    id="login-phone"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     className="bg-casino-dark border-gray-700 text-white"
+                    placeholder="+8801XXXXXXXXX"
                   />
+                  <p className="text-xs text-blue-400">Bangladesh number (+880)</p>
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="phone-password" className="text-white flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-casino-accent" /> {t('password')}
+                    <KeyRound className="h-4 w-4" /> {t('password')}
                   </Label>
                   <Input
                     id="phone-password"
@@ -218,9 +205,10 @@ export function LoginButton() {
                     value={phonePassword}
                     onChange={(e) => setPhonePassword(e.target.value)}
                     className="bg-casino-dark border-gray-700 text-white"
-                    placeholder="Your password"
+                    placeholder="********"
                   />
                 </div>
+                
                 <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button 
                     type="submit" 
