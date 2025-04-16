@@ -145,37 +145,25 @@ const Deposit = () => {
       return;
     }
     
-    // Set the correct payment URL based on the selected amount
-    switch(amount) {
-      case 100:
-        setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt100/OO0xWr');
-        break;
-      case 200:
-        setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt200/cAVSkv');
-        break;
-      case 300:
-        setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt300/SiWqw0');
-        break;
-      case 500:
-        setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt500/2taUT3');
-        break;
-      case 800:
-        setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt800/37Pk5h');
-        break;
-      case 1000:
-        setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt1000/oFyDMf');
-        break;
-      case 1500:
-        setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt1500/BktX0l');
-        break;
-      case 2000:
-        setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt2000/DWE6A9');
-        break;
-      default:
-        setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
-        break;
+    if (amount === 100) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt100/OO0xWr');
+    } else if (amount === 200) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt200/cAVSkv');
+    } else if (amount === 300) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt300/SiWqw0');
+    } else if (amount === 500) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt500/2taUT3');
+    } else if (amount === 800) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt800/37Pk5h');
+    } else if (amount === 1000) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt1000/oFyDMf');
+    } else if (amount === 1500) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt1500/BktX0l');
+    } else if (amount === 2000) {
+      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt2000/DWE6A9');
+    } else {
+      setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
     }
-    
     setPaymentDialogOpen(true);
     setPopupTimer(240);
   };
