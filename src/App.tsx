@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Analytics } from '@/components/Analytics';
@@ -47,9 +48,9 @@ import SuperElementsControl from '@/pages/SuperElementsControl';
 function App() {
   return (
     <AuthProvider>
-      <Analytics />
       <LanguageProvider>
         <BrowserRouter>
+          <Analytics />
           <Toaster />
           <Routes>
             <Route path="/" element={<Index />} />
