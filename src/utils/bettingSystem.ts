@@ -18,16 +18,6 @@ export interface GameSettings {
   }
 }
 
-// Track user bet counts for calculating win probabilities
-interface UserBetCount {
-  [userId: string]: {
-    [gameName: string]: number;
-  }
-}
-
-// Use a module-level variable instead of window property
-let userBetCounts: UserBetCount = {};
-
 // Get game settings from Firestore
 export const getGameSettings = async (): Promise<GameSettings> => {
   try {
@@ -121,16 +111,20 @@ export const shouldBetWin = async (
     const winRate = game?.winRate || 20; // 20% default win rate
     
     // Track user bet counts for more sophisticated win patterns
-    if (!userBetCounts[userId]) {
-      userBetCounts[userId] = {};
+    if (!window.userBetCounts) {
+      window.userBetCounts = {};
     }
     
-    if (!userBetCounts[userId][gameName]) {
-      userBetCounts[userId][gameName] = 0;
+    if (!window.userBetCounts[userId]) {
+      window.userBetCounts[userId] = {};
     }
     
-    userBetCounts[userId][gameName]++;
-    const betCount = userBetCounts[userId][gameName];
+    if (!window.userBetCounts[userId][gameName]) {
+      window.userBetCounts[userId][gameName] = 0;
+    }
+    
+    window.userBetCounts[userId][gameName]++;
+    const betCount = window.userBetCounts[userId][gameName];
     
     // For high bet amounts, lower the win probability
     let adjustedWinRate = winRate;
