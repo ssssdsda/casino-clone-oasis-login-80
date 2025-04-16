@@ -16,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Phone, KeyRound } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 export function LoginButton(props: any) {
   const [open, setOpen] = useState(false);
@@ -33,7 +32,6 @@ export function LoginButton(props: any) {
   const { login, loginWithPhone, isLoading } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
-  const isMobile = useIsMobile();
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +117,7 @@ export function LoginButton(props: any) {
         setOpen(isOpen);
         if (!isOpen) resetForm();
       }}>
-        <DialogContent className={`${isMobile ? 'w-[95%] p-4' : 'sm:max-w-[425px]'} bg-gradient-to-br from-[#0e363d] to-[#0a2328] border-casino-accent`}>
+        <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-[#0e363d] to-[#0a2328] border-casino-accent">
           <DialogHeader>
             <DialogTitle className="text-white text-xl">{t('login')}</DialogTitle>
             <DialogDescription className="text-white">
