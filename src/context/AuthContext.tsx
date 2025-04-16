@@ -36,7 +36,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   updateUserBalance: (newBalance: number) => void;
-  processReferralBonus: (userId: string) => Promise<void>;
+  processReferralBonus: (userId: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return urlParams.get('ref');
   };
 
-  const processReferralBonus = async (userId: string) => {
+  const processReferralBonus = async (userId: string): Promise<boolean> => {
     try {
       console.log("Processing referral bonus for user:", userId);
       
