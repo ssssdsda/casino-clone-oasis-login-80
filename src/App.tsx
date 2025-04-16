@@ -1,126 +1,38 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import Index from "./pages/Index";
-import ImagesChanger from "./pages/ImagesChanger";
-import SpinGame from "./pages/SpinGame";
-import SpinControl from "./pages/SpinControl";
-import MegaSpin from "./pages/MegaSpin";
-import MegaSpinControl from "./pages/MegaSpinControl";
-import Withdrawal from "./pages/Withdrawal";
-import Deposit from "./pages/Deposit";
-import LiveCricket from "./pages/LiveCricket";
-import LiveFootball from "./pages/LiveFootball";
-import SuperAce from "./pages/SuperAce";
-import SuperAceCasinoGame from "./pages/SuperAceCasinoGame";
-import CoinsGame from "./pages/CoinsGame";
-import MoneyGram from "./pages/MoneyGram";
-import AviatorGame from "./pages/AviatorGame";
-import BoxingKingGame from "./pages/BoxingKingGame";
-import FortuneGemsGame from "./pages/FortuneGemsGame";
-import CoinUpGame from "./pages/CoinUpGame";
-import GoldenBasinGame from "./pages/GoldenBasinGame";
-import SuperElementGame from "./pages/SuperElementGame";
-import Bonus from "./pages/Bonus";
-import BonusControl from "./pages/BonusControl";
-import NotFound from "./pages/NotFound";
-import { LanguageProvider } from "./context/LanguageContext";
-import AviatorControl from "./pages/AviatorControl";
-import PopupCustomizer from "./pages/PopupCustomizer";
-import WithdrawalManager from "./pages/WithdrawalManager";
-import ReferralProgram from "./pages/ReferralProgram";
-import PlinkoGame from "./pages/PlinkoGame";
-import FruityBonanzaGame from "./pages/FruityBonanzaGame";
-import Register from "./pages/Register";
-import GameOddsManagement from './pages/GameOddsManagement';
-import GameOddsAdmin from './pages/GameOddsAdmin';
-import Admin from './pages/Admin';
 
-const queryClient = new QueryClient();
+import { useEffect } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import AppRoutes from './AppRoutes';
+import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { Toaster } from './components/ui/toast';
+import { ExtendedToaster } from './hooks/use-extended-toast';
+import "./App.css";
 
-// Enhanced ReferralHandler component with additional error handling
-const ReferralHandler = ({ code }: { code: string }) => {
-  console.log("ReferralHandler: Processing referral code:", code);
-  
-  try {
-    // Store the referral code in localStorage
-    if (code && code !== 'undefined') {
-      localStorage.setItem('referralCode', code);
-      console.log("ReferralHandler: Saved referral code to localStorage:", code);
-      
-      // Track this referral click for analytics (if applicable)
-      // You can add Firebase logging code here
-    }
-  } catch (error) {
-    console.error("Error in ReferralHandler:", error);
-  }
-  
-  // Redirect to register page
-  return <Navigate to="/register" replace />;
-};
+function App() {
+  // Handle history popstate for SPA
+  useEffect(() => {
+    const handlePopState = () => {
+      console.log('Navigation: popstate event detected');
+    };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <LanguageProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Main routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/admin/images" element={<ImagesChanger />} />
-              <Route path="/game/spin" element={<SpinGame />} />
-              <Route path="/admin/spin-control" element={<SpinControl />} />
-              <Route path="/game/megaspin" element={<MegaSpin />} />
-              <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />
-              <Route path="/game/moneygram" element={<MoneyGram />} />
-              <Route path="/game/aviator" element={<AviatorGame />} />
-              <Route path="/game/aviator-control" element={<AviatorControl />} />
-              <Route path="/game/boxing-king" element={<BoxingKingGame />} />
-              <Route path="/game/fortune-gems" element={<FortuneGemsGame />} />
-              <Route path="/game/coin-up" element={<CoinUpGame />} />
-              <Route path="/game/golden-basin" element={<GoldenBasinGame />} />
-              <Route path="/game/super-element" element={<SuperElementGame />} />
-              <Route path="/withdrawal" element={<Withdrawal />} />
-              <Route path="/deposit" element={<Deposit />} />
-              <Route path="/bonus" element={<Bonus />} />
-              <Route path="/admin/bonus-control" element={<BonusControl />} />
-              <Route path="/game/live-cricket" element={<LiveCricket />} />
-              <Route path="/game/live-football" element={<LiveFootball />} />
-              <Route path="/game/super-ace" element={<SuperAce />} />
-              <Route path="/game/super-ace-casino" element={<SuperAceCasinoGame />} />
-              <Route path="/game/777coins" element={<CoinsGame />} />
-              <Route path="/admin/popup-customizer" element={<PopupCustomizer />} />
-              <Route path="/admin/withdrawal-manager" element={<WithdrawalManager />} />
-              <Route path="/referral" element={<ReferralProgram />} />
-              <Route path="/game/plinko" element={<PlinkoGame />} />
-              <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />
-              
-              {/* Registration routes */}
-              <Route path="/register" element={<Register />} />
-              <Route path="/signup" element={<Register />} />
-              <Route path="/admin/game-odds" element={<GameOddsAdmin />} />
-              <Route path="/game-odds" element={<GameOddsManagement />} />
-              
-              {/* Enhanced referral link handling - dedicated handlers for direct links */}
-              <Route path="/referral/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2] || ''} />} />
-              <Route path="/ref/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2] || ''} />} />
-              <Route path="/r/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2] || ''} />} />
-              
-              {/* Default 404 handler */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </LanguageProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  return (
+    <LanguageProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
+            <AppRoutes />
+            <Toaster />
+            <ExtendedToaster />
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </LanguageProvider>
+  );
+}
 
 export default App;

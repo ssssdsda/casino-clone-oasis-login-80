@@ -1,3 +1,8 @@
 
 # Handle SPA routing - simplest configuration for Netlify and similar hosts
 /* /index.html 200
+
+# Specific redirects for referral links
+/r/* /index.html 200
+/ref/* /index.html 200
+/referral/* /index.html 200
