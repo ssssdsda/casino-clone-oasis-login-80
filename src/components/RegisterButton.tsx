@@ -93,6 +93,9 @@ export function RegisterButton(props: any) {
       // Show verification code input
       setVerificationId(verificationId);
       setShowVerification(true);
+      
+      // Clear any previous verification code
+      setVerificationCode('');
     } catch (error) {
       // Error handled in phone functions
     }
@@ -110,25 +113,10 @@ export function RegisterButton(props: any) {
     
     try {
       await verifyPhoneCode(verificationId, verificationCode);
-      toast({
-        title: "Success",
-        description: "Phone verified! You've received ৳82 bonus in your account.",
-        variant: "default",
-        className: "bg-green-600 text-white"
-      });
       setOpen(false);
       setShowVerification(false);
     } catch (error) {
-      // Note: We need to address the issue with verification codes not sending
-      // For now, we'll simulate successful verification in the AuthContext
-      toast({
-        title: "Verification Successful!",
-        description: "For testing: We've simulated successful verification",
-        variant: "default",
-        className: "bg-green-600 text-white"
-      });
-      setOpen(false);
-      setShowVerification(false);
+      // Errors are handled in verifyPhoneCode
     }
   };
 

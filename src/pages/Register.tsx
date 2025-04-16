@@ -1,17 +1,20 @@
 
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { RegisterButton } from '@/components/RegisterButton';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from '@/context/LanguageContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/context/AuthContext';
 
 const Register = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const { isAuthenticated } = useAuth();
   
   // Extract referral code from URL when page loads
   React.useEffect(() => {
@@ -23,7 +26,12 @@ const Register = () => {
       localStorage.setItem('referralCode', refCode);
       console.log(`Referral code stored: ${refCode}`);
     }
-  }, [location.search]);
+    
+    // If user is already logged in, redirect to home page
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [location.search, isAuthenticated, navigate]);
 
   // Automatically trigger register dialog when the page loads
   React.useEffect(() => {
