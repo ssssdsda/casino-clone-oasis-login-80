@@ -26,10 +26,6 @@ const GameControls = ({
   handleSpin, 
   setAutoSpin 
 }: GameControlsProps) => {
-  // Set min and max bet limits
-  const MIN_BET = 10;
-  const MAX_BET = 1000; 
-  
   return (
     <div className="mt-4 flex-1 flex flex-col justify-end">
       {/* Control buttons */}
@@ -38,8 +34,8 @@ const GameControls = ({
           className="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border border-green-500"
           whileHover={{ scale: 1.1, boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)' }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => changeBet(-10)}
-          disabled={spinning || betAmount <= MIN_BET}
+          onClick={() => changeBet(-1)}
+          disabled={spinning || betAmount <= minBet}
         >
           <Minus size={24} />
         </motion.button>
@@ -48,10 +44,10 @@ const GameControls = ({
           className="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border border-amber-400"
           whileHover={{ scale: 1.1, boxShadow: '0 0 8px rgba(251, 191, 36, 0.6)' }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => changeBet(-50)}
-          disabled={spinning || betAmount <= MIN_BET + 50}
+          onClick={() => changeBet(-10)}
+          disabled={spinning || betAmount <= minBet + 10}
         >
-          <div className="font-bold">-50</div>
+          <div className="font-bold">-10</div>
         </motion.button>
         
         <motion.button 
@@ -81,18 +77,18 @@ const GameControls = ({
           className="bg-amber-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border border-amber-400"
           whileHover={{ scale: 1.1, boxShadow: '0 0 8px rgba(251, 191, 36, 0.6)' }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => changeBet(50)}
-          disabled={spinning || betAmount >= MAX_BET - 50}
+          onClick={() => changeBet(10)}
+          disabled={spinning || betAmount >= maxBet - 10}
         >
-          <div className="font-bold">+50</div>
+          <div className="font-bold">+10</div>
         </motion.button>
         
         <motion.button 
           className="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border border-green-500"
           whileHover={{ scale: 1.1, boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)' }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => changeBet(10)}
-          disabled={spinning || betAmount >= MAX_BET}
+          onClick={() => changeBet(1)}
+          disabled={spinning || betAmount >= maxBet}
         >
           <Plus size={24} />
         </motion.button>
@@ -103,10 +99,10 @@ const GameControls = ({
           className="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border border-green-500"
           whileHover={{ scale: 1.1, boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)' }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => changeBet(MIN_BET - betAmount)}
+          onClick={() => changeBet(minBet - betAmount)}
           disabled={spinning}
         >
-          <div className="font-bold">{MIN_BET}</div>
+          <div className="font-bold">{minBet}</div>
         </motion.button>
         
         <motion.button
@@ -126,7 +122,7 @@ const GameControls = ({
           className="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border border-green-500"
           whileHover={{ scale: 1.1, boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)' }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => changeBet(MAX_BET - betAmount)}
+          onClick={() => changeBet(maxBet - betAmount)}
           disabled={spinning}
         >
           <Menu size={24} />

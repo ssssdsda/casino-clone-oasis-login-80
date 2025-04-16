@@ -1,9 +1,9 @@
 
 // Game constants
 export const DEFAULT_ROWS = 12;
-export const DEFAULT_BET_AMOUNT = 10.00; // Changed from 2.00 to 10.00
-export const MIN_BET_AMOUNT = 10.00; // Changed from 0.10 to 10.00
-export const MAX_BET_AMOUNT = 1000.00; // Kept at 1000.00
+export const DEFAULT_BET_AMOUNT = 2.00;
+export const MIN_BET_AMOUNT = 0.10;
+export const MAX_BET_AMOUNT = 1000.00;
 
 export const RISK_LEVELS = {
   LOW: 'low',

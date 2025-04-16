@@ -26,15 +26,8 @@ const BetControls: React.FC<BetControlsProps> = ({
   onBet,
   isSpinning
 }) => {
-  const MIN_BET = 10;
-  const MAX_BET = 1000;
-  
   const updateBetAmount = (amount: number) => {
-    const newAmount = betAmount + amount;
-    // Ensure bet stays within limits (10-1000)
-    if (newAmount >= MIN_BET && newAmount <= MAX_BET) {
-      onBetChange(newAmount);
-    }
+    onBetChange(betAmount + amount);
   };
   
   const isDisabled = isSpinning || balance < betAmount;
@@ -45,8 +38,8 @@ const BetControls: React.FC<BetControlsProps> = ({
         <div className="text-xs mb-1 text-gray-400">BET AMOUNT</div>
         <div className="flex items-center bg-gray-800 rounded-md">
           <button
-            onClick={() => updateBetAmount(-10)}
-            disabled={isSpinning || betAmount <= MIN_BET}
+            onClick={() => updateBetAmount(-0.1)}
+            disabled={isSpinning}
             className="px-4 py-2 text-gray-400 hover:text-white disabled:opacity-50"
           >
             <ChevronDown size={20} />
@@ -55,8 +48,8 @@ const BetControls: React.FC<BetControlsProps> = ({
             ৳{betAmount.toFixed(2)}
           </div>
           <button
-            onClick={() => updateBetAmount(10)}
-            disabled={isSpinning || betAmount >= MAX_BET}
+            onClick={() => updateBetAmount(0.1)}
+            disabled={isSpinning}
             className="px-4 py-2 text-gray-400 hover:text-white disabled:opacity-50"
           >
             <ChevronUp size={20} />

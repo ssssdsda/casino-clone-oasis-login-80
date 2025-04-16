@@ -28,10 +28,9 @@ const userBetPatterns: Record<string, number[]> = {};
  * Then repeat the pattern
  * 
  * @param userId The ID of the user placing the bet
- * @param betAmount The bet amount placed by the user
  * @returns Whether this bet should win
  */
-export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
+export const shouldBetWin = (userId: string): boolean => {
   // Initialize bet count for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = 0;
@@ -41,12 +40,6 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
   // Increment bet count
   userBetCounts[userId]++;
   const betCount = userBetCounts[userId];
-  
-  // For larger bets (>200), never win (new requirement)
-  if (betAmount > 200) {
-    console.log(`Bet ${betCount} - Large bet amount (${betAmount}), forced loss`);
-    return false;
-  }
   
   // For bets within the predefined pattern, return the predetermined result
   const patternLength = userBetPatterns[userId].length;
@@ -59,6 +52,13 @@ export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
   // After the pattern, repeat the pattern
   const patternPosition = (betCount - 1) % patternLength;
   const shouldWin = userBetPatterns[userId][patternPosition] === 1;
+  
+  // For larger bets (>200), never win
+  const betAmount = 200; // This would normally come from the bet context
+  if (betAmount > 200) {
+    console.log(`Bet ${betCount} - Large bet amount (${betAmount}), forced loss`);
+    return false;
+  }
   
   console.log(`Bet ${betCount} - Pattern position ${patternPosition}: ${shouldWin ? 'Win' : 'Loss'}`);
   return shouldWin;

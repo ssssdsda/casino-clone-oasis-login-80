@@ -1,4 +1,3 @@
-
 /**
  * MegaSpin Betting System Utility
  * Controls winning odds for the MegaSpin game with a specific pattern:
