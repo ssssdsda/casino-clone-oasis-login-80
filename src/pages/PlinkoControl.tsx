@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { ArrowLeft, RefreshCw, Save } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Save, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getGameSettings, GameSettings } from '@/utils/bettingSystem';
 
@@ -19,16 +19,18 @@ const PlinkoControl = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // Define settings object with required properties (not optional)
   const [settings, setSettings] = useState({
     winRate: 30,
     minBet: 5,
     maxBet: 500,
     maxWin: 3000,
     isActive: true,
-    multipliers: [0.2, 0.5, 1, 2, 5, 10]
+    multipliers: [1.5, 2, 3, 5, 10] // Default multipliers
   });
   
   const [isLoading, setIsLoading] = useState(false);
+  const [newMultiplier, setNewMultiplier] = useState<number>(2);
   
   // Load game settings from Firebase
   useEffect(() => {
@@ -37,7 +39,16 @@ const PlinkoControl = () => {
         const gameSettings = await getGameSettings();
         
         if (gameSettings && gameSettings.games && gameSettings.games.Plinko) {
-          setSettings(gameSettings.games.Plinko);
+          // Ensure all required properties have values with defaults if missing
+          const plinkoSettings = gameSettings.games.Plinko;
+          setSettings({
+            winRate: plinkoSettings.winRate ?? 30,
+            minBet: plinkoSettings.minBet ?? 5,
+            maxBet: plinkoSettings.maxBet ?? 500,
+            maxWin: plinkoSettings.maxWin ?? 3000,
+            isActive: plinkoSettings.isActive ?? true,
+            multipliers: plinkoSettings.multipliers ?? [1.5, 2, 3, 5, 10]
+          });
         }
       } catch (error) {
         console.error("Error fetching game settings:", error);
@@ -52,14 +63,37 @@ const PlinkoControl = () => {
       if (doc.exists()) {
         const data = doc.data();
         if (data && data.games && data.games.Plinko) {
-          setSettings(data.games.Plinko);
-          console.log("Real-time Plinko settings update:", data.games.Plinko);
+          const plinkoSettings = data.games.Plinko;
+          setSettings({
+            winRate: plinkoSettings.winRate ?? 30,
+            minBet: plinkoSettings.minBet ?? 5,
+            maxBet: plinkoSettings.maxBet ?? 500,
+            maxWin: plinkoSettings.maxWin ?? 3000,
+            isActive: plinkoSettings.isActive ?? true,
+            multipliers: plinkoSettings.multipliers ?? [1.5, 2, 3, 5, 10]
+          });
         }
       }
     });
     
     return () => unsubscribe();
   }, []);
+  
+  const addMultiplier = () => {
+    if (newMultiplier > 0) {
+      setSettings({
+        ...settings,
+        multipliers: [...settings.multipliers, newMultiplier].sort((a, b) => a - b)
+      });
+      setNewMultiplier(2);
+    }
+  };
+  
+  const removeMultiplier = (index: number) => {
+    const newMultipliers = [...settings.multipliers];
+    newMultipliers.splice(index, 1);
+    setSettings({...settings, multipliers: newMultipliers});
+  };
   
   // Handle save settings
   const handleSaveSettings = async () => {
@@ -74,7 +108,6 @@ const PlinkoControl = () => {
       
       if (settingsDoc.exists()) {
         const data = settingsDoc.data();
-        // Ensure we have a games object
         allSettings = { 
           games: data.games || {} 
         };
@@ -134,7 +167,7 @@ const PlinkoControl = () => {
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
               <CardTitle className="text-white">Winning Odds</CardTitle>
-              <CardDescription>Adjust win probability and payouts</CardDescription>
+              <CardDescription>Adjust win probability and payout ratios</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -202,6 +235,51 @@ const PlinkoControl = () => {
                   className="bg-gray-700 border-gray-600"
                 />
                 <p className="text-xs text-gray-400">Maximum amount a player can win in a single game</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gray-800 border-gray-700 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-white">Multiplier Settings</CardTitle>
+              <CardDescription>Configure possible payout multipliers</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {settings.multipliers.map((mult, index) => (
+                    <div 
+                      key={`mult-${index}`}
+                      className="px-3 py-1 bg-indigo-700 rounded-full flex items-center gap-1"
+                    >
+                      <span className="text-white">{mult}x</span>
+                      <button 
+                        onClick={() => removeMultiplier(index)}
+                        className="text-red-300 hover:text-red-500"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex gap-2">
+                  <Input 
+                    type="number"
+                    min={1}
+                    step={0.1}
+                    value={newMultiplier}
+                    onChange={(e) => setNewMultiplier(parseFloat(e.target.value) || 0)}
+                    className="bg-gray-700 border-gray-600"
+                  />
+                  <Button 
+                    onClick={addMultiplier}
+                    size="sm"
+                    className="bg-indigo-700 hover:bg-indigo-600"
+                  >
+                    <Plus size={16} className="mr-1" /> Add
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

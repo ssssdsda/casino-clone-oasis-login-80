@@ -19,8 +19,9 @@ const MoneyGramControl = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // Define settings object with required properties (not optional)
   const [settings, setSettings] = useState({
-    winRate: 30,
+    winRate: 28,
     minBet: 5,
     maxBet: 500,
     maxWin: 3000,
@@ -36,7 +37,15 @@ const MoneyGramControl = () => {
         const gameSettings = await getGameSettings();
         
         if (gameSettings && gameSettings.games && gameSettings.games.MoneyGram) {
-          setSettings(gameSettings.games.MoneyGram);
+          // Ensure all required properties have values with defaults if missing
+          const moneyGramSettings = gameSettings.games.MoneyGram;
+          setSettings({
+            winRate: moneyGramSettings.winRate ?? 28,
+            minBet: moneyGramSettings.minBet ?? 5,
+            maxBet: moneyGramSettings.maxBet ?? 500,
+            maxWin: moneyGramSettings.maxWin ?? 3000,
+            isActive: moneyGramSettings.isActive ?? true
+          });
         }
       } catch (error) {
         console.error("Error fetching game settings:", error);
@@ -51,8 +60,14 @@ const MoneyGramControl = () => {
       if (doc.exists()) {
         const data = doc.data();
         if (data && data.games && data.games.MoneyGram) {
-          setSettings(data.games.MoneyGram);
-          console.log("Real-time MoneyGram settings update:", data.games.MoneyGram);
+          const moneyGramSettings = data.games.MoneyGram;
+          setSettings({
+            winRate: moneyGramSettings.winRate ?? 28,
+            minBet: moneyGramSettings.minBet ?? 5,
+            maxBet: moneyGramSettings.maxBet ?? 500,
+            maxWin: moneyGramSettings.maxWin ?? 3000,
+            isActive: moneyGramSettings.isActive ?? true
+          });
         }
       }
     });
@@ -73,7 +88,6 @@ const MoneyGramControl = () => {
       
       if (settingsDoc.exists()) {
         const data = settingsDoc.data();
-        // Ensure we have a games object
         allSettings = { 
           games: data.games || {} 
         };
@@ -107,7 +121,7 @@ const MoneyGramControl = () => {
   };
 
   return (
-    <div className="min-h-screen bg-casino-dark flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-green-800 to-green-950 flex flex-col">
       <Header />
       <main className="flex-1 p-4 max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -132,14 +146,14 @@ const MoneyGramControl = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-white">Winning Odds</CardTitle>
+              <CardTitle className="text-green-400">Winning Odds</CardTitle>
               <CardDescription>Adjust win probability and payout ratios</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <Label className="text-white">Win Probability</Label>
-                  <span className="text-yellow-400 font-mono">{settings.winRate}%</span>
+                  <span className="text-green-400 font-mono">{settings.winRate}%</span>
                 </div>
                 <Slider 
                   value={[settings.winRate]} 
@@ -155,7 +169,7 @@ const MoneyGramControl = () => {
           
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-white">Betting Limits</CardTitle>
+              <CardTitle className="text-green-400">Betting Limits</CardTitle>
               <CardDescription>Control minimum and maximum bet amounts</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -187,7 +201,7 @@ const MoneyGramControl = () => {
           
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-white">Payout Settings</CardTitle>
+              <CardTitle className="text-green-400">Payout Settings</CardTitle>
               <CardDescription>Control maximum win amount</CardDescription>
             </CardHeader>
             <CardContent>
@@ -207,7 +221,7 @@ const MoneyGramControl = () => {
           
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-white">Game Status</CardTitle>
+              <CardTitle className="text-green-400">Game Status</CardTitle>
               <CardDescription>Enable or disable the game</CardDescription>
             </CardHeader>
             <CardContent>

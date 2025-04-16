@@ -1,30 +1,28 @@
 
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
-/**
- * Analytics component for tracking user interactions
- * This is a placeholder component that can be expanded with actual analytics implementation
- */
-export const Analytics: React.FC = () => {
+export const Analytics = () => {
+  const location = useLocation();
+
   useEffect(() => {
-    console.log('Analytics component mounted');
-    
-    // Example analytics initialization code
-    const initAnalytics = () => {
-      console.log('Analytics initialized');
-      // You would typically initialize your analytics service here
+    // Track page views
+    const trackPageView = () => {
+      try {
+        if (typeof window !== 'undefined') {
+          console.log(`Page viewed: ${location.pathname}`);
+          // Here you would typically add your analytics code, like:
+          // window.gtag('config', 'GA-MEASUREMENT-ID', {
+          //   page_path: location.pathname,
+          // });
+        }
+      } catch (error) {
+        console.error('Error in analytics tracking:', error);
+      }
     };
 
-    initAnalytics();
+    trackPageView();
+  }, [location]);
 
-    return () => {
-      console.log('Analytics component unmounted');
-      // Cleanup code would go here
-    };
-  }, []);
-
-  // This component doesn't render anything
-  return null;
+  return null; // This component doesn't render anything
 };
-
-export default Analytics;

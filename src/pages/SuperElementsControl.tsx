@@ -19,11 +19,12 @@ const SuperElementsControl = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // Define settings object with required properties (not optional)
   const [settings, setSettings] = useState({
-    winRate: 30,
-    minBet: 5,
+    winRate: 25,
+    minBet: 10,
     maxBet: 500,
-    maxWin: 3000,
+    maxWin: 4000,
     isActive: true
   });
   
@@ -36,7 +37,15 @@ const SuperElementsControl = () => {
         const gameSettings = await getGameSettings();
         
         if (gameSettings && gameSettings.games && gameSettings.games.SuperElements) {
-          setSettings(gameSettings.games.SuperElements);
+          // Ensure all required properties have values with defaults if missing
+          const superElementsSettings = gameSettings.games.SuperElements;
+          setSettings({
+            winRate: superElementsSettings.winRate ?? 25,
+            minBet: superElementsSettings.minBet ?? 10,
+            maxBet: superElementsSettings.maxBet ?? 500,
+            maxWin: superElementsSettings.maxWin ?? 4000,
+            isActive: superElementsSettings.isActive ?? true
+          });
         }
       } catch (error) {
         console.error("Error fetching game settings:", error);
@@ -51,8 +60,14 @@ const SuperElementsControl = () => {
       if (doc.exists()) {
         const data = doc.data();
         if (data && data.games && data.games.SuperElements) {
-          setSettings(data.games.SuperElements);
-          console.log("Real-time SuperElements settings update:", data.games.SuperElements);
+          const superElementsSettings = data.games.SuperElements;
+          setSettings({
+            winRate: superElementsSettings.winRate ?? 25,
+            minBet: superElementsSettings.minBet ?? 10,
+            maxBet: superElementsSettings.maxBet ?? 500,
+            maxWin: superElementsSettings.maxWin ?? 4000,
+            isActive: superElementsSettings.isActive ?? true
+          });
         }
       }
     });
@@ -73,7 +88,6 @@ const SuperElementsControl = () => {
       
       if (settingsDoc.exists()) {
         const data = settingsDoc.data();
-        // Ensure we have a games object
         allSettings = { 
           games: data.games || {} 
         };
@@ -107,7 +121,7 @@ const SuperElementsControl = () => {
   };
 
   return (
-    <div className="min-h-screen bg-casino-dark flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-blue-800 to-purple-950 flex flex-col">
       <Header />
       <main className="flex-1 p-4 max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -122,7 +136,7 @@ const SuperElementsControl = () => {
           <Button 
             onClick={handleSaveSettings}
             disabled={isLoading}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-blue-600 hover:bg-blue-700"
           >
             {isLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Settings
@@ -132,14 +146,14 @@ const SuperElementsControl = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-white">Winning Odds</CardTitle>
+              <CardTitle className="text-cyan-400">Winning Odds</CardTitle>
               <CardDescription>Adjust win probability and payout ratios</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <Label className="text-white">Win Probability</Label>
-                  <span className="text-yellow-400 font-mono">{settings.winRate}%</span>
+                  <span className="text-cyan-400 font-mono">{settings.winRate}%</span>
                 </div>
                 <Slider 
                   value={[settings.winRate]} 
@@ -155,7 +169,7 @@ const SuperElementsControl = () => {
           
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-white">Betting Limits</CardTitle>
+              <CardTitle className="text-cyan-400">Betting Limits</CardTitle>
               <CardDescription>Control minimum and maximum bet amounts</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -187,7 +201,7 @@ const SuperElementsControl = () => {
           
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-white">Payout Settings</CardTitle>
+              <CardTitle className="text-cyan-400">Payout Settings</CardTitle>
               <CardDescription>Control maximum win amount</CardDescription>
             </CardHeader>
             <CardContent>
@@ -207,7 +221,7 @@ const SuperElementsControl = () => {
           
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-white">Game Status</CardTitle>
+              <CardTitle className="text-cyan-400">Game Status</CardTitle>
               <CardDescription>Enable or disable the game</CardDescription>
             </CardHeader>
             <CardContent>

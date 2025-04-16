@@ -1,5 +1,5 @@
 
-import { doc, getDoc, setDoc, DocumentData } from 'firebase/firestore';
+import { doc, getDoc, setDoc, DocumentData, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Interface for game settings
@@ -92,6 +92,132 @@ export const updateGameSettings = async (
     return true;
   } catch (error) {
     console.error(`Error updating ${game} settings:`, error);
+    return false;
+  }
+};
+
+// Function to determine if a bet should win based on game settings
+export const shouldBetWin = async (
+  userId: string, 
+  gameName: string, 
+  betAmount: number = 0
+): Promise<boolean> => {
+  try {
+    // Get game settings
+    const gameSettings = await getGameSettings();
+    const game = gameSettings.games[gameName];
+    
+    // Default win rate if not specified in settings
+    const winRate = game?.winRate || 20; // 20% default win rate
+    
+    // Track user bet counts for more sophisticated win patterns
+    if (!window.userBetCounts) {
+      window.userBetCounts = {};
+    }
+    
+    if (!window.userBetCounts[userId]) {
+      window.userBetCounts[userId] = {};
+    }
+    
+    if (!window.userBetCounts[userId][gameName]) {
+      window.userBetCounts[userId][gameName] = 0;
+    }
+    
+    window.userBetCounts[userId][gameName]++;
+    const betCount = window.userBetCounts[userId][gameName];
+    
+    // For high bet amounts, lower the win probability
+    let adjustedWinRate = winRate;
+    if (betAmount > 100) {
+      adjustedWinRate = Math.max(5, winRate - 10);
+    } else if (betAmount > 50) {
+      adjustedWinRate = Math.max(10, winRate - 5);
+    }
+    
+    // Generate random number between 0-100
+    const randomChance = Math.random() * 100;
+    
+    return randomChance <= adjustedWinRate;
+  } catch (error) {
+    console.error('Error in shouldBetWin:', error);
+    
+    // Default to a 20% win rate if there's an error
+    return Math.random() <= 0.2;
+  }
+};
+
+// Calculate win amount based on bet amount and multiplier
+export const calculateWinAmount = async (
+  betAmount: number,
+  multiplier: number,
+  gameName: string,
+  betCount: number = 1
+): Promise<number> => {
+  try {
+    // Get game settings
+    const gameSettings = await getGameSettings();
+    const game = gameSettings.games[gameName];
+    
+    // Calculate base win amount
+    let winAmount = betAmount * multiplier;
+    
+    // Apply max win cap if specified in settings
+    if (game?.maxWin && winAmount > game.maxWin) {
+      winAmount = game.maxWin;
+    }
+    
+    // Apply minimum win if specified in settings
+    if (game?.minWin && winAmount < game.minWin) {
+      winAmount = game.minWin;
+    }
+    
+    // Round to 2 decimal places
+    return Math.round(winAmount * 100) / 100;
+  } catch (error) {
+    console.error('Error calculating win amount:', error);
+    
+    // Default calculation
+    return Math.round(betAmount * multiplier * 100) / 100;
+  }
+};
+
+// Process referral bonus
+export const processReferralBonus = async (
+  userId: string,
+  referrerId: string,
+  amount: number
+): Promise<boolean> => {
+  try {
+    if (!referrerId || referrerId === userId) {
+      return false;
+    }
+    
+    // Calculate bonus amount (e.g., 10% of deposit)
+    const bonusAmount = amount * 0.1;
+    
+    if (bonusAmount <= 0) {
+      return false;
+    }
+    
+    // Update referrer's balance in Firestore
+    const referrerRef = doc(db, "users", referrerId);
+    await updateDoc(referrerRef, {
+      balance: increment(bonusAmount)
+    });
+    
+    // Record the referral bonus transaction
+    const transactionRef = doc(db, "transactions", `ref_${Date.now()}`);
+    await setDoc(transactionRef, {
+      userId: referrerId,
+      type: 'referral_bonus',
+      amount: bonusAmount,
+      referredUserId: userId,
+      timestamp: new Date()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error processing referral bonus:', error);
     return false;
   }
 };

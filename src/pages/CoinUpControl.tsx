@@ -19,6 +19,7 @@ const CoinUpControl = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // Define settings object with required properties (not optional)
   const [settings, setSettings] = useState({
     winRate: 30,
     minBet: 5,
@@ -36,7 +37,15 @@ const CoinUpControl = () => {
         const gameSettings = await getGameSettings();
         
         if (gameSettings && gameSettings.games && gameSettings.games.CoinUp) {
-          setSettings(gameSettings.games.CoinUp);
+          // Ensure all required properties have values with defaults if missing
+          const coinUpSettings = gameSettings.games.CoinUp;
+          setSettings({
+            winRate: coinUpSettings.winRate ?? 30,
+            minBet: coinUpSettings.minBet ?? 5,
+            maxBet: coinUpSettings.maxBet ?? 500,
+            maxWin: coinUpSettings.maxWin ?? 3000,
+            isActive: coinUpSettings.isActive ?? true
+          });
         }
       } catch (error) {
         console.error("Error fetching game settings:", error);
@@ -51,7 +60,14 @@ const CoinUpControl = () => {
       if (doc.exists()) {
         const data = doc.data();
         if (data && data.games && data.games.CoinUp) {
-          setSettings(data.games.CoinUp);
+          const coinUpSettings = data.games.CoinUp;
+          setSettings({
+            winRate: coinUpSettings.winRate ?? 30,
+            minBet: coinUpSettings.minBet ?? 5,
+            maxBet: coinUpSettings.maxBet ?? 500,
+            maxWin: coinUpSettings.maxWin ?? 3000,
+            isActive: coinUpSettings.isActive ?? true
+          });
           console.log("Real-time CoinUp settings update:", data.games.CoinUp);
         }
       }
