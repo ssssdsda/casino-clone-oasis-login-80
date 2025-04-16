@@ -42,18 +42,14 @@ import Admin from './pages/Admin';
 
 const queryClient = new QueryClient();
 
-// Create ReferralHandler component for handling direct referral links
-const ReferralHandler = ({ code }: { code: string }) => {
-  console.log("ReferralHandler: Processing referral code:", code);
+// Enhanced NotFound component to provide better error logging
+const EnhancedNotFound = () => {
+  // Get the current URL for better error tracking
+  const fullUrl = window.location.href;
+  console.error(`404 Error: User attempted to access: ${fullUrl}`);
   
-  // Store the referral code in localStorage
-  if (code && code !== 'undefined') {
-    localStorage.setItem('referralCode', code);
-    console.log("ReferralHandler: Saved referral code to localStorage:", code);
-  }
-  
-  // Redirect to register page
-  return <Navigate to="/register" replace />;
+  // Render the actual NotFound component
+  return <NotFound />;
 };
 
 const App = () => (
@@ -102,13 +98,16 @@ const App = () => (
               <Route path="/admin/game-odds" element={<GameOddsAdmin />} />
               <Route path="/game-odds" element={<GameOddsManagement />} />
               
-              {/* Enhanced referral link handling - dedicated handler for direct links */}
-              <Route path="/referral/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2]} />} />
-              <Route path="/ref/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2]} />} />
-              <Route path="/r/:code" element={<ReferralHandler code={window.location.pathname.split('/')[2]} />} />
+              {/* Enhanced referral link handling - multiple formats */}
+              <Route path="/ref/:referralCode" element={<Register />} />
+              <Route path="/r/:referralCode" element={<Register />} />
+              
+              {/* Legacy referral link formats (additional support) */}
+              <Route path="ref/:referralCode" element={<Register />} />
+              <Route path="r/:referralCode" element={<Register />} />
               
               {/* Default 404 handler */}
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<EnhancedNotFound />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>

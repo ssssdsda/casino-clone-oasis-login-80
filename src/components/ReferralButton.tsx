@@ -11,18 +11,14 @@ const ReferralButton = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   
-  // Enhanced referral link generation and navigation with error handling
+  // Enhanced navigation to referral program page with error handling
   const handleClick = () => {
     try {
       if (user) {
-        // Save a record of this referral link visit
-        console.log("User clicked referral button, navigating to referral page");
-        
         // Push to history instead of directly navigating for better SPA behavior
         navigate('/referral', { replace: false });
       } else {
-        // For non-logged in users, direct to registration page with a note
-        console.log("Non-logged in user clicked referral button, redirecting to register");
+        // For non-logged in users, direct to registration page
         navigate('/register', { replace: false });
       }
     } catch (error) {

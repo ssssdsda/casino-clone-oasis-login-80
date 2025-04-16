@@ -5,90 +5,43 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft, RefreshCw } from "lucide-react";
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
 const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const db = getFirestore();
   
-  // Enhanced error logging and referral code recovery
+  // Enhanced error logging
   useEffect(() => {
     console.error(
       "404 Error: User attempted to access non-existent route:",
       location.pathname
     );
     
-    // Try to extract a referral code from the path
-    const attemptReferralCodeExtraction = async () => {
-      const path = location.pathname;
-      let possibleRefCode = null;
-      
-      // Check if path contains referral-related keywords
-      const refKeywords = ['ref', 'referral', 'r'];
-      let isReferralPath = false;
-      
-      for (const keyword of refKeywords) {
-        if (path.includes(keyword)) {
-          isReferralPath = true;
-          console.log("This appears to be a malformed referral link with keyword:", keyword);
+    // Check if this might be a referral link with wrong format
+    if (location.pathname.includes('ref') || location.pathname.includes('r/')) {
+      console.log("This appears to be a malformed referral link");
+    }
+    
+    // Try to extract a referral code anyway to save the referral
+    const pathParts = location.pathname.split('/');
+    let possibleRefCode = null;
+    
+    // Check various possible referral code positions
+    for (let i = 0; i < pathParts.length; i++) {
+      if (pathParts[i] === 'ref' || pathParts[i] === 'r') {
+        if (i + 1 < pathParts.length) {
+          possibleRefCode = pathParts[i + 1];
           break;
         }
       }
-      
-      if (isReferralPath) {
-        // Extract possible referral code using various methods
-        
-        // Method 1: Split by slashes and look for code after ref keyword
-        const pathParts = path.split('/');
-        for (let i = 0; i < pathParts.length; i++) {
-          const part = pathParts[i].toLowerCase();
-          if (refKeywords.includes(part) && i + 1 < pathParts.length) {
-            possibleRefCode = pathParts[i + 1];
-            console.log(`Found possible referral code after ${part}: ${possibleRefCode}`);
-            break;
-          }
-        }
-        
-        // Method 2: Try to find code using regex pattern matching
-        if (!possibleRefCode) {
-          const refRegex = /\/(?:ref|r|referral)[\/=]?([a-zA-Z0-9_-]+)/i;
-          const match = path.match(refRegex);
-          if (match && match[1]) {
-            possibleRefCode = match[1];
-            console.log("Found possible referral code using regex:", possibleRefCode);
-          }
-        }
-        
-        // If we found a possible referral code, save it
-        if (possibleRefCode && possibleRefCode !== 'undefined') {
-          localStorage.setItem('referralCode', possibleRefCode);
-          console.log(`Saved possible referral code from 404 page: ${possibleRefCode}`);
-          
-          // Track this recovery in Firebase for analytics
-          try {
-            const recoveryId = `recovery_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-            await setDoc(doc(db, "referralRecovery", recoveryId), {
-              originalPath: path,
-              recoveredCode: possibleRefCode,
-              timestamp: new Date(),
-              userAgent: navigator.userAgent
-            });
-            console.log("Referral code recovery tracked in Firebase");
-          } catch (err) {
-            console.error("Error tracking referral recovery:", err);
-          }
-          
-          // Automatic redirection to register page with the recovered code
-          setTimeout(() => {
-            navigate(`/register?ref=${possibleRefCode}`);
-          }, 500);
-        }
-      }
-    };
+    }
     
-    attemptReferralCodeExtraction();
-  }, [location.pathname, navigate, db]);
+    // If we found a possible referral code, save it
+    if (possibleRefCode) {
+      localStorage.setItem('referralCode', possibleRefCode);
+      console.log(`Saved possible referral code from 404 page: ${possibleRefCode}`);
+    }
+  }, [location.pathname]);
   
   // Go back one page in history
   const handleBack = () => {
