@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +68,7 @@ export function RegisterButton(props: any) {
     }
     
     try {
+      // Fixed: Updated to match the expected parameters
       await register(email, password, username, referralCode);
       setOpen(false);
       toast.success("Registration Successful! You've received signup bonus!", {
@@ -92,7 +94,7 @@ export function RegisterButton(props: any) {
       // Format phone number to ensure it has Bangladesh code
       const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+880${phoneNumber}`;
       
-      // Register with phone
+      // Fixed: Updated to match the expected parameters
       await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
       setOpen(false);
       

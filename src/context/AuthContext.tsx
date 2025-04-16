@@ -28,13 +28,13 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  register: (email: string, password: string, referralCode?: string) => Promise<void>;
+  register: (email: string, password: string, username: string, referralCode?: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUserBalance: (newBalance: number) => Promise<boolean>;
   isAuthenticated: boolean; // Added isAuthenticated property
-  loginWithPhone: (phone: string, code: string) => Promise<void>;
-  registerWithPhone: (phone: string, name: string, referralCode?: string) => Promise<void>;
+  loginWithPhone: (phone: string, password: string) => Promise<void>;
+  registerWithPhone: (phone: string, username: string, password: string, referralCode?: string) => Promise<void>;
   isLoading: boolean; // Added isLoading property that maps to loading
 }
 
@@ -131,15 +131,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsubscribe;
   }, []);
 
-  // Register function
-  const register = async (email: string, password: string, referralCode?: string) => {
+  // Register function with updated parameter list
+  const register = async (email: string, password: string, username: string, referralCode?: string) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Add the user to Firestore
       const newUser: Omit<User, 'uid' | 'id' | 'username'> = {
         email: userCredential.user.email,
-        displayName: userCredential.user.email?.split('@')[0] || 'User',
+        displayName: username || userCredential.user.email?.split('@')[0] || 'User',
         balance: 100, // Starting bonus
         role: 'user',
         createdAt: Date.now()
@@ -169,11 +169,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Mock phone registration function
-  const registerWithPhone = async (phone: string, name: string, referralCode?: string) => {
+  // Updated phone registration function to match usage
+  const registerWithPhone = async (phone: string, username: string, password: string, referralCode?: string) => {
     try {
       // Mock functionality - in a real app, this would use Firebase phone auth
-      console.log(`Registering user with phone: ${phone}, name: ${name}`);
+      console.log(`Registering user with phone: ${phone}, name: ${username}`);
       
       // Create a unique ID for the user
       const uid = `phone_${Date.now()}`;
@@ -181,7 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Add the user to Firestore
       const newUser: Omit<User, 'uid' | 'id' | 'username'> = {
         email: null,
-        displayName: name,
+        displayName: username,
         balance: 100, // Starting bonus
         role: 'user',
         phone: phone,
@@ -199,13 +199,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Mock phone login function
-  const loginWithPhone = async (phone: string, code: string) => {
+  // Updated phone login function to match usage
+  const loginWithPhone = async (phone: string, password: string) => {
     try {
       // Mock functionality - in a real app, this would verify the code
-      console.log(`Logging in with phone: ${phone}, code: ${code}`);
+      console.log(`Logging in with phone: ${phone}, password: ${password}`);
       
-      // In a real app, you would verify the code and get the user document
+      // In a real app, you would verify the password and get the user document
     } catch (error) {
       console.error('Error logging in with phone:', error);
       throw error;
