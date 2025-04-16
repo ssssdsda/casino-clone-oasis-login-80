@@ -5,7 +5,7 @@ import AppRoutes from './AppRoutes';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { Toaster } from './components/ui/toast';
+import { Toaster } from '@/components/ui/toaster';
 import { ExtendedToaster } from './hooks/use-extended-toast';
 import "./App.css";
 

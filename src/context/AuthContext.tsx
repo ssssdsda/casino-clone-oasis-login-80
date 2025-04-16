@@ -21,6 +21,8 @@ interface User {
   createdAt?: number;
   referralCode?: string;
   referredBy?: string;
+  id: string; // Added id property that maps to uid
+  username: string; // Added username property that maps to displayName
 }
 
 interface AuthContextType {
@@ -30,6 +32,10 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUserBalance: (newBalance: number) => Promise<boolean>;
+  isAuthenticated: boolean; // Added isAuthenticated property
+  loginWithPhone: (phone: string, code: string) => Promise<void>;
+  registerWithPhone: (phone: string, name: string, referralCode?: string) => Promise<void>;
+  isLoading: boolean; // Added isLoading property that maps to loading
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [unsubscribeUserListener, setUnsubscribeUserListener] = useState<(() => void) | null>(null);
+  const isAuthenticated = user !== null; // Calculate isAuthenticated based on user state
 
   // Set up real-time listener for user balance updates
   const setupUserListener = (uid: string) => {
@@ -62,11 +69,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Only update if necessary to avoid loops
           if (!prevUser || prevUser.balance !== userData.balance) {
             console.log('Real-time user data update:', userData);
-            return { 
+            const updatedUser = { 
               ...prevUser,
               ...userData,
-              uid 
+              uid,
+              id: uid, // Map uid to id
+              username: userData.displayName || userData.email?.split('@')[0] || 'User' // Map displayName to username
             } as User;
+            
+            return updatedUser;
           }
           return prevUser;
         });
@@ -126,9 +137,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Add the user to Firestore
-      const newUser: Omit<User, 'uid'> = {
+      const newUser: Omit<User, 'uid' | 'id' | 'username'> = {
         email: userCredential.user.email,
-        displayName: userCredential.user.displayName || email.split('@')[0],
+        displayName: userCredential.user.email?.split('@')[0] || 'User',
         balance: 100, // Starting bonus
         role: 'user',
         createdAt: Date.now()
@@ -154,6 +165,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
     } catch (error) {
       console.error('Error signing up:', error);
+      throw error;
+    }
+  };
+
+  // Mock phone registration function
+  const registerWithPhone = async (phone: string, name: string, referralCode?: string) => {
+    try {
+      // Mock functionality - in a real app, this would use Firebase phone auth
+      console.log(`Registering user with phone: ${phone}, name: ${name}`);
+      
+      // Create a unique ID for the user
+      const uid = `phone_${Date.now()}`;
+      
+      // Add the user to Firestore
+      const newUser: Omit<User, 'uid' | 'id' | 'username'> = {
+        email: null,
+        displayName: name,
+        balance: 100, // Starting bonus
+        role: 'user',
+        phone: phone,
+        createdAt: Date.now()
+      };
+      
+      if (referralCode) {
+        newUser.referredBy = referralCode;
+      }
+      
+      await setDoc(doc(db, 'users', uid), newUser);
+    } catch (error) {
+      console.error('Error signing up with phone:', error);
+      throw error;
+    }
+  };
+  
+  // Mock phone login function
+  const loginWithPhone = async (phone: string, code: string) => {
+    try {
+      // Mock functionality - in a real app, this would verify the code
+      console.log(`Logging in with phone: ${phone}, code: ${code}`);
+      
+      // In a real app, you would verify the code and get the user document
+    } catch (error) {
+      console.error('Error logging in with phone:', error);
       throw error;
     }
   };
@@ -195,10 +249,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     loading,
+    isLoading: loading, // Map loading to isLoading
     register,
     login,
     logout,
-    updateUserBalance
+    updateUserBalance,
+    isAuthenticated,
+    loginWithPhone,
+    registerWithPhone
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
