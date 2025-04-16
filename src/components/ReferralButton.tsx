@@ -11,23 +11,22 @@ const ReferralButton = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   
-  // Enhanced referral link generation with improved error handling
+  // Enhanced referral link generation and navigation with error handling
   const handleClick = () => {
     try {
       if (user) {
-        // For logged-in users, navigate to referral program page
+        // Save a record of this referral link visit
         console.log("User clicked referral button, navigating to referral page");
         
-        // Use React Router navigation
+        // Push to history instead of directly navigating for better SPA behavior
         navigate('/referral', { replace: false });
       } else {
-        // For non-logged in users, direct to registration page
+        // For non-logged in users, direct to registration page with a note
         console.log("Non-logged in user clicked referral button, redirecting to register");
         navigate('/register', { replace: false });
       }
     } catch (error) {
       console.error("Navigation error:", error);
-      
       // Fallback: direct browser navigation if React Router fails
       window.location.href = user ? '/referral' : '/register';
     }
