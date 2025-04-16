@@ -4,9 +4,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  sendEmailVerification,
-  setPersistence,
-  browserLocalPersistence
+  sendEmailVerification
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
@@ -41,9 +39,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const db = getFirestore();
 
-// Session timeout duration in minutes
-const SESSION_TIMEOUT_MINUTES = 10;
-
 // Signup bonus amounts
 const EMAIL_SIGNUP_BONUS = 89;
 const PHONE_SIGNUP_BONUS = 82;
@@ -74,23 +69,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const extractReferralCode = () => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('ref');
-  };
-
-  // Initialize session timeout
-  const resetSessionTimeout = () => {
-    // Store current timestamp
-    localStorage.setItem('sessionStart', Date.now().toString());
-  };
-
-  // Check if session is still valid
-  const isSessionValid = () => {
-    const sessionStart = localStorage.getItem('sessionStart');
-    if (!sessionStart) return false;
-    
-    const now = Date.now();
-    const timeElapsed = (now - parseInt(sessionStart)) / (1000 * 60); // minutes
-    
-    return timeElapsed < SESSION_TIMEOUT_MINUTES;
   };
 
   const processReferralBonus = async (userId: string): Promise<boolean> => {
@@ -155,12 +133,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set firebase persistence to local
-    setPersistence(auth, browserLocalPersistence)
-      .catch(error => {
-        console.error("Error setting persistence:", error);
-      });
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
@@ -186,65 +158,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           setUser(userData);
           localStorage.setItem('casinoUser', JSON.stringify(userData));
-          resetSessionTimeout();
         } catch (error) {
           console.error("Error setting user data:", error);
         }
       } else {
-        // Check for stored user data in local storage
-        const storedUser = localStorage.getItem('casinoUser');
-        const storedAuthTime = localStorage.getItem('sessionStart');
-        
-        if (storedUser && storedAuthTime && isSessionValid()) {
-          // Session is still valid - restore the user
-          try {
-            const userData = JSON.parse(storedUser);
-            setUser(userData);
-            console.log("Restored user from local storage:", userData.username);
-            resetSessionTimeout();
-          } catch (e) {
-            console.error("Error parsing stored user data:", e);
-            localStorage.removeItem('casinoUser');
-            localStorage.removeItem('sessionStart');
-            setUser(null);
-          }
-        } else {
-          // Session expired or no stored user
-          setUser(null);
-          localStorage.removeItem('casinoUser');
-          localStorage.removeItem('sessionStart');
-        }
+        setUser(null);
+        localStorage.removeItem('casinoUser');
       }
       setIsLoading(false);
     });
 
-    // Existing session check
     const storedUser = localStorage.getItem('casinoUser');
-    if (storedUser && isSessionValid()) {
+    if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
-        console.log("Initial session restore successful");
       } catch (error) {
-        console.error("Error restoring initial session:", error);
         localStorage.removeItem('casinoUser');
-        localStorage.removeItem('sessionStart');
       }
     }
-    
-    // Reset session timeout on user activity
-    const resetOnActivity = () => resetSessionTimeout();
-    window.addEventListener('click', resetOnActivity);
-    window.addEventListener('keypress', resetOnActivity);
-    window.addEventListener('scroll', resetOnActivity);
-    window.addEventListener('mousemove', resetOnActivity);
 
-    return () => {
-      unsubscribe();
-      window.removeEventListener('click', resetOnActivity);
-      window.removeEventListener('keypress', resetOnActivity);
-      window.removeEventListener('scroll', resetOnActivity);
-      window.removeEventListener('mousemove', resetOnActivity);
-    };
+    return () => unsubscribe();
   }, []);
 
   const register = async (email: string, password: string, username: string, referralCode?: string) => {
@@ -320,9 +253,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Ensure persistent session
-      await setPersistence(auth, browserLocalPersistence);
-      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
       const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
@@ -341,7 +271,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       setUser(userData);
       localStorage.setItem('casinoUser', JSON.stringify(userData));
-      resetSessionTimeout();
       
       toast({
         title: "Success",
@@ -405,7 +334,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       setUser(user);
       localStorage.setItem('casinoUser', JSON.stringify(user));
-      resetSessionTimeout();
       
       toast({
         title: "Success",
@@ -577,7 +505,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signOut(auth).then(() => {
       setUser(null);
       localStorage.removeItem('casinoUser');
-      localStorage.removeItem('sessionStart');
       toast({
         title: "Logged out",
         description: "You have been logged out successfully",
