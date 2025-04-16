@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,8 +91,8 @@ const ReferralProgram = () => {
         createdAt: new Date()
       });
       
-      // Process the referral bonus - correctly pass all three required arguments
-      const success = await processReferralBonus(dummyUserId, user.id, 1000);
+      // Process the referral bonus
+      const success = await processReferralBonus(dummyUserId, 1000);
       
       if (success) {
         toast.success("Referral bonus of ৳119 has been added to your balance!");
