@@ -84,11 +84,8 @@ const App = () => (
               <Route path="/signup" element={<Register />} />
               <Route path="/admin/game-odds" element={<GameOddsAdmin />} />
               <Route path="/game-odds" element={<GameOddsManagement />} />
-              
-              {/* Support referral links - both formats */}
-              <Route path="/ref/:referralCode" element={<Register />} />
-              <Route path="/r/:referralCode" element={<Register />} />
-              
+              {/* Support referral links */}
+              <Route path="/ref/:referralCode" element={<Index />} />
               {/* Catch all route - must be last */}
               <Route path="*" element={<NotFound />} />
             </Routes>

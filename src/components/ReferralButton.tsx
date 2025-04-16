@@ -1,24 +1,17 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Users } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
-import { useAuth } from '@/context/AuthContext';
 
 const ReferralButton = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { user } = useAuth();
   
   // Direct navigation to referral program page
   const handleClick = () => {
-    // If user is logged in, navigate to referral program page
-    // Otherwise navigate to registration page
-    if (user) {
-      navigate('/referral');
-    } else {
-      navigate('/register');
-    }
+    navigate('/referral');
   };
   
   return (

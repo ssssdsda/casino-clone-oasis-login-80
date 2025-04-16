@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useLanguage } from '@/context/LanguageContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/context/AuthContext';
-import { doc, getFirestore, setDoc } from 'firebase/firestore';
 
 const Register = () => {
   const location = useLocation();
@@ -16,51 +15,23 @@ const Register = () => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const { isAuthenticated } = useAuth();
-  const db = getFirestore();
   
-  // Extract referral code from URL and path parameters when page loads
+  // Extract referral code from URL when page loads
   React.useEffect(() => {
-    const handleReferralCode = async () => {
-      // Check for referral code in query parameters
-      const urlParams = new URLSearchParams(location.search);
-      let refCode = urlParams.get('ref');
-      
-      // If not in query params, check if it's in the path (for /ref/CODE format)
-      if (!refCode && location.pathname.includes('/ref/')) {
-        const pathParts = location.pathname.split('/');
-        const refIndex = pathParts.indexOf('ref');
-        if (refIndex !== -1 && refIndex < pathParts.length - 1) {
-          refCode = pathParts[refIndex + 1];
-        }
-      }
-      
-      if (refCode) {
-        // Store referral code in localStorage
-        localStorage.setItem('referralCode', refCode);
-        console.log(`Referral code stored: ${refCode}`);
-        
-        // Also track this referral view in Firebase for analytics
-        try {
-          const referralViewId = `view_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-          await setDoc(doc(db, "referralViews", referralViewId), {
-            referralCode: refCode,
-            timestamp: new Date(),
-            userAgent: navigator.userAgent,
-            viewedOn: window.location.href
-          });
-        } catch (error) {
-          console.error("Error tracking referral view:", error);
-        }
-      }
-      
-      // If user is already logged in, redirect to home page
-      if (isAuthenticated) {
-        navigate('/');
-      }
-    };
+    const urlParams = new URLSearchParams(location.search);
+    const refCode = urlParams.get('ref');
     
-    handleReferralCode();
-  }, [location.search, location.pathname, isAuthenticated, navigate, db]);
+    if (refCode) {
+      // Store referral code in localStorage
+      localStorage.setItem('referralCode', refCode);
+      console.log(`Referral code stored: ${refCode}`);
+    }
+    
+    // If user is already logged in, redirect to home page
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [location.search, isAuthenticated, navigate]);
 
   // Automatically trigger register dialog when the page loads
   React.useEffect(() => {
