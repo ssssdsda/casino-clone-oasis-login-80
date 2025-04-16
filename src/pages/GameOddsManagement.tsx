@@ -13,36 +13,17 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { saveGameSettings } from '@/utils/bettingSystem';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from "@/components/ui/sonner";
 import { getDoc, doc, getFirestore } from 'firebase/firestore';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-
-// Define the game settings type for better type safety
-interface GameSettings {
-  games: {
-    BoxingKing: {
-      winRate: number;
-      minBet: number;
-      maxBet: number;
-      maxWin: number;
-      isActive: boolean;
-      specialRules: {
-        firstTwoBetsWin: boolean;
-        firstTwoBetsMultiplier: number;
-        regularMultiplier: number;
-      }
-    };
-    MoneyGram: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
-    CoinUp: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
-    SuperAce: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
-    default: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
-  }
-}
+import { useNavigate } from 'react-router-dom';
 
 const GameOddsManagement = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [gameSettings, setGameSettings] = useState<GameSettings>({
+  const [gameSettings, setGameSettings] = useState({
     games: {
       BoxingKing: {
         winRate: 20, 
@@ -63,7 +44,7 @@ const GameOddsManagement = () => {
     }
   });
   
-  const { toast } = useToast();
+  const { user } = useAuth();
   const db = getFirestore();
   
   useEffect(() => {
@@ -75,13 +56,8 @@ const GameOddsManagement = () => {
         
         if (settingsDoc.exists()) {
           const data = settingsDoc.data();
-          // Check if the data has the expected structure
-          if (data && data.games) {
-            setGameSettings(data as GameSettings);
-            console.log("Game settings loaded from Firebase:", data);
-          } else {
-            console.warn("Firebase data doesn't match the expected structure:", data);
-          }
+          setGameSettings(data);
+          console.log("Game settings loaded from Firebase:", data);
         } else {
           // If no settings in Firebase, try localStorage
           const localSettings = localStorage.getItem('gameOddsSettings');
@@ -102,7 +78,7 @@ const GameOddsManagement = () => {
     fetchSettings();
   }, [db]);
   
-  const handleUpdateSetting = (gameType: string, property: string, value: any) => {
+  const handleUpdateSetting = (gameType, property, value) => {
     setGameSettings(prev => {
       const updatedSettings = {...prev};
       
@@ -128,30 +104,28 @@ const GameOddsManagement = () => {
       const success = await saveGameSettings(gameSettings);
       
       if (success) {
-        toast({
-          title: "Settings saved successfully!",
-          description: "Game odds have been updated.",
-        });
+        toast.success("Settings saved successfully!");
       } else {
         // If Firebase save fails, save to localStorage as fallback
         localStorage.setItem('gameOddsSettings', JSON.stringify(gameSettings));
-        toast({
-          title: "Settings saved locally",
-          description: "Firebase update failed, saved to local storage instead.",
-        });
+        toast.info("Settings saved locally but Firebase update failed");
       }
     } catch (error) {
       console.error("Error saving settings:", error);
       localStorage.setItem('gameOddsSettings', JSON.stringify(gameSettings));
-      toast({
-        title: "Error saving to Firebase",
-        description: "Settings saved locally instead.",
-        variant: "destructive"
-      });
+      toast.error("Error saving to Firebase, saved locally instead");
     } finally {
       setIsLoading(false);
     }
   };
+  
+  // Protect route for non-admin users
+  useEffect(() => {
+    if (!user || !user.isAdmin) {
+      toast.error("You need admin privileges to access this page");
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
@@ -166,7 +140,7 @@ const GameOddsManagement = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="BoxingKing" className="space-y-4">
-              <TabsList className="grid grid-cols-5">
+              <TabsList className="grid grid-cols-4">
                 <TabsTrigger value="BoxingKing">Boxing King</TabsTrigger>
                 <TabsTrigger value="MoneyGram">Money Gram</TabsTrigger>
                 <TabsTrigger value="CoinUp">Coin Up</TabsTrigger>

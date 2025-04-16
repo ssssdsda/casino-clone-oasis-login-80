@@ -8,7 +8,6 @@ import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/components/ui/sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Dialog,
   DialogContent,

@@ -138,11 +138,10 @@ export const shouldBetWin = async (userId: string, gameType: string = 'default',
   
   // Get admin settings
   const settings = await getGameSettings();
-  // Add null checks to prevent accessing undefined properties
-  const gameSettings = settings?.games?.[gameType] || settings?.games?.default || { winRate: 25 };
+  const gameSettings = settings?.games[gameType] || settings?.games.default || { winRate: 25 };
   
   let shouldWin = false;
-  const winRate = (gameSettings.winRate || 25) / 100; // Convert percentage to decimal, with fallback
+  const winRate = gameSettings.winRate / 100; // Convert percentage to decimal
   
   // Apply special rules for specific games
   if (gameType === 'BoxingKing' && gameSettings.specialRules) {
@@ -192,8 +191,7 @@ export const calculateWinAmount = async (
 ): Promise<number> => {
   // Get admin settings
   const settings = await getGameSettings();
-  // Add null checks to prevent accessing undefined properties
-  const gameSettings = settings?.games?.[gameType || 'default'] || settings?.games?.default || { maxWin: 100 };
+  const gameSettings = settings?.games[gameType || 'default'] || settings?.games.default || { maxWin: 100 };
   
   // Calculate the standard win amount
   let winAmount = betAmount * multiplier;
