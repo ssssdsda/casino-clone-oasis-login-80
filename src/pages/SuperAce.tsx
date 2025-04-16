@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/sonner';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, RotateCw, Plus, Minus, RefreshCw, Heart, Target, Crown } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
-import { db } from '@/lib/firebase';
-import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
 
 const firestore = getFirestore(app);
 
@@ -49,6 +48,7 @@ const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
     return null;
   };
 
+  // Enhanced card design to match the image
   return (
     <motion.div 
       className={`w-16 h-24 md:w-20 md:h-30 rounded-lg overflow-hidden shadow-xl ${
@@ -137,12 +137,14 @@ const Card = ({ suit, value, isRevealed = true, isHighlighted = false }) => {
 
 // Card slot grid to create a 4x4 layout (changed from 5x5)
 const CardSlotGrid = ({ cards = [] }) => {
+  // Create a 4x4 grid of slots (changed from 5x5)
   const grid = Array(4).fill(null).map(() => Array(4).fill(null));
   
+  // Fill grid with cards
   cards.forEach((card, index) => {
-    const row = Math.floor(index / 4);
-    const col = index % 4;
-    if (row < 4 && col < 4) {
+    const row = Math.floor(index / 4); // Changed from 5 to 4
+    const col = index % 4; // Changed from 5 to 4
+    if (row < 4 && col < 4) { // Changed from 5 to 4
       grid[row][col] = card;
     }
   });
@@ -163,7 +165,8 @@ const CardSlotGrid = ({ cards = [] }) => {
                 <div className="w-16 h-24 md:w-20 md:h-30 bg-gray-200 bg-opacity-40 rounded-lg"></div>
               )}
               
-              {([5, 10].includes(rowIndex * 4 + colIndex)) && (
+              {/* Show target indicator for special positions */}
+              {([5, 10].includes(rowIndex * 4 + colIndex)) && ( // Changed indices to match 4x4 grid
                 <div className="absolute -right-2 -top-2 bg-red-500 rounded-full p-1">
                   <Target className="h-4 w-4 md:h-6 md:w-6 text-white" />
                 </div>
@@ -185,73 +188,41 @@ const PHASES = {
 
 const SuperAce = () => {
   const navigate = useNavigate();
-  const { user, updateUserBalance } = useAuth();
+  const { toast } = useToast();
+  const { user } = useAuth();
   
   const [deck, setDeck] = useState([]);
   const [displayedCards, setDisplayedCards] = useState([]);
   const [gamePhase, setGamePhase] = useState(PHASES.BETTING);
   const [bet, setBet] = useState(50);
-  const [balance, setBalance] = useState(0);
+  const [balance, setBalance] = useState(user?.balance || 1000);
   const [result, setResult] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [winAmount, setWinAmount] = useState(0);
-  const [feature, setFeature] = useState(1);
-  const [gameSettings, setGameSettings] = useState({
-    winRate: 25,
-    minBet: 10,
-    maxBet: 500,
-    maxWin: 5000,
-    isActive: true
-  });
-
-  const loadGameSettings = useCallback(async () => {
-    try {
-      const settingsRef = doc(db, "admin", "gameSettings");
-      const settingsDoc = await getDoc(settingsRef);
-      
-      if (settingsDoc.exists()) {
-        const data = settingsDoc.data();
-        if (data.games && data.games.SuperAce) {
-          setGameSettings(data.games.SuperAce);
-          
-          // Adjust bet if outside allowed range
-          if (bet < data.games.SuperAce.minBet) {
-            setBet(data.games.SuperAce.minBet);
-          } else if (bet > data.games.SuperAce.maxBet) {
-            setBet(data.games.SuperAce.maxBet);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error loading game settings:", error);
-    }
-  }, [bet]);
-
+  const [feature, setFeature] = useState(1); // Feature multiplier
+  
+  // Initialize game
   useEffect(() => {
     setTimeout(() => {
       initializeGame();
       setIsLoading(false);
     }, 1500);
-    
-    loadGameSettings();
-  }, [loadGameSettings]);
-
-  useEffect(() => {
-    if (user) {
-      setBalance(user.balance);
-    }
-  }, [user?.balance]);
-
+  }, []);
+  
+  // Initialize or reset the game
   const initializeGame = () => {
+    // Create and shuffle a new deck
     const newDeck = createShuffledDeck();
     setDeck(newDeck);
     
+    // Reset cards and game state
     setDisplayedCards([]);
     setGamePhase(PHASES.BETTING);
     setResult(null);
     setWinAmount(0);
   };
-
+  
+  // Create and shuffle a deck
   const createShuffledDeck = () => {
     const newDeck = [];
     for (const suit of suits) {
@@ -260,6 +231,7 @@ const SuperAce = () => {
       }
     }
     
+    // Fisher-Yates shuffle
     for (let i = newDeck.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
@@ -267,115 +239,108 @@ const SuperAce = () => {
     
     return newDeck;
   };
-
+  
+  // Deal cards
   const startGame = async () => {
-    if (!user) {
-      toast("Login Required", {
-        description: "Please login to play",
-        className: "bg-red-600 text-white border-red-700",
-      });
-      return;
-    }
-    
     if (balance < bet) {
-      toast("Insufficient Balance", {
+      toast({
+        title: "Insufficient Balance",
         description: "You don't have enough balance for this bet",
-        className: "bg-red-600 text-white border-red-700",
+        variant: "destructive",
       });
       return;
     }
     
-    if (!gameSettings.isActive) {
-      toast("Game Unavailable", {
-        description: "This game is currently unavailable",
-        className: "bg-red-600 text-white border-red-700",
-      });
-      return;
-    }
-    
-    const newBalance = balance - bet;
-    setBalance(newBalance);
-    updateUserBalance(newBalance);
-    
+    setBalance(prev => prev - bet);
     setGamePhase(PHASES.DEALING);
     
+    // Save bet to Firebase
     try {
-      await addDoc(collection(db, "bets"), {
+      await addDoc(collection(firestore, "bets"), {
         userId: user?.id || "anonymous",
         betAmount: bet,
         game: "SuperAce",
         timestamp: serverTimestamp(),
-        userBalance: newBalance
+        userBalance: balance - bet
       });
     } catch (error) {
       console.error("Error saving bet: ", error);
     }
     
+    // Deal random cards
     const newDeck = [...deck];
     const drawnCards = [];
     
+    // Draw 16 cards for the 4x4 grid (changed from 25 for 5x5)
     for (let i = 0; i < 16; i++) {
       if (newDeck.length > 0) {
         drawnCards.push(newDeck.pop());
       }
     }
     
-    for (const pos of [5, 10]) {
+    // Add special positions (targets)
+    for (const pos of [5, 10]) { // Changed positions for 4x4 grid
       if (drawnCards[pos]) {
         drawnCards[pos].isTarget = true;
       }
     }
     
+    // Display cards with animation
     setDisplayedCards(drawnCards);
     
-    setTimeout(async () => {
-      const shouldWin = await shouldBetWin(user?.id || 'anonymous', 'SuperAce', bet);
-      let win = 0;
-      
-      if (shouldWin) {
-        win = await calculateWinAmount(bet, 2 * feature, 'SuperAce');
-        win = Math.min(win, gameSettings.maxWin);
-      }
-      
+    // Check for win
+    setTimeout(() => {
+      const win = calculateWin(drawnCards);
       handleGameResult(win);
     }, 1500);
   };
-
+  
+  // Calculate win based on card combinations
   const calculateWin = (cards) => {
+    // Check for Aces
     const aces = cards.filter(card => card.value === 'A');
-    const faceCards = cards.filter(card => ['K', 'Q', 'J'].includes(card.value));
-    const targetAce = cards.some((card, index) => [5, 10].includes(index) && card.value === 'A');
     
+    // Check for face cards (K, Q, J)
+    const faceCards = cards.filter(card => ['K', 'Q', 'J'].includes(card.value));
+    
+    // Check for target positions
+    const targetAce = cards.some((card, index) => [5, 10].includes(index) && card.value === 'A'); // Changed positions
+    
+    // Calculate win
     let win = 0;
     let multiplier = 1;
     
+    // Target Ace pays 10x bet
     if (targetAce) {
       win += bet * 10;
       multiplier = 10;
     }
     
+    // Each Ace pays 2x bet
     win += aces.length * bet * 2;
     
+    // Each face card in key positions pays 1.5x bet
     const keyPositionFaceCards = cards.filter((card, index) => 
-      [4, 6, 9, 11].includes(index) && ['K', 'Q', 'J'].includes(card.value)
+      [4, 6, 9, 11].includes(index) && ['K', 'Q', 'J'].includes(card.value) // Changed positions
     );
     
     win += keyPositionFaceCards.length * bet * 1.5;
     
+    // Apply feature multiplier
     win *= feature;
     
     return win;
   };
-
+  
+  // Handle game result
   const handleGameResult = (win) => {
     setGamePhase(PHASES.RESULT);
     setWinAmount(win);
     
     if (win > 0) {
-      const newBalance = balance + win;
-      setBalance(newBalance);
-      updateUserBalance(newBalance);
+      setBalance(prev => prev + win);
       
+      // Determine result message based on win amount
       let resultType = 'WIN';
       if (win >= bet * 10) {
         resultType = 'BIG_WIN';
@@ -385,33 +350,41 @@ const SuperAce = () => {
       
       setResult(resultType);
       
-      toast(win >= bet * 5 ? "Big Win!" : "You Won!", {
+      toast({
+        title: win >= bet * 5 ? "Big Win!" : "You Won!",
         description: `${win.toFixed(0)}৳ added to your balance`,
-        className: "bg-red-600 text-white border-red-700"
+        variant: "default",
+        className: win >= bet * 10 ? "bg-yellow-600 text-white font-bold" : "bg-green-600 text-white font-bold"
       });
     } else {
       setResult('LOSE');
       
-      toast("No Win", {
+      toast({
+        title: "No Win",
         description: "Try again!",
-        className: "bg-red-600 text-white border-red-700"
+        variant: "destructive",
       });
     }
   };
-
+  
+  // Start a new hand
   const handleNewHand = () => {
     initializeGame();
   };
-
+  
+  // Change bet amount
   const changeBet = (amount) => {
-    const newBet = Math.max(gameSettings.minBet, Math.min(gameSettings.maxBet, bet + amount));
+    const newBet = Math.max(10, Math.min(500, bet + amount));
     setBet(newBet);
   };
-
+  
+  // Change feature multiplier
   const changeFeature = () => {
+    // Toggle between 1x and 2x
     setFeature(prev => prev === 1 ? 2 : 1);
   };
-
+  
+  // Get text message based on game result
   const getResultMessage = () => {
     switch (result) {
       case 'WIN':
@@ -426,7 +399,8 @@ const SuperAce = () => {
         return '';
     }
   };
-
+  
+  // Loading Screen
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-red-800 to-red-950 flex flex-col">
@@ -482,11 +456,12 @@ const SuperAce = () => {
       </div>
     );
   }
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-800 to-red-950 flex flex-col">
       <Header />
       <main className="flex-1 p-2 max-w-md mx-auto">
+        {/* Game Header Banner */}
         <div className="mb-4">
           <div className="bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 rounded-lg shadow-lg px-2 py-2 relative overflow-hidden">
             <h1 className="text-2xl font-bold text-amber-100 text-center drop-shadow-lg z-10 relative">
@@ -495,9 +470,12 @@ const SuperAce = () => {
           </div>
         </div>
         
+        {/* Game Board */}
         <div className="relative w-full mb-4">
+          {/* Card Grid */}
           <CardSlotGrid cards={displayedCards} />
           
+          {/* Game Result Display */}
           <AnimatePresence>
             {gamePhase === PHASES.RESULT && (
               <motion.div 
@@ -521,6 +499,7 @@ const SuperAce = () => {
           </AnimatePresence>
         </div>
         
+        {/* Feature Controls */}
         <div className="flex justify-between items-center mb-2 px-2">
           <Button
             variant="ghost"
@@ -538,7 +517,9 @@ const SuperAce = () => {
           </Button>
         </div>
         
+        {/* Game Controls */}
         <div className="bg-gradient-to-b from-amber-900 to-amber-950 rounded-lg p-2 mb-2">
+          {/* Balance and Bet Display */}
           <div className="flex justify-between items-center gap-2 mb-2">
             <div className="bg-gradient-to-r from-amber-700 to-amber-800 p-1 rounded flex-1 flex items-center justify-between">
               <div className="text-amber-200 text-xs">BALANCE</div>
@@ -556,17 +537,12 @@ const SuperAce = () => {
             </div>
           </div>
           
-          <div className="flex justify-between text-xs text-amber-300 mb-2 px-2">
-            <span>Min: {gameSettings.minBet}</span>
-            <span>Max: {gameSettings.maxBet}</span>
-          </div>
-          
+          {/* Control Buttons */}
           <div className="flex items-center justify-center gap-4 my-1">
             <Button
               variant="ghost"
               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
               onClick={() => changeBet(-10)}
-              disabled={bet <= gameSettings.minBet}
             >
               <Minus className="h-5 w-5" />
             </Button>
@@ -574,7 +550,7 @@ const SuperAce = () => {
             {gamePhase === PHASES.BETTING && (
               <Button
                 onClick={startGame}
-                disabled={isLoading || balance < bet || !user || !gameSettings.isActive}
+                disabled={isLoading || balance < bet}
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-full h-16 w-16 flex items-center justify-center p-0"
               >
                 <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full h-14 w-14 flex items-center justify-center">
@@ -597,7 +573,6 @@ const SuperAce = () => {
               variant="ghost"
               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
               onClick={() => changeBet(10)}
-              disabled={bet >= gameSettings.maxBet}
             >
               <Plus className="h-5 w-5" />
             </Button>

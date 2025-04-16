@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -9,23 +10,26 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
-import { Percent } from 'lucide-react';
 
 const Admin = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  // State for welcome popup settings
   const [welcomeTitle, setWelcomeTitle] = useState('Welcome to CK444!');
   const [welcomeMessage, setWelcomeMessage] = useState("We're thrilled to have you join our casino community!");
   const [welcomeImageUrl, setWelcomeImageUrl] = useState(
     'https://images.unsplash.com/photo-1542297566-39ea5e9dafa5?auto=format&fit=crop&w=500&h=300'
   );
   
+  // State for site colors
   const [accentColor, setAccentColor] = useState('#ffb217');
   
+  // Save changes function
   const saveChanges = () => {
+    // In a real app, you would save these to your database
+    // For now we'll just store in localStorage
     localStorage.setItem('adminSettings', JSON.stringify({
       welcomeTitle,
       welcomeMessage,
@@ -39,6 +43,7 @@ const Admin = () => {
     });
   };
   
+  // If not authenticated, redirect to home
   React.useEffect(() => {
     if (!isAuthenticated) {
       navigate('/');
@@ -175,20 +180,6 @@ const Admin = () => {
             </Card>
           </TabsContent>
         </Tabs>
-        
-        <Link to="/admin/game-odds" className="block mt-4">
-          <Card className="hover:bg-gray-800 transition-colors">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Percent className="mr-2 h-6 w-6 text-purple-500" />
-                Game Odds Management
-              </CardTitle>
-              <CardDescription>
-                Control win rates and betting limits for all casino games
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
       </main>
       <Footer />
     </div>

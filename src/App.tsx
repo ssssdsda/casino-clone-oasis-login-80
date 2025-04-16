@@ -36,14 +36,11 @@ import ReferralProgram from "./pages/ReferralProgram";
 import PlinkoGame from "./pages/PlinkoGame";
 import FruityBonanzaGame from "./pages/FruityBonanzaGame";
 import Register from "./pages/Register";
-import GameOddsManagement from './pages/GameOddsManagement';
-import Admin from './pages/Admin';
 
 const queryClient = new QueryClient();
 
 const routes = [
   <Route path="/" element={<Index />} />,
-  <Route path="/admin" element={<Admin />} />,
   <Route path="/admin/images" element={<ImagesChanger />} />,
   <Route path="/game/spin" element={<SpinGame />} />,
   <Route path="/admin/spin-control" element={<SpinControl />} />,
@@ -73,8 +70,6 @@ const routes = [
   <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />,
   <Route path="/register" element={<Register />} />,
   <Route path="/signup" element={<Register />} />,
-  <Route path="/admin/game-odds" element={<GameOddsManagement />} />,
-  <Route path="/game-odds" element={<GameOddsManagement />} />,
   <Route path="*" element={<NotFound />} />
 ];
 

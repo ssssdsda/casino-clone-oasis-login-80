@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -10,7 +11,6 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { shouldBetWin } from '@/utils/bettingSystem';
 import {
   Dialog,
   DialogContent,
@@ -141,12 +141,11 @@ const MoneyGram = () => {
     setTimeout(() => {
       clearInterval(spinInterval);
       
-      const betAmount = bet;
-      const shouldWin = shouldBetWin(user.id, 'MoneyGram', betAmount);
+      const willWin = Math.random() < 0.2;
       
       let finalSymbols;
       
-      if (shouldWin) {
+      if (willWin) {
         const winSymbol = Math.floor(Math.random() * moneySymbols.length);
         
         finalSymbols = Array(3).fill(null).map(() => 
