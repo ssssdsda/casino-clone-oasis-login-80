@@ -5,13 +5,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { useAuth } from '@/context/AuthContext';
 import { Copy, Share2, Gift, Users } from "lucide-react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/hooks/use-toast";
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
-import { doc, getDoc, collection, query, where, getDocs, getFirestore, addDoc, setDoc } from 'firebase/firestore';
-import { processReferralBonus } from '@/utils/bettingSystem';
+import { doc, getDoc, collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
 
 const ReferralProgram = () => {
   const { user } = useAuth();
@@ -29,7 +28,7 @@ const ReferralProgram = () => {
     // Generate referral link based on user ID
     if (user) {
       const baseUrl = window.location.origin;
-      // Create a direct link to the register page with ref parameter
+      // Use the register route for a more standard referral flow
       setReferralLink(`${baseUrl}/register?ref=${user.id}`);
       
       // Fetch real referral stats from Firebase
@@ -48,7 +47,7 @@ const ReferralProgram = () => {
             const data = doc.data();
             totalRefs++;
             if (data.bonusPaid) {
-              totalEarned += data.bonusAmount || 119;
+              totalEarned += data.bonusPaid;
             }
           });
           
@@ -76,51 +75,6 @@ const ReferralProgram = () => {
       fetchReferralStats();
     }
   }, [user, db]);
-
-  // Function to immediately test the referral system (for development only)
-  const testReferralBonus = async () => {
-    if (!user) return;
-    
-    try {
-      // Create a dummy referral
-      const dummyUserId = `test_${Date.now()}`;
-      await setDoc(doc(db, "users", dummyUserId), {
-        username: "TestUser",
-        referredBy: user.id,
-        referralProcessed: false,
-        balance: 100,
-        createdAt: new Date()
-      });
-      
-      // Process the referral bonus
-      const success = await processReferralBonus(dummyUserId, 1000);
-      
-      if (success) {
-        toast({
-          title: "Referral Test Success",
-          description: "Referral bonus of ৳119 has been added to your balance!",
-        });
-        
-        // Force refresh user data
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        toast({
-          title: "Referral Test Failed",
-          description: "Could not process the referral bonus",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error("Error testing referral:", error);
-      toast({
-        title: "Error",
-        description: "Could not test the referral system",
-        variant: "destructive"
-      });
-    }
-  };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink).then(() => {
@@ -252,20 +206,10 @@ const ReferralProgram = () => {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-gray-900 border-t border-gray-800 flex flex-col space-y-4">
+            <CardFooter className="bg-gray-900 border-t border-gray-800 flex justify-center">
               <p className="text-sm text-gray-300 text-center">
                 Rewards are credited automatically when your friend makes a deposit
               </p>
-              
-              {user && user.email && user.email.includes('admin') && (
-                <Button 
-                  onClick={testReferralBonus} 
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white text-xs"
-                  size="sm"
-                >
-                  Test Referral Bonus (Admin Only)
-                </Button>
-              )}
             </CardFooter>
           </Card>
           

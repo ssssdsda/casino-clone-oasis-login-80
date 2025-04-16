@@ -9,14 +9,9 @@ const ReferralButton = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   
-  // Direct navigation to referral program page
-  const handleClick = () => {
-    navigate('/referral');
-  };
-  
   return (
     <Button 
-      onClick={handleClick}
+      onClick={() => navigate('/referral')}
       variant="outline"
       className="bg-gradient-to-r from-green-600 to-green-700 border-green-500 text-white font-semibold flex gap-2 items-center justify-center animate-pulse-slow"
     >
