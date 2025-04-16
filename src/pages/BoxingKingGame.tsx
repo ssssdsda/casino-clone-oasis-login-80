@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, ArrowLeft, Volume2, VolumeX, RefreshCw, Info } from 'lucide-react';
@@ -45,7 +44,6 @@ const createInitialReels = () => {
 const BoxingKingGame = () => {
   const navigate = useNavigate();
   const { user, updateUserBalance } = useAuth();
-  const { toast } = useToast();
   
   // Game state
   const [loading, setLoading] = useState(true);
@@ -88,8 +86,7 @@ const BoxingKingGame = () => {
     if (!user) {
       toast({
         title: "Login Required",
-        description: "Please login to play",
-        variant: "destructive"
+        description: "Please login to play"
       });
       return;
     }
@@ -97,8 +94,7 @@ const BoxingKingGame = () => {
     if (user.balance < bet) {
       toast({
         title: "Insufficient Balance",
-        description: "Please deposit more funds to play",
-        variant: "destructive"
+        description: "Please deposit more funds to play"
       });
       return;
     }
@@ -155,7 +151,6 @@ const BoxingKingGame = () => {
               toast({
                 title: "You Won!",
                 description: `You won ${winAmount.toFixed(2)}!`,
-                variant: "default",
                 className: "bg-green-600 text-white"
               });
             }
