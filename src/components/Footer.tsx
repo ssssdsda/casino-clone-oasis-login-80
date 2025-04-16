@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Home, FileText, Gift, Bell, Menu, Phone, Mail, MessageCircle } from 'lucide-react';
+import { Home, FileText, Gift, Bell, Menu, Phone, Mail, MessageCircle, Download } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import ReferralButton from './ReferralButton';
@@ -19,6 +18,10 @@ const Footer = () => {
   
   const openTelegram = () => {
     window.open('https://t.me/shadow3132', '_blank');
+  };
+
+  const downloadApp = () => {
+    window.open('https://limewire.com/d/EFdAx#ztApaKkndW', '_blank');
   };
   
   // Support chat button that floats in the bottom right corner
@@ -160,7 +163,6 @@ const Footer = () => {
     );
   }
   
-  // Only show the bottom navigation on the homepage for mobile
   if (isHomePage) {
     return (
       <>
@@ -189,7 +191,6 @@ const Footer = () => {
               <span className="text-xs">Bonus</span>
             </button>
             
-            {/* Highlight the referral button - only on homepage */}
             {isHomePage && (
               <div className="scale-110 transform -translate-y-1">
                 <ReferralButton />
@@ -197,19 +198,11 @@ const Footer = () => {
             )}
             
             <button 
-              onClick={openWhatsApp}
+              onClick={downloadApp}
               className="flex flex-col items-center justify-center py-1 px-3 rounded-md text-gray-300"
             >
-              <MessageCircle className="h-5 w-5 text-green-400" />
-              <span className="text-xs">Support</span>
-            </button>
-            
-            <button 
-              onClick={() => navigate('/more')}
-              className="flex flex-col items-center justify-center py-1 px-3 rounded-md text-gray-300"
-            >
-              <Menu className="h-5 w-5" />
-              <span className="text-xs">More</span>
+              <Download className="h-5 w-5 text-green-400" />
+              <span className="text-xs">Download</span>
             </button>
           </div>
         </div>

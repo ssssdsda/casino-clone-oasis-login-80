@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, Plus, Minus, Bell, Settings, Apple, Banana, Cherry, DollarSign, Grape } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { shouldBetWin } from '@/utils/bettingSystem';
 
-// Fruit symbols for the game with proper icons
 const symbols = [
   { id: 'cherry', symbol: 'cherry', icon: Cherry, color: 'text-red-500', multiplier: 5 },
   { id: 'apple', symbol: 'apple', icon: Apple, color: 'text-green-500', multiplier: 3 },
@@ -42,7 +41,7 @@ interface Jackpot {
 
 const FruityBonanzaGame: React.FC = () => {
   const [betAmount, setBetAmount] = useState<number>(2);
-  const [balance, setBalance] = useState<number>(50);
+  const [balance, setBalance] = useState<number>(0);
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [winAmount, setWinAmount] = useState<number>(0);
   const [reels, setReels] = useState<number[][]>([]);
@@ -53,25 +52,21 @@ const FruityBonanzaGame: React.FC = () => {
   ]);
   
   const { user, updateUserBalance } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const winSound = useRef<HTMLAudioElement | null>(null);
   
-  // Maintain visible symbols for the reels to prevent scrolling issues
   const symbolsContainerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     spinSound.current = new Audio('/sounds/spin.mp3');
     winSound.current = new Audio('/sounds/win.mp3');
     
-    // Initialize with user balance if available
     if (user) {
       setBalance(user.balance);
     }
     
-    // Generate initial reels
     generateReels();
     
     return () => {
@@ -84,10 +79,15 @@ const FruityBonanzaGame: React.FC = () => {
         winSound.current = null;
       }
     };
-  }, [user]);
+  }, []);
+  
+  useEffect(() => {
+    if (user) {
+      setBalance(user.balance);
+    }
+  }, [user?.balance]);
   
   const generateReels = () => {
-    // Create a 5x3 grid of symbols (5 reels with 3 visible symbols each)
     const newReels: number[][] = Array(5).fill(0).map(() => 
       Array(5).fill(0).map(() => {
         const randomSymbolIndex = Math.floor(Math.random() * symbols.length);
@@ -101,32 +101,26 @@ const FruityBonanzaGame: React.FC = () => {
     if (isSpinning) return;
     
     if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please login to play",
-        variant: "destructive",
+      toast("Please login to play", {
+        description: "Login required to play games",
+        className: "bg-red-600 text-white border-red-700",
       });
       return;
     }
     
     if (balance < betAmount) {
-      toast({
-        title: "Insufficient Funds",
+      toast("Insufficient Funds", {
         description: "Please deposit more to play",
-        variant: "destructive",
+        className: "bg-red-600 text-white border-red-700",
       });
       return;
     }
     
-    // Deduct bet amount
     const newBalance = balance - betAmount;
     setBalance(newBalance);
     
-    if (user) {
-      updateUserBalance(newBalance);
-    }
+    updateUserBalance(newBalance);
     
-    // Play spin sound
     if (spinSound.current) {
       spinSound.current.currentTime = 0;
       spinSound.current.play().catch(e => console.error("Error playing sound:", e));
@@ -135,12 +129,9 @@ const FruityBonanzaGame: React.FC = () => {
     setIsSpinning(true);
     setWinAmount(0);
     
-    // Simulate spinning animation
     setTimeout(() => {
-      // Generate new symbols for each position
       generateReels();
       
-      // Calculate win based on updated betting pattern
       calculateWin();
       
       setIsSpinning(false);
@@ -148,36 +139,26 @@ const FruityBonanzaGame: React.FC = () => {
   };
   
   const calculateWin = () => {
-    // Use the improved betting system
     const shouldWin = shouldBetWin(user?.id || 'anonymous');
     
     if (shouldWin) {
-      // Random win amount between 1x and 10x bet
       const multiplier = Math.random() * 9 + 1;
       const win = Math.round(betAmount * multiplier * 100) / 100;
       
-      // Update balance
       const newBalance = balance + win;
       setBalance(newBalance);
-      if (user) {
-        updateUserBalance(newBalance);
-      }
+      updateUserBalance(newBalance);
       
-      // Update win amount
       setWinAmount(win);
       
-      // Play win sound
       if (winSound.current) {
         winSound.current.currentTime = 0;
         winSound.current.play().catch(e => console.error("Error playing sound:", e));
       }
       
-      // Show win toast
-      toast({
-        title: "You Won!",
+      toast("You Won!", {
         description: `${win.toFixed(2)} coins`,
-        variant: "default",
-        className: "bg-green-500 text-white font-bold"
+        className: "bg-red-600 text-white border-red-700"
       });
     } else {
       setWinAmount(0);
@@ -189,7 +170,6 @@ const FruityBonanzaGame: React.FC = () => {
     setBetAmount(newBetAmount);
   };
   
-  // Improved symbol rendering to prevent scrolling issues
   const renderSymbol = (symbolIndex: number, isSpinning: boolean) => {
     const symbol = symbols[symbolIndex];
     const IconComponent = symbol.icon;
@@ -223,7 +203,6 @@ const FruityBonanzaGame: React.FC = () => {
       <Header />
       
       <main className="flex-1 p-1 md:p-4 max-w-md mx-auto w-full flex flex-col" ref={symbolsContainerRef}>
-        {/* Game Title with Image */}
         <div className="relative w-full h-16 mb-2">
           <img
             src="/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png"
@@ -232,7 +211,6 @@ const FruityBonanzaGame: React.FC = () => {
           />
         </div>
         
-        {/* Simplified Jackpots Row */}
         <div className="flex justify-between items-center mb-2">
           {jackpots.map((jackpot) => (
             <div 
@@ -247,9 +225,7 @@ const FruityBonanzaGame: React.FC = () => {
           ))}
         </div>
         
-        {/* Game Board */}
         <div className="bg-blue-800 border-2 border-yellow-600 rounded-lg overflow-hidden shadow-lg mb-2">
-          {/* Main grid */}
           <div className="grid grid-cols-5 gap-1 p-1">
             {Array(5).fill(0).map((_, row) => (
               Array(3).fill(0).map((_, col) => (
@@ -260,7 +236,6 @@ const FruityBonanzaGame: React.FC = () => {
             ))}
           </div>
           
-          {/* Win display */}
           <div className="bg-blue-700 p-1 text-center border-t-2 border-blue-500">
             <div className="text-white font-bold text-lg">
               WIN <span className="text-yellow-300">₹{winAmount.toFixed(2)}</span>
@@ -268,7 +243,6 @@ const FruityBonanzaGame: React.FC = () => {
           </div>
         </div>
         
-        {/* Controls */}
         <div className="grid grid-cols-3 gap-2 mb-2">
           <div className="bg-blue-900 rounded-md p-2 text-center">
             <div className="text-white text-xs">BALANCE</div>
@@ -308,7 +282,6 @@ const FruityBonanzaGame: React.FC = () => {
           </div>
         </div>
         
-        {/* Spin Button */}
         <div className="flex justify-center mb-4">
           <motion.button
             className={`bg-gradient-to-r ${isSpinning ? 'from-blue-700 to-blue-800' : 'from-green-500 to-green-700'} 
@@ -333,7 +306,6 @@ const FruityBonanzaGame: React.FC = () => {
   );
 };
 
-// Simpler mobile-friendly footer component with contact information
 const GameFooter = () => {
   return (
     <footer className="bg-gradient-to-r from-blue-900 to-blue-800 p-2 text-white text-sm">
