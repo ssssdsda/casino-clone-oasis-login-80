@@ -35,6 +35,7 @@ import WithdrawalManager from "./pages/WithdrawalManager";
 import ReferralProgram from "./pages/ReferralProgram";
 import PlinkoGame from "./pages/PlinkoGame";
 import FruityBonanzaGame from "./pages/FruityBonanzaGame";
+import Register from "./pages/Register";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,8 @@ const routes = [
   <Route path="/referral" element={<ReferralProgram />} />,
   <Route path="/game/plinko" element={<PlinkoGame />} />,
   <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />,
+  <Route path="/register" element={<Register />} />,
+  <Route path="/signup" element={<Register />} />,
   <Route path="*" element={<NotFound />} />
 ];
 

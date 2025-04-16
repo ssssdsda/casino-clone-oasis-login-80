@@ -14,11 +14,11 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone, User, Lock, Gift, Check } from 'lucide-react';
+import { Mail, Phone, User, Lock, Gift, Check, Percent } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
-export function RegisterButton() {
+export function RegisterButton(props: any) {
   const [open, setOpen] = useState(false);
   const [registerMethod, setRegisterMethod] = useState<'email' | 'phone'>('phone'); // Default to phone
   
@@ -37,9 +37,21 @@ export function RegisterButton() {
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationId, setVerificationId] = useState('');
   
+  // Referral code
+  const [referralCode, setReferralCode] = useState('');
+  
   const { register, registerWithPhone, verifyPhoneCode, isLoading } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
+
+  // Load referral code from localStorage if available
+  useEffect(() => {
+    const storedReferralCode = localStorage.getItem('referralCode');
+    if (storedReferralCode) {
+      setReferralCode(storedReferralCode);
+      console.log(`Loaded referral code: ${storedReferralCode}`);
+    }
+  }, []);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +66,7 @@ export function RegisterButton() {
     }
     
     try {
-      await register(email, password, username);
+      await register(email, password, username, referralCode);
       setOpen(false);
     } catch (error) {
       // Error handled in register function
@@ -76,7 +88,7 @@ export function RegisterButton() {
     try {
       // Format phone number to ensure it has Bangladesh code
       const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+880${phoneNumber}`;
-      const verificationId = await registerWithPhone(formattedPhone, phoneUsername);
+      const verificationId = await registerWithPhone(formattedPhone, phoneUsername, referralCode);
       
       // Show verification code input
       setVerificationId(verificationId);
@@ -130,6 +142,7 @@ export function RegisterButton() {
     setVerificationCode('');
     setVerificationId('');
     setShowVerification(false);
+    // Don't clear referral code as it might be needed for the next attempt
   };
 
   return (
@@ -137,6 +150,7 @@ export function RegisterButton() {
       <Button 
         onClick={() => setOpen(true)}
         className="bg-green-600 hover:bg-green-700 text-white font-bold"
+        {...props}
       >
         {t('register')}
       </Button>
@@ -150,7 +164,7 @@ export function RegisterButton() {
             <>
               <DialogHeader>
                 <DialogTitle className="text-white text-xl">{t('register')}</DialogTitle>
-                <DialogDescription className="text-gray-300">
+                <DialogDescription className="text-white">
                   Create a new account to start playing.
                 </DialogDescription>
               </DialogHeader>
@@ -159,11 +173,23 @@ export function RegisterButton() {
                 <div className="flex items-start space-x-2">
                   <Gift className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-yellow-300 font-medium text-sm">Sign up bonus!</p>
-                    <p className="text-gray-300 text-xs">Get ৳82 free when you register and verify your phone number.</p>
+                    <p className="text-yellow-300 font-medium text-sm">Register for bonus!</p>
+                    <p className="text-white text-xs">Register now and get 100% deposit bonus. Minimum withdrawal amount is ৳200. No turnover requirements!</p>
                   </div>
                 </div>
               </div>
+              
+              {referralCode && (
+                <div className="bg-green-600/20 border border-green-500/30 rounded-lg p-3 mb-4">
+                  <div className="flex items-start space-x-2">
+                    <Percent className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-green-300 font-medium text-sm">Referral Bonus Available!</p>
+                      <p className="text-white text-xs">You were referred by a friend! Complete registration to activate your referral bonus.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <Tabs defaultValue="phone" value={registerMethod} onValueChange={(v) => setRegisterMethod(v as 'email' | 'phone')}>
                 <TabsList className="grid grid-cols-2 mb-4">
@@ -287,7 +313,7 @@ export function RegisterButton() {
             <>
               <DialogHeader>
                 <DialogTitle className="text-white text-xl">Verify Your Phone</DialogTitle>
-                <DialogDescription className="text-gray-300">
+                <DialogDescription className="text-white">
                   We've sent a 6-digit code to your phone. Enter it below to complete registration.
                 </DialogDescription>
               </DialogHeader>
@@ -297,7 +323,7 @@ export function RegisterButton() {
                   <Gift className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-green-300 font-medium text-sm">Get ৳82 Signup Bonus!</p>
-                    <p className="text-gray-300 text-xs">Verify your phone number to get your bonus.</p>
+                    <p className="text-white text-xs">Verify your phone number to get your bonus.</p>
                   </div>
                 </div>
               </div>
