@@ -131,7 +131,7 @@ const SpinGame = () => {
       audioRef.current.play().catch(err => console.error("Audio play error:", err));
     }
     
-    const shouldWin = shouldBetWin(user?.id || 'anonymous', 'SpinGame');
+    const shouldWin = shouldBetWin(user.id);
     
     let newFinalSymbols: number[] = [];
     
