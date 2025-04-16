@@ -6,24 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ArrowLeft, RefreshCw, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getGameSettings, GameSettings } from '@/utils/bettingSystem';
 
 const PlinkoControl = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
   const [settings, setSettings] = useState({
-    winRate: 40,
+    winRate: 30,
     minBet: 5,
-    maxBet: 300,
+    maxBet: 500,
     maxWin: 3000,
-    isActive: true
+    isActive: true,
+    multipliers: [0.2, 0.5, 1, 2, 5, 10]
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -32,14 +34,10 @@ const PlinkoControl = () => {
   useEffect(() => {
     const fetchGameSettings = async () => {
       try {
-        const settingsRef = doc(db, "admin", "gameSettings");
-        const settingsDoc = await getDoc(settingsRef);
+        const gameSettings = await getGameSettings();
         
-        if (settingsDoc.exists()) {
-          const data = settingsDoc.data();
-          if (data && data.games && data.games.Plinko) {
-            setSettings(data.games.Plinko);
-          }
+        if (gameSettings && gameSettings.games && gameSettings.games.Plinko) {
+          setSettings(gameSettings.games.Plinko);
         }
       } catch (error) {
         console.error("Error fetching game settings:", error);
@@ -72,10 +70,14 @@ const PlinkoControl = () => {
       const settingsRef = doc(db, "admin", "gameSettings");
       const settingsDoc = await getDoc(settingsRef);
       
-      let allSettings = { games: {} };
+      let allSettings: GameSettings = { games: {} };
       
       if (settingsDoc.exists()) {
-        allSettings = settingsDoc.data();
+        const data = settingsDoc.data();
+        // Ensure we have a games object
+        allSettings = { 
+          games: data.games || {} 
+        };
       }
       
       // Update just the Plinko settings
@@ -132,7 +134,7 @@ const PlinkoControl = () => {
           <Card className="bg-gray-800 border-gray-700 shadow-lg">
             <CardHeader>
               <CardTitle className="text-white">Winning Odds</CardTitle>
-              <CardDescription>Adjust win probability and payout ratios</CardDescription>
+              <CardDescription>Adjust win probability and payouts</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

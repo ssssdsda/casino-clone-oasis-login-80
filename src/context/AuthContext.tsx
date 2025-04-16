@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   createUserWithEmailAndPassword,
@@ -7,8 +8,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth, db } from '@/lib/firebase';
-import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
-import { useRouter } from 'next/navigation';
+import { doc, setDoc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 
 interface User {
   uid: string;
@@ -19,6 +19,8 @@ interface User {
   winnings: number;
   losses: number;
   referredBy?: string | null;
+  id?: string; // Added id field for compatibility
+  role?: string; // Added role field for compatibility
 }
 
 interface AuthContextType {
@@ -26,23 +28,28 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithPhone: (phoneNumber: string, password: string) => Promise<boolean>; // Added for compatibility
   register: (email: string, password: string, username: string, referralCode?: string) => Promise<boolean>;
   registerWithPhone: (phoneNumber: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUserProfile: (username: string, photoURL: string) => Promise<boolean>;
   refreshUserData: () => Promise<void>;
+  updateUserBalance: (amount: number, isWin?: boolean) => Promise<boolean>; // Added for compatibility
 }
 
+// Create context with default values
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
   login: async () => false,
+  loginWithPhone: async () => false,
   register: async () => false,
   registerWithPhone: async () => false,
   logout: async () => {},
   updateUserProfile: async () => false,
   refreshUserData: async () => {},
+  updateUserBalance: async () => false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -62,13 +69,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const userData = docSnap.data();
           setUser({
             uid: user.uid,
+            id: user.uid, // For compatibility
             email: user.email,
             username: userData.username || user.displayName || 'Guest',
             photoURL: user.photoURL,
             balance: userData.balance || 0,
             winnings: userData.winnings || 0,
             losses: userData.losses || 0,
-            referredBy: userData.referredBy || null
+            referredBy: userData.referredBy || null,
+            role: userData.role || 'user' // Default role
           });
           setIsAuthenticated(true);
         } else {
@@ -99,13 +108,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userData = docSnap.data();
         setUser({
           uid: user.uid,
+          id: user.uid, // For compatibility
           email: user.email,
           username: userData.username || user.displayName || 'Guest',
           photoURL: user.photoURL,
           balance: userData.balance || 0,
           winnings: userData.winnings || 0,
           losses: userData.losses || 0,
-          referredBy: userData.referredBy || null
+          referredBy: userData.referredBy || null,
+          role: userData.role || 'user' // Default role
         });
         setIsAuthenticated(true);
         return true;
@@ -118,6 +129,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error: any) {
       console.error("Login failed:", error.message);
+      return false;
+    }
+  };
+
+  // Added for compatibility
+  const loginWithPhone = async (phoneNumber: string, password: string): Promise<boolean> => {
+    try {
+      const email = phoneNumber + '@example.com';
+      return await login(email, password);
+    } catch (error: any) {
+      console.error("Phone login failed:", error.message);
       return false;
     }
   };
@@ -151,6 +173,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             winnings: 0,
             losses: 0,
             referredBy: referralCode, // Store the referrer's ID
+            role: 'user'
           });
   
           // No need to update referrer's balance here
@@ -164,6 +187,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             balance: initialBalance,
             winnings: 0,
             losses: 0,
+            role: 'user'
           });
         }
       } else {
@@ -175,11 +199,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           balance: initialBalance,
           winnings: 0,
           losses: 0,
+          role: 'user'
         });
       }
   
       setUser({
         uid: user.uid,
+        id: user.uid, // For compatibility
         email: user.email,
         username: username,
         photoURL: user.photoURL,
@@ -187,6 +213,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         winnings: 0,
         losses: 0,
         referredBy: referralCode || null,
+        role: 'user'
       });
       setIsAuthenticated(true);
       return true;
@@ -196,6 +223,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
   
+  // Add updateUserBalance for compatibility
+  const updateUserBalance = async (amount: number, isWin: boolean = false): Promise<boolean> => {
+    try {
+      if (!user || !user.uid) return false;
+      
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) return false;
+      
+      const userData = userSnap.data();
+      const currentBalance = userData.balance || 0;
+      const newBalance = currentBalance + amount;
+      
+      // Update user document with new balance
+      if (isWin) {
+        await updateDoc(userRef, { 
+          balance: newBalance,
+          winnings: (userData.winnings || 0) + amount
+        });
+      } else if (amount < 0) {
+        await updateDoc(userRef, { 
+          balance: newBalance,
+          losses: (userData.losses || 0) - amount
+        });
+      } else {
+        await updateDoc(userRef, { balance: newBalance });
+      }
+      
+      // Update local state
+      setUser({
+        ...user,
+        balance: newBalance,
+        winnings: isWin ? (user.winnings + amount) : user.winnings,
+        losses: (!isWin && amount < 0) ? (user.losses - amount) : user.losses
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Failed to update balance:", error);
+      return false;
+    }
+  };
 
   const registerWithPhone = async (phoneNumber: string, username: string, password: string, referralCode?: string): Promise<boolean> => {
     try {
@@ -227,6 +297,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             winnings: 0,
             losses: 0,
             referredBy: referralCode, // Store the referrer's ID
+            role: 'user'
           });
   
           console.log(`User ${user.uid} registered with referral code ${referralCode}`);
@@ -239,6 +310,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             balance: initialBalance,
             winnings: 0,
             losses: 0,
+            role: 'user'
           });
         }
       } else {
@@ -250,11 +322,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           balance: initialBalance,
           winnings: 0,
           losses: 0,
+          role: 'user'
         });
       }
   
       setUser({
         uid: user.uid,
+        id: user.uid, // For compatibility
         email: phoneNumber, // Store phone number as email
         username: username,
         photoURL: user.photoURL,
@@ -262,6 +336,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         winnings: 0,
         losses: 0,
         referredBy: referralCode || null,
+        role: 'user'
       });
       setIsAuthenticated(true);
       return true;
@@ -322,13 +397,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userData = docSnap.data();
         setUser({
           uid: auth.currentUser.uid,
+          id: auth.currentUser.uid, // For compatibility
           email: auth.currentUser.email,
           username: userData.username || auth.currentUser.displayName || 'Guest',
           photoURL: auth.currentUser.photoURL,
           balance: userData.balance || 0,
           winnings: userData.winnings || 0,
           losses: userData.losses || 0,
-          referredBy: userData.referredBy || null
+          referredBy: userData.referredBy || null,
+          role: userData.role || 'user'
         });
         setIsAuthenticated(true);
       } else {
@@ -357,8 +434,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               balance: userData.balance || 0,
               winnings: userData.winnings || 0,
               losses: userData.losses || 0,
-              referredBy: userData.referredBy || null
-              // Include any other fields that might change
+              referredBy: userData.referredBy || null,
+              role: userData.role || 'user'
             };
           });
           
@@ -374,7 +451,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user?.uid]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, register, registerWithPhone, logout, updateUserProfile, refreshUserData }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated, 
+      isLoading, 
+      login,
+      loginWithPhone,  
+      register, 
+      registerWithPhone, 
+      logout, 
+      updateUserProfile, 
+      refreshUserData,
+      updateUserBalance 
+    }}>
       {children}
     </AuthContext.Provider>
   );
