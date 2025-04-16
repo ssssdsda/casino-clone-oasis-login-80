@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -38,35 +37,31 @@ interface GameSettings {
     CoinUp: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
     SuperAce: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
     default: { winRate: number; minBet: number; maxBet: number; maxWin: number; isActive: boolean };
-    [key: string]: any; // Allow for additional game types
   }
 }
 
-// Default game settings to use as fallback
-const defaultGameSettings: GameSettings = {
-  games: {
-    BoxingKing: {
-      winRate: 20, 
-      minBet: 10,
-      maxBet: 1000,
-      maxWin: 10000,
-      isActive: true,
-      specialRules: { 
-        firstTwoBetsWin: true,
-        firstTwoBetsMultiplier: 2,
-        regularMultiplier: 0.7
-      }
-    },
-    MoneyGram: { winRate: 20, minBet: 10, maxBet: 1000, maxWin: 5000, isActive: true },
-    CoinUp: { winRate: 30, minBet: 5, maxBet: 500, maxWin: 3000, isActive: true },
-    SuperAce: { winRate: 25, minBet: 10, maxBet: 500, maxWin: 5000, isActive: true },
-    default: { winRate: 25, minBet: 1, maxBet: 100, maxWin: 1000, isActive: true }
-  }
-};
-
 const GameOddsManagement = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [gameSettings, setGameSettings] = useState<GameSettings>(defaultGameSettings);
+  const [gameSettings, setGameSettings] = useState<GameSettings>({
+    games: {
+      BoxingKing: {
+        winRate: 20, 
+        minBet: 10,
+        maxBet: 1000,
+        maxWin: 10000,
+        isActive: true,
+        specialRules: { 
+          firstTwoBetsWin: true,
+          firstTwoBetsMultiplier: 2,
+          regularMultiplier: 0.7
+        }
+      },
+      MoneyGram: { winRate: 20, minBet: 10, maxBet: 1000, maxWin: 5000, isActive: true },
+      CoinUp: { winRate: 30, minBet: 5, maxBet: 500, maxWin: 3000, isActive: true },
+      SuperAce: { winRate: 25, minBet: 10, maxBet: 500, maxWin: 5000, isActive: true },
+      default: { winRate: 25, minBet: 1, maxBet: 100, maxWin: 1000, isActive: true }
+    }
+  });
   
   const { toast } = useToast();
   const db = getFirestore();
@@ -82,63 +77,24 @@ const GameOddsManagement = () => {
           const data = settingsDoc.data();
           // Check if the data has the expected structure
           if (data && data.games) {
-            // Make sure we have a valid structure by merging with default settings
-            const mergedSettings = {
-              games: { 
-                ...defaultGameSettings.games,
-                ...data.games 
-              }
-            };
-            setGameSettings(mergedSettings as GameSettings);
-            console.log("Game settings loaded from Firebase:", mergedSettings);
+            setGameSettings(data as GameSettings);
+            console.log("Game settings loaded from Firebase:", data);
           } else {
             console.warn("Firebase data doesn't match the expected structure:", data);
-            setGameSettings(defaultGameSettings); // Use defaults if structure is invalid
           }
         } else {
           // If no settings in Firebase, try localStorage
           const localSettings = localStorage.getItem('gameOddsSettings');
           if (localSettings) {
-            try {
-              const parsedSettings = JSON.parse(localSettings);
-              if (parsedSettings && parsedSettings.games) {
-                // Merge with defaults to ensure we have all required fields
-                const mergedSettings = {
-                  games: { 
-                    ...defaultGameSettings.games,
-                    ...parsedSettings.games 
-                  }
-                };
-                setGameSettings(mergedSettings as GameSettings);
-              } else {
-                setGameSettings(defaultGameSettings);
-              }
-            } catch (error) {
-              console.error("Error parsing local settings:", error);
-              setGameSettings(defaultGameSettings);
-            }
-          } else {
-            setGameSettings(defaultGameSettings);
+            setGameSettings(JSON.parse(localSettings));
           }
         }
       } catch (error) {
         console.error("Error fetching settings:", error);
         // If Firebase fails, try localStorage
-        try {
-          const localSettings = localStorage.getItem('gameOddsSettings');
-          if (localSettings) {
-            const parsedSettings = JSON.parse(localSettings);
-            if (parsedSettings && parsedSettings.games) {
-              setGameSettings(parsedSettings as GameSettings);
-            } else {
-              setGameSettings(defaultGameSettings);
-            }
-          } else {
-            setGameSettings(defaultGameSettings);
-          }
-        } catch (e) {
-          console.error("Error with localStorage fallback:", e);
-          setGameSettings(defaultGameSettings);
+        const localSettings = localStorage.getItem('gameOddsSettings');
+        if (localSettings) {
+          setGameSettings(JSON.parse(localSettings));
         }
       }
     };
@@ -148,26 +104,15 @@ const GameOddsManagement = () => {
   
   const handleUpdateSetting = (gameType: string, property: string, value: any) => {
     setGameSettings(prev => {
-      // Create deep copy to avoid mutation issues
-      const updatedSettings = JSON.parse(JSON.stringify(prev)) as GameSettings;
-      
-      // Ensure the game type exists
-      if (!updatedSettings.games[gameType]) {
-        updatedSettings.games[gameType] = JSON.parse(JSON.stringify(updatedSettings.games.default));
-      }
+      const updatedSettings = {...prev};
       
       // Handle special rules separately
       if (property.includes('.')) {
         const [mainProperty, subProperty] = property.split('.');
-        
-        // Make sure specialRules exists if we're updating it
-        if (mainProperty === 'specialRules' && !updatedSettings.games[gameType][mainProperty]) {
-          updatedSettings.games[gameType][mainProperty] = {};
-        }
-        
-        if (updatedSettings.games[gameType][mainProperty]) {
-          updatedSettings.games[gameType][mainProperty][subProperty] = value;
-        }
+        updatedSettings.games[gameType][mainProperty] = {
+          ...updatedSettings.games[gameType][mainProperty],
+          [subProperty]: value
+        };
       } else {
         updatedSettings.games[gameType][property] = value;
       }
@@ -178,13 +123,7 @@ const GameOddsManagement = () => {
 
   const handleSaveSettings = async () => {
     setIsLoading(true);
-    
     try {
-      // Validate settings before saving
-      if (!gameSettings || !gameSettings.games) {
-        throw new Error("Invalid game settings object");
-      }
-      
       // Save to Firebase
       const success = await saveGameSettings(gameSettings);
       
@@ -203,41 +142,15 @@ const GameOddsManagement = () => {
       }
     } catch (error) {
       console.error("Error saving settings:", error);
-      try {
-        localStorage.setItem('gameOddsSettings', JSON.stringify(gameSettings));
-        toast({
-          title: "Error saving to Firebase",
-          description: "Settings saved locally instead.",
-          variant: "destructive"
-        });
-      } catch (storageError) {
-        console.error("Failed to save to localStorage:", storageError);
-        toast({
-          title: "Failed to save settings",
-          description: "Could not save settings to Firebase or localStorage.",
-          variant: "destructive"
-        });
-      }
+      localStorage.setItem('gameOddsSettings', JSON.stringify(gameSettings));
+      toast({
+        title: "Error saving to Firebase",
+        description: "Settings saved locally instead.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Helper function to safely access nested properties
-  const getSafeGameSettings = (gameType: string) => {
-    // Ensure the games object exists
-    if (!gameSettings || !gameSettings.games) {
-      return defaultGameSettings.games[gameType] || defaultGameSettings.games.default;
-    }
-    
-    // Return the game settings or fall back to default
-    return gameSettings.games[gameType] || defaultGameSettings.games[gameType] || defaultGameSettings.games.default;
-  };
-
-  // Safely get special rules for Boxing King
-  const getBoxingKingRules = () => {
-    const game = getSafeGameSettings('BoxingKing');
-    return game.specialRules || defaultGameSettings.games.BoxingKing.specialRules;
   };
 
   return (
@@ -269,7 +182,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="boxingking-winrate"
-                        value={getSafeGameSettings('BoxingKing').winRate}
+                        value={gameSettings.games.BoxingKing.winRate}
                         onChange={(e) => handleUpdateSetting('BoxingKing', 'winRate', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -279,7 +192,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="boxingking-minbet"
-                        value={getSafeGameSettings('BoxingKing').minBet}
+                        value={gameSettings.games.BoxingKing.minBet}
                         onChange={(e) => handleUpdateSetting('BoxingKing', 'minBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -289,7 +202,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="boxingking-maxbet"
-                        value={getSafeGameSettings('BoxingKing').maxBet}
+                        value={gameSettings.games.BoxingKing.maxBet}
                         onChange={(e) => handleUpdateSetting('BoxingKing', 'maxBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -299,7 +212,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="boxingking-maxwin"
-                        value={getSafeGameSettings('BoxingKing').maxWin}
+                        value={gameSettings.games.BoxingKing.maxWin}
                         onChange={(e) => handleUpdateSetting('BoxingKing', 'maxWin', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -312,7 +225,7 @@ const GameOddsManagement = () => {
                       <Label htmlFor="boxingking-firsttwobetswin" className="text-white">First Two Bets Win</Label>
                       <Switch 
                         id="boxingking-firsttwobetswin"
-                        checked={getBoxingKingRules().firstTwoBetsWin}
+                        checked={gameSettings.games.BoxingKing.specialRules.firstTwoBetsWin}
                         onCheckedChange={(checked) => handleUpdateSetting('BoxingKing', 'specialRules.firstTwoBetsWin', checked)}
                       />
                     </div>
@@ -322,7 +235,7 @@ const GameOddsManagement = () => {
                         <Input 
                           type="number"
                           id="boxingking-firsttwobetsmultiplier"
-                          value={getBoxingKingRules().firstTwoBetsMultiplier}
+                          value={gameSettings.games.BoxingKing.specialRules.firstTwoBetsMultiplier}
                           onChange={(e) => handleUpdateSetting('BoxingKing', 'specialRules.firstTwoBetsMultiplier', Number(e.target.value))}
                           className="bg-casino-dark border-gray-700 text-white"
                         />
@@ -332,7 +245,7 @@ const GameOddsManagement = () => {
                         <Input 
                           type="number"
                           id="boxingking-regularmultiplier"
-                          value={getBoxingKingRules().regularMultiplier}
+                          value={gameSettings.games.BoxingKing.specialRules.regularMultiplier}
                           onChange={(e) => handleUpdateSetting('BoxingKing', 'specialRules.regularMultiplier', Number(e.target.value))}
                           className="bg-casino-dark border-gray-700 text-white"
                         />
@@ -344,7 +257,7 @@ const GameOddsManagement = () => {
                     <Label htmlFor="boxingking-isactive" className="text-white">Is Active</Label>
                     <Switch 
                       id="boxingking-isactive"
-                      checked={getSafeGameSettings('BoxingKing').isActive}
+                      checked={gameSettings.games.BoxingKing.isActive}
                       onCheckedChange={(checked) => handleUpdateSetting('BoxingKing', 'isActive', checked)}
                     />
                   </div>
@@ -359,7 +272,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="moneygram-winrate"
-                        value={getSafeGameSettings('MoneyGram').winRate}
+                        value={gameSettings.games.MoneyGram.winRate}
                         onChange={(e) => handleUpdateSetting('MoneyGram', 'winRate', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -369,7 +282,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="moneygram-minbet"
-                        value={getSafeGameSettings('MoneyGram').minBet}
+                        value={gameSettings.games.MoneyGram.minBet}
                         onChange={(e) => handleUpdateSetting('MoneyGram', 'minBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -379,7 +292,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="moneygram-maxbet"
-                        value={getSafeGameSettings('MoneyGram').maxBet}
+                        value={gameSettings.games.MoneyGram.maxBet}
                         onChange={(e) => handleUpdateSetting('MoneyGram', 'maxBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -389,7 +302,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="moneygram-maxwin"
-                        value={getSafeGameSettings('MoneyGram').maxWin}
+                        value={gameSettings.games.MoneyGram.maxWin}
                         onChange={(e) => handleUpdateSetting('MoneyGram', 'maxWin', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -399,7 +312,7 @@ const GameOddsManagement = () => {
                     <Label htmlFor="moneygram-isactive" className="text-white">Is Active</Label>
                     <Switch 
                       id="moneygram-isactive"
-                      checked={getSafeGameSettings('MoneyGram').isActive}
+                      checked={gameSettings.games.MoneyGram.isActive}
                       onCheckedChange={(checked) => handleUpdateSetting('MoneyGram', 'isActive', checked)}
                     />
                   </div>
@@ -414,7 +327,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="coinup-winrate"
-                        value={getSafeGameSettings('CoinUp').winRate}
+                        value={gameSettings.games.CoinUp.winRate}
                         onChange={(e) => handleUpdateSetting('CoinUp', 'winRate', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -424,7 +337,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="coinup-minbet"
-                        value={getSafeGameSettings('CoinUp').minBet}
+                        value={gameSettings.games.CoinUp.minBet}
                         onChange={(e) => handleUpdateSetting('CoinUp', 'minBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -434,7 +347,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="coinup-maxbet"
-                        value={getSafeGameSettings('CoinUp').maxBet}
+                        value={gameSettings.games.CoinUp.maxBet}
                         onChange={(e) => handleUpdateSetting('CoinUp', 'maxBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -444,7 +357,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="coinup-maxwin"
-                        value={getSafeGameSettings('CoinUp').maxWin}
+                        value={gameSettings.games.CoinUp.maxWin}
                         onChange={(e) => handleUpdateSetting('CoinUp', 'maxWin', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -454,7 +367,7 @@ const GameOddsManagement = () => {
                     <Label htmlFor="coinup-isactive" className="text-white">Is Active</Label>
                     <Switch 
                       id="coinup-isactive"
-                      checked={getSafeGameSettings('CoinUp').isActive}
+                      checked={gameSettings.games.CoinUp.isActive}
                       onCheckedChange={(checked) => handleUpdateSetting('CoinUp', 'isActive', checked)}
                     />
                   </div>
@@ -469,7 +382,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="superace-winrate"
-                        value={getSafeGameSettings('SuperAce').winRate}
+                        value={gameSettings.games.SuperAce.winRate}
                         onChange={(e) => handleUpdateSetting('SuperAce', 'winRate', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -479,7 +392,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="superace-minbet"
-                        value={getSafeGameSettings('SuperAce').minBet}
+                        value={gameSettings.games.SuperAce.minBet}
                         onChange={(e) => handleUpdateSetting('SuperAce', 'minBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -489,7 +402,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="superace-maxbet"
-                        value={getSafeGameSettings('SuperAce').maxBet}
+                        value={gameSettings.games.SuperAce.maxBet}
                         onChange={(e) => handleUpdateSetting('SuperAce', 'maxBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -499,7 +412,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="superace-maxwin"
-                        value={getSafeGameSettings('SuperAce').maxWin}
+                        value={gameSettings.games.SuperAce.maxWin}
                         onChange={(e) => handleUpdateSetting('SuperAce', 'maxWin', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -509,7 +422,7 @@ const GameOddsManagement = () => {
                     <Label htmlFor="superace-isactive" className="text-white">Is Active</Label>
                     <Switch 
                       id="superace-isactive"
-                      checked={getSafeGameSettings('SuperAce').isActive}
+                      checked={gameSettings.games.SuperAce.isActive}
                       onCheckedChange={(checked) => handleUpdateSetting('SuperAce', 'isActive', checked)}
                     />
                   </div>
@@ -524,7 +437,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="default-winrate"
-                        value={getSafeGameSettings('default').winRate}
+                        value={gameSettings.games.default.winRate}
                         onChange={(e) => handleUpdateSetting('default', 'winRate', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -534,7 +447,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="default-minbet"
-                        value={getSafeGameSettings('default').minBet}
+                        value={gameSettings.games.default.minBet}
                         onChange={(e) => handleUpdateSetting('default', 'minBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -544,7 +457,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="default-maxbet"
-                        value={getSafeGameSettings('default').maxBet}
+                        value={gameSettings.games.default.maxBet}
                         onChange={(e) => handleUpdateSetting('default', 'maxBet', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -554,7 +467,7 @@ const GameOddsManagement = () => {
                       <Input 
                         type="number"
                         id="default-maxwin"
-                        value={getSafeGameSettings('default').maxWin}
+                        value={gameSettings.games.default.maxWin}
                         onChange={(e) => handleUpdateSetting('default', 'maxWin', Number(e.target.value))}
                         className="bg-casino-dark border-gray-700 text-white"
                       />
@@ -564,7 +477,7 @@ const GameOddsManagement = () => {
                     <Label htmlFor="default-isactive" className="text-white">Is Active</Label>
                     <Switch 
                       id="default-isactive"
-                      checked={getSafeGameSettings('default').isActive}
+                      checked={gameSettings.games.default.isActive}
                       onCheckedChange={(checked) => handleUpdateSetting('default', 'isActive', checked)}
                     />
                   </div>

@@ -40,15 +40,10 @@ async function getGameSettings() {
     
     if (settingsDoc.exists()) {
       const data = settingsDoc.data();
-      // Verify the data has the expected structure before using it
-      if (data && data.games) {
-        gameSettingsCache = data;
-        lastCacheTime = now;
-        console.log("Game settings loaded from Firebase:", data);
-        return data;
-      } else {
-        console.warn("Firebase data doesn't have the expected 'games' structure:", data);
-      }
+      gameSettingsCache = data;
+      lastCacheTime = now;
+      console.log("Game settings loaded from Firebase:", data);
+      return data;
     }
   } catch (error) {
     console.error("Error fetching game settings:", error);
@@ -58,20 +53,17 @@ async function getGameSettings() {
   try {
     const localSettings = localStorage.getItem('gameOddsSettings');
     if (localSettings) {
-      const parsedSettings = JSON.parse(localSettings);
-      // Verify the data has the expected structure before using it
-      if (parsedSettings && parsedSettings.games) {
-        gameSettingsCache = parsedSettings;
-        lastCacheTime = now;
-        return parsedSettings;
-      }
+      const settings = JSON.parse(localSettings);
+      gameSettingsCache = settings;
+      lastCacheTime = now;
+      return settings;
     }
   } catch (error) {
     console.error("Error fetching local game settings:", error);
   }
   
   // Return default settings as last resort
-  const defaultSettings = {
+  return {
     games: {
       BoxingKing: { 
         winRate: 20, 
@@ -92,10 +84,6 @@ async function getGameSettings() {
       default: { winRate: 25, minBet: 1, maxBet: 100, maxWin: 1000, isActive: true }
     }
   };
-  
-  gameSettingsCache = defaultSettings;
-  lastCacheTime = now;
-  return defaultSettings;
 }
 
 /**
@@ -105,12 +93,6 @@ async function getGameSettings() {
  */
 export const saveGameSettings = async (settings: any): Promise<boolean> => {
   try {
-    // Validate settings before saving
-    if (!settings || !settings.games) {
-      console.error("Invalid settings object:", settings);
-      return false;
-    }
-    
     const settingsRef = doc(db, "admin", "gameSettings");
     await setDoc(settingsRef, settings);
     
@@ -156,18 +138,8 @@ export const shouldBetWin = async (userId: string, gameType: string = 'default',
   
   // Get admin settings
   const settings = await getGameSettings();
-  
-  // Ensure games object exists
-  if (!settings || !settings.games) {
-    console.error("Invalid game settings:", settings);
-    return Math.random() < 0.25; // Default 25% win rate as fallback
-  }
-  
-  // Safely access game settings with multiple fallbacks
-  const games = settings.games;
-  const gameSettings = games && typeof games === 'object' ? 
-    (games[gameType] || games.default || { winRate: 25, specialRules: null }) : 
-    { winRate: 25, specialRules: null };
+  // Add null checks to prevent accessing undefined properties
+  const gameSettings = settings?.games?.[gameType] || settings?.games?.default || { winRate: 25 };
   
   let shouldWin = false;
   const winRate = (gameSettings.winRate || 25) / 100; // Convert percentage to decimal, with fallback
@@ -220,18 +192,8 @@ export const calculateWinAmount = async (
 ): Promise<number> => {
   // Get admin settings
   const settings = await getGameSettings();
-  
-  // Ensure games object exists
-  if (!settings || !settings.games) {
-    console.error("Invalid game settings:", settings);
-    return Math.floor(betAmount * multiplier);
-  }
-  
-  // Safely access game settings with multiple fallbacks
-  const games = settings.games;
-  const gameSettings = games && typeof games === 'object' ? 
-    (games[gameType || 'default'] || games.default || { maxWin: 100, specialRules: null }) : 
-    { maxWin: 100, specialRules: null };
+  // Add null checks to prevent accessing undefined properties
+  const gameSettings = settings?.games?.[gameType || 'default'] || settings?.games?.default || { maxWin: 100 };
   
   // Calculate the standard win amount
   let winAmount = betAmount * multiplier;
