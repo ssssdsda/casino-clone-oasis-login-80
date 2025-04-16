@@ -12,46 +12,15 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from '@/context/LanguageContext';
 import { saveGameSettings } from '@/utils/bettingSystem';
-import { doc, getDoc, DocumentData } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
-// Define types for our game settings
-interface GameSpecialRules {
-  firstTwoBetsWin: boolean;
-  firstTwoBetsMultiplier: number;
-  regularMultiplier: number;
-}
-
-interface GameSetting {
-  winRate: number;
-  minBet: number;
-  maxBet: number;
-  maxWin: number;
-  isActive: boolean;
-  specialRules?: GameSpecialRules;
-}
-
-interface GameSettings {
-  games: {
-    BoxingKing: GameSetting;
-    MoneyGram: GameSetting;
-    CoinUp: GameSetting;
-    SuperAce: GameSetting;
-    SuperElement: GameSetting;
-    Plinko: GameSetting;
-    Aviator: GameSetting;
-    GoldenBasin: GameSetting;
-    default: GameSetting;
-    [key: string]: GameSetting;
-  };
-}
 
 const GameOddsAdmin = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
   
   // State for game settings
-  const [gameSettings, setGameSettings] = useState<GameSettings>({
+  const [gameSettings, setGameSettings] = useState({
     games: {
       BoxingKing: { 
         winRate: 20, 
@@ -68,10 +37,12 @@ const GameOddsAdmin = () => {
       MoneyGram: { winRate: 20, minBet: 10, maxBet: 1000, maxWin: 5000, isActive: true },
       CoinUp: { winRate: 30, minBet: 5, maxBet: 500, maxWin: 3000, isActive: true },
       SuperAce: { winRate: 25, minBet: 10, maxBet: 500, maxWin: 5000, isActive: true },
+      // Added new games
       SuperElement: { winRate: 25, minBet: 10, maxBet: 800, maxWin: 6000, isActive: true },
       Plinko: { winRate: 40, minBet: 5, maxBet: 300, maxWin: 3000, isActive: true },
       Aviator: { winRate: 15, minBet: 20, maxBet: 1000, maxWin: 10000, isActive: true },
       GoldenBasin: { winRate: 22, minBet: 10, maxBet: 500, maxWin: 4000, isActive: true },
+      // Default values for other games
       default: { winRate: 25, minBet: 1, maxBet: 100, maxWin: 1000, isActive: true }
     }
   });
@@ -86,16 +57,9 @@ const GameOddsAdmin = () => {
         const settingsRef = doc(db, "admin", "gameSettings");
         const settingsDoc = await getDoc(settingsRef);
         
-        if (settingsDoc.exists()) {
-          const data = settingsDoc.data() as DocumentData;
-          
-          // Validate the data has the expected structure before using it
-          if (data && data.games) {
-            setGameSettings(data as GameSettings);
-            console.log("Game settings loaded from Firebase:", data);
-          } else {
-            console.warn("Firebase data doesn't have the expected 'games' structure:", data);
-          }
+        if (settingsDoc.exists() && settingsDoc.data().games) {
+          setGameSettings(settingsDoc.data());
+          console.log("Game settings loaded from Firebase:", settingsDoc.data());
         }
       } catch (error) {
         console.error("Error fetching game settings:", error);
@@ -106,15 +70,15 @@ const GameOddsAdmin = () => {
   }, []);
   
   // Handle game selection change
-  const handleGameChange = (game: string) => {
+  const handleGameChange = (game) => {
     setSelectedGame(game);
   };
   
   // Update specific game setting
-  const updateGameSetting = (game: string, setting: string, value: any) => {
+  const updateGameSetting = (game, setting, value) => {
     setGameSettings(prev => {
       // Create a deep copy to avoid mutation
-      const updated = JSON.parse(JSON.stringify(prev)) as GameSettings;
+      const updated = JSON.parse(JSON.stringify(prev));
       
       // Ensure the game exists in settings
       if (!updated.games[game]) {
@@ -125,18 +89,12 @@ const GameOddsAdmin = () => {
       if (setting.includes('.')) {
         // Handle nested properties like specialRules.firstTwoBetsWin
         const [parent, child] = setting.split('.');
-        if (parent === 'specialRules') {
-          if (!updated.games[game].specialRules) {
-            updated.games[game].specialRules = {
-              firstTwoBetsWin: true,
-              firstTwoBetsMultiplier: 2,
-              regularMultiplier: 0.7
-            };
-          }
-          (updated.games[game].specialRules as any)[child] = value;
+        if (!updated.games[game][parent]) {
+          updated.games[game][parent] = {};
         }
+        updated.games[game][parent][child] = value;
       } else {
-        (updated.games[game] as any)[setting] = value;
+        updated.games[game][setting] = value;
       }
       
       return updated;
@@ -162,7 +120,7 @@ const GameOddsAdmin = () => {
           variant: "destructive"
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error saving settings:", error);
       toast({
         title: "Error",
@@ -176,7 +134,7 @@ const GameOddsAdmin = () => {
 
   // Handle reset to defaults
   const handleResetDefaults = () => {
-    const defaultSettings: GameSetting = {
+    const defaultSettings = {
       winRate: 25,
       minBet: 10,
       maxBet: 500,
@@ -194,7 +152,7 @@ const GameOddsAdmin = () => {
     
     // Update the selected game with default values
     setGameSettings(prev => {
-      const updated = JSON.parse(JSON.stringify(prev)) as GameSettings;
+      const updated = JSON.parse(JSON.stringify(prev));
       updated.games[selectedGame] = defaultSettings;
       return updated;
     });
@@ -206,7 +164,7 @@ const GameOddsAdmin = () => {
   };
 
   // Get current game settings
-  const getCurrentGameSettings = (): GameSetting => {
+  const getCurrentGameSettings = () => {
     // Safely access game settings with fallbacks
     return gameSettings?.games?.[selectedGame] || gameSettings?.games?.default || {
       winRate: 25,
@@ -218,13 +176,6 @@ const GameOddsAdmin = () => {
   };
 
   const currentGame = getCurrentGameSettings();
-  // Initialize specialRules if it doesn't exist and we're on BoxingKing
-  const specialRules = currentGame.specialRules || 
-    (selectedGame === 'BoxingKing' ? {
-      firstTwoBetsWin: true, 
-      firstTwoBetsMultiplier: 2, 
-      regularMultiplier: 0.7
-    } : undefined);
 
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
@@ -285,7 +236,7 @@ const GameOddsAdmin = () => {
                     />
                   </div>
                   
-                  {selectedGame === 'BoxingKing' && specialRules && (
+                  {selectedGame === 'BoxingKing' && (
                     <div>
                       <div className="mt-4 mb-2 font-semibold">Special Rules for Boxing King</div>
                       
@@ -293,7 +244,7 @@ const GameOddsAdmin = () => {
                         <div className="flex items-center justify-between">
                           <Label>First 2 bets always win</Label>
                           <Switch 
-                            checked={specialRules.firstTwoBetsWin} 
+                            checked={currentGame.specialRules?.firstTwoBetsWin || false} 
                             onCheckedChange={(checked) => 
                               updateGameSetting(selectedGame, 'specialRules.firstTwoBetsWin', checked)
                             }
@@ -305,7 +256,7 @@ const GameOddsAdmin = () => {
                           <div className="flex items-center gap-2">
                             <Input 
                               type="number" 
-                              value={specialRules.firstTwoBetsMultiplier} 
+                              value={currentGame.specialRules?.firstTwoBetsMultiplier || 2} 
                               onChange={(e) => 
                                 updateGameSetting(
                                   selectedGame, 
@@ -327,7 +278,7 @@ const GameOddsAdmin = () => {
                               step="0.1"
                               min="0.1"
                               max="5"
-                              value={specialRules.regularMultiplier} 
+                              value={currentGame.specialRules?.regularMultiplier || 0.7} 
                               onChange={(e) => 
                                 updateGameSetting(
                                   selectedGame, 
