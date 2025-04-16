@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,11 +12,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Phone, KeyRound } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavigate } from 'react-router-dom';
 
 export function LoginButton(props: any) {
   const [open, setOpen] = useState(false);
@@ -30,34 +31,45 @@ export function LoginButton(props: any) {
   const [phoneNumber, setPhoneNumber] = useState('+880');
   const [phonePassword, setPhonePassword] = useState('');
   
-  const { login, loginWithPhone, isLoading } = useAuth();
-  const { toast } = useToast();
+  const { login, loginWithPhone, isLoading, isAuthenticated } = useAuth();
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  
+  // If user becomes authenticated, close the dialog
+  useEffect(() => {
+    if (isAuthenticated && open) {
+      setOpen(false);
+    }
+  }, [isAuthenticated, open]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
+      toast.error("Please fill in all fields");
       return;
     }
     
     try {
-      await login(email, password);
-      setOpen(false);
-      toast({
-        title: "Success",
-        description: "Login successful!",
-        variant: "default",
-        className: "bg-green-600 text-white"
-      });
+      const result = await login(email, password);
+      if (result) {
+        toast.success("Login successful!", {
+          duration: 3000,
+          className: "bg-green-600 text-white"
+        });
+        
+        // Close modal and refresh page to ensure auth state is applied
+        setTimeout(() => {
+          setOpen(false);
+          navigate('/');  // Redirect to home page
+        }, 500);
+      } else {
+        toast.error("Invalid email or password. Please try again.");
+      }
     } catch (error) {
-      // Error handled in login function
+      toast.error("Login failed. Please try again later.");
+      console.error("Login error:", error);
     }
   };
 
@@ -65,36 +77,34 @@ export function LoginButton(props: any) {
     e.preventDefault();
     
     if (!phoneNumber || phoneNumber === '+880' || phoneNumber.length < 11) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid phone number",
-        variant: "destructive"
-      });
+      toast.error("Please enter a valid phone number");
       return;
     }
     
     if (!phonePassword) {
-      toast({
-        title: "Error",
-        description: "Please enter your password",
-        variant: "destructive"
-      });
+      toast.error("Please enter your password");
       return;
     }
     
     try {
       const result = await loginWithPhone(phoneNumber, phonePassword);
       if (result) {
-        setOpen(false);
-        toast({
-          title: "Success",
-          description: "Login successful!",
-          variant: "default",
+        toast.success("Login successful!", {
+          duration: 3000,
           className: "bg-green-600 text-white"
         });
+        
+        // Close modal and refresh page to ensure auth state is applied
+        setTimeout(() => {
+          setOpen(false);
+          navigate('/');  // Redirect to home page
+        }, 500);
+      } else {
+        toast.error("Invalid phone number or password. Please try again.");
       }
     } catch (error) {
-      // Error handled in loginWithPhone function
+      toast.error("Login failed. Please try again later.");
+      console.error("Phone login error:", error);
     }
   };
 

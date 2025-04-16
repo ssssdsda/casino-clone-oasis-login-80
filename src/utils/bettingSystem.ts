@@ -41,11 +41,19 @@ export const getGameSettings = async (): Promise<GameSettings> => {
       if (!data.games) {
         data.games = {};
       }
+
+      console.log("Loaded game settings from firestore:", data);
+      
+      // Dispatch event for real-time updates
+      const event = new CustomEvent('gameSettingsLoaded', { detail: data });
+      window.dispatchEvent(event);
       
       return data as GameSettings;
     } else {
       // Return default settings if document doesn't exist
-      return { games: {} };
+      const defaultSettings = { games: {} };
+      console.log("No game settings found, using defaults");
+      return defaultSettings;
     }
   } catch (error) {
     console.error('Error fetching game settings:', error);
@@ -58,6 +66,12 @@ export const saveGameSettings = async (settings: GameSettings): Promise<boolean>
   try {
     const settingsRef = doc(db, "admin", "gameSettings");
     await setDoc(settingsRef, settings, { merge: true });
+    
+    // Dispatch event for real-time updates
+    const event = new CustomEvent('gameSettingsUpdated', { detail: settings });
+    window.dispatchEvent(event);
+    
+    console.log("Game settings saved successfully:", settings);
     return true;
   } catch (error) {
     console.error('Error saving game settings:', error);
@@ -99,6 +113,12 @@ export const updateGameSettings = async (
     };
     
     await setDoc(settingsRef, currentSettings);
+    
+    // Dispatch event for real-time updates
+    const event = new CustomEvent('gameSettingsUpdated', { detail: currentSettings });
+    window.dispatchEvent(event);
+    
+    console.log(`Game settings for ${game} updated successfully:`, settings);
     return true;
   } catch (error) {
     console.error(`Error updating ${game} settings:`, error);
@@ -143,6 +163,8 @@ export const shouldBetWin = async (
     // Generate random number between 0-100
     const randomChance = Math.random() * 100;
     
+    console.log(`Game ${gameName} win check - Rate: ${adjustedWinRate}%, Random: ${randomChance.toFixed(2)}`);
+    
     return randomChance <= adjustedWinRate;
   } catch (error) {
     console.error('Error in shouldBetWin:', error);
@@ -177,6 +199,8 @@ export const calculateWinAmount = async (
       winAmount = game.minWin;
     }
     
+    console.log(`Win calculation for ${gameName}: ${betAmount} * ${multiplier} = ${winAmount}`);
+    
     // Round to 2 decimal places
     return Math.round(winAmount * 100) / 100;
   } catch (error) {
@@ -207,8 +231,16 @@ export const processReferralBonus = async (
     
     // Update referrer's balance in Firestore
     const referrerRef = doc(db, "users", referrerId);
+    const referrerSnap = await getDoc(referrerRef);
+    
+    if (!referrerSnap.exists()) {
+      console.error(`Referrer ${referrerId} not found`);
+      return false;
+    }
+    
     await updateDoc(referrerRef, {
-      balance: increment(bonusAmount)
+      balance: increment(bonusAmount),
+      referralEarnings: increment(bonusAmount)
     });
     
     // Record the referral bonus transaction
@@ -221,6 +253,7 @@ export const processReferralBonus = async (
       timestamp: new Date()
     });
     
+    console.log(`Referral bonus of ${bonusAmount} processed for ${referrerId} from ${userId}`);
     return true;
   } catch (error) {
     console.error('Error processing referral bonus:', error);

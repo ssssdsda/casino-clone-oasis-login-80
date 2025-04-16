@@ -59,76 +59,96 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Enhanced authentication state listener with improved persistence
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(userRef);
-
-        if (docSnap.exists()) {
-          const userData = docSnap.data();
-          setUser({
-            uid: user.uid,
-            id: user.uid, // For compatibility
-            email: user.email,
-            username: userData.username || user.displayName || 'Guest',
-            photoURL: user.photoURL,
-            balance: userData.balance || 0,
-            winnings: userData.winnings || 0,
-            losses: userData.losses || 0,
-            referredBy: userData.referredBy || null,
-            role: userData.role || 'user' // Default role
-          });
-          setIsAuthenticated(true);
-        } else {
-          // If the document doesn't exist, sign out the user
-          signOut(auth);
-          setUser(null);
-          setIsAuthenticated(false);
-        }
+        
+        // Set up real-time listener for user data
+        const unsubscribeUser = onSnapshot(userRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            setUser({
+              uid: user.uid,
+              id: user.uid, // For compatibility
+              email: user.email,
+              username: userData.username || user.displayName || 'Guest',
+              photoURL: user.photoURL,
+              balance: userData.balance || 0,
+              winnings: userData.winnings || 0,
+              losses: userData.losses || 0,
+              referredBy: userData.referredBy || null,
+              role: userData.role || 'user' // Default role
+            });
+            setIsAuthenticated(true);
+            console.log("User data updated via real-time listener:", userData);
+          } else {
+            console.warn("User document doesn't exist in Firestore");
+            // Don't sign out immediately - could be a temporary issue
+          }
+          setIsLoading(false);
+        }, (error) => {
+          console.error("Error in real-time user data listener:", error);
+          setIsLoading(false);
+        });
+        
+        // Store auth session in local storage for persistence
+        localStorage.setItem('authUser', JSON.stringify({
+          uid: user.uid,
+          email: user.email
+        }));
+        
+        // Return cleanup function for the user data listener
+        return () => unsubscribeUser();
       } else {
+        // No active user in Firebase Auth
         setUser(null);
         setIsAuthenticated(false);
+        localStorage.removeItem('authUser');
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup subscription on unmount
+    // Check local storage for existing session on initial load
+    const checkStoredSession = async () => {
+      const storedUser = localStorage.getItem('authUser');
+      if (storedUser && !auth.currentUser) {
+        console.log("Found stored user session, attempting to restore");
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          // We don't need to do anything here as the onAuthStateChanged will handle it
+          // Just logging for debugging
+          console.log("Waiting for Firebase Auth to restore session for:", parsedUser.uid);
+        } catch (error) {
+          console.error("Error parsing stored user:", error);
+          localStorage.removeItem('authUser');
+        }
+      }
+    };
+    
+    checkStoredSession();
+    
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      setIsLoading(true);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Update timestamps and last login
       const userRef = doc(db, "users", user.uid);
-      const docSnap = await getDoc(userRef);
-
-      if (docSnap.exists()) {
-        const userData = docSnap.data();
-        setUser({
-          uid: user.uid,
-          id: user.uid, // For compatibility
-          email: user.email,
-          username: userData.username || user.displayName || 'Guest',
-          photoURL: user.photoURL,
-          balance: userData.balance || 0,
-          winnings: userData.winnings || 0,
-          losses: userData.losses || 0,
-          referredBy: userData.referredBy || null,
-          role: userData.role || 'user' // Default role
-        });
-        setIsAuthenticated(true);
-        return true;
-      } else {
-        // If the document doesn't exist, sign out the user
-        signOut(auth);
-        setUser(null);
-        setIsAuthenticated(false);
-        return false;
-      }
+      await updateDoc(userRef, {
+        lastLogin: new Date()
+      });
+      
+      console.log("User logged in successfully:", user.uid);
+      return true;
     } catch (error: any) {
       console.error("Login failed:", error.message);
+      setIsLoading(false);
       return false;
     }
   };
@@ -146,6 +166,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const register = async (email: string, password: string, username: string, referralCode?: string): Promise<boolean> => {
     try {
+      setIsLoading(true);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
   
@@ -173,11 +194,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             winnings: 0,
             losses: 0,
             referredBy: referralCode, // Store the referrer's ID
-            role: 'user'
+            role: 'user',
+            createdAt: new Date()
           });
   
-          // No need to update referrer's balance here
           console.log(`User ${user.uid} registered with referral code ${referralCode}`);
+          
+          // Process referral bonus for the referrer
+          const referrerData = referrerSnap.data();
+          const referralBonus = 50; // Set referral bonus amount
+          
+          // Update referrer's balance
+          await updateDoc(referrerRef, {
+            balance: (referrerData.balance || 0) + referralBonus,
+            referralCount: (referrerData.referralCount || 0) + 1
+          });
+          
+          console.log(`Referral bonus of ${referralBonus} awarded to ${referralCode}`);
         } else {
           // If the referrer doesn't exist, create the user document without referral
           await setDoc(userRef, {
@@ -187,7 +220,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             balance: initialBalance,
             winnings: 0,
             losses: 0,
-            role: 'user'
+            role: 'user',
+            createdAt: new Date()
           });
         }
       } else {
@@ -199,26 +233,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           balance: initialBalance,
           winnings: 0,
           losses: 0,
-          role: 'user'
+          role: 'user',
+          createdAt: new Date()
         });
       }
   
-      setUser({
-        uid: user.uid,
-        id: user.uid, // For compatibility
-        email: user.email,
-        username: username,
-        photoURL: user.photoURL,
-        balance: initialBalance,
-        winnings: 0,
-        losses: 0,
-        referredBy: referralCode || null,
-        role: 'user'
-      });
-      setIsAuthenticated(true);
+      console.log("User registered successfully:", user.uid);
       return true;
     } catch (error: any) {
       console.error("Registration failed:", error.message);
+      setIsLoading(false);
       return false;
     }
   };
@@ -252,14 +276,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await updateDoc(userRef, { balance: newBalance });
       }
       
-      // Update local state
-      setUser({
-        ...user,
-        balance: newBalance,
-        winnings: isWin ? (user.winnings + amount) : user.winnings,
-        losses: (!isWin && amount < 0) ? (user.losses - amount) : user.losses
-      });
-      
+      console.log(`User ${user.uid} balance updated: ${currentBalance} -> ${newBalance}`);
       return true;
     } catch (error) {
       console.error("Failed to update balance:", error);
@@ -269,6 +286,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const registerWithPhone = async (phoneNumber: string, username: string, password: string, referralCode?: string): Promise<boolean> => {
     try {
+      setIsLoading(true);
       // Create a new user with email and password
       const userCredential = await createUserWithEmailAndPassword(auth, phoneNumber + '@example.com', password);
       const user = userCredential.user;
@@ -292,25 +310,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           await setDoc(userRef, {
             uid: user.uid,
             email: phoneNumber, // Store phone number as email
+            phone: phoneNumber,
             username: username,
             balance: initialBalance,
             winnings: 0,
             losses: 0,
             referredBy: referralCode, // Store the referrer's ID
-            role: 'user'
+            phoneVerified: true,
+            role: 'user',
+            createdAt: new Date()
           });
-  
+          
+          // Process referral bonus for the referrer
+          const referrerData = referrerSnap.data();
+          const referralBonus = 50; // Set referral bonus amount
+          
+          // Update referrer's balance
+          await updateDoc(referrerRef, {
+            balance: (referrerData.balance || 0) + referralBonus,
+            referralCount: (referrerData.referralCount || 0) + 1
+          });
+          
+          console.log(`Referral bonus of ${referralBonus} awarded to ${referralCode}`);
           console.log(`User ${user.uid} registered with referral code ${referralCode}`);
         } else {
           // If the referrer doesn't exist, create the user document without referral
           await setDoc(userRef, {
             uid: user.uid,
             email: phoneNumber, // Store phone number as email
+            phone: phoneNumber,
             username: username,
             balance: initialBalance,
             winnings: 0,
             losses: 0,
-            role: 'user'
+            phoneVerified: true,
+            role: 'user',
+            createdAt: new Date()
           });
         }
       } else {
@@ -318,30 +353,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await setDoc(userRef, {
           uid: user.uid,
           email: phoneNumber, // Store phone number as email
+          phone: phoneNumber,
           username: username,
           balance: initialBalance,
           winnings: 0,
           losses: 0,
-          role: 'user'
+          phoneVerified: true,
+          role: 'user',
+          createdAt: new Date()
         });
       }
-  
-      setUser({
-        uid: user.uid,
-        id: user.uid, // For compatibility
-        email: phoneNumber, // Store phone number as email
-        username: username,
-        photoURL: user.photoURL,
-        balance: initialBalance,
-        winnings: 0,
-        losses: 0,
-        referredBy: referralCode || null,
-        role: 'user'
-      });
-      setIsAuthenticated(true);
+      
+      console.log("User registered successfully with phone:", user.uid);
       return true;
     } catch (error: any) {
       console.error("Phone registration failed:", error);
+      setIsLoading(false);
       return false;
     }
   };
@@ -351,6 +378,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await signOut(auth);
       setUser(null);
       setIsAuthenticated(false);
+      localStorage.removeItem('authUser');
+      console.log("User logged out successfully");
     } catch (error: any) {
       console.error("Logout failed:", error.message);
     }
@@ -371,12 +400,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           photoURL: photoURL,
         }, { merge: true });
 
-        // Update the local user state
-        setUser({
-          ...user!,
-          username: username,
-          photoURL: photoURL,
-        });
+        console.log("User profile updated successfully");
         return true;
       } else {
         console.error("No user is currently logged in.");
@@ -408,47 +432,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           role: userData.role || 'user'
         });
         setIsAuthenticated(true);
+        console.log("User data refreshed manually");
       } else {
         // If the document doesn't exist, sign out the user
         signOut(auth);
         setUser(null);
         setIsAuthenticated(false);
+        localStorage.removeItem('authUser');
       }
     }
   };
-
-  // Modify to add real-time listener for user balance
-  useEffect(() => {
-    if (user && user.uid) {
-      // Set up real-time listener for user data
-      const userRef = doc(db, "users", user.uid);
-      const unsubscribe = onSnapshot(userRef, (docSnapshot) => {
-        if (docSnapshot.exists()) {
-          const userData = docSnapshot.data();
-          
-          // Update the user state with the new data
-          setUser(prevUser => {
-            if (!prevUser) return null;
-            return {
-              ...prevUser,
-              balance: userData.balance || 0,
-              winnings: userData.winnings || 0,
-              losses: userData.losses || 0,
-              referredBy: userData.referredBy || null,
-              role: userData.role || 'user'
-            };
-          });
-          
-          console.log("Real-time user data update:", userData);
-        }
-      }, (error) => {
-        console.error("Error setting up real-time user data listener:", error);
-      });
-      
-      // Clean up listener on unmount
-      return () => unsubscribe();
-    }
-  }, [user?.uid]);
 
   return (
     <AuthContext.Provider value={{ 

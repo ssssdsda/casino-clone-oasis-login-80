@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Analytics } from '@/components/Analytics';
 import { AuthProvider } from '@/context/AuthContext';
@@ -89,13 +89,13 @@ function App() {
             <Route path="/game-odds-admin" element={<GameOddsAdmin />} />
             <Route path="/game-odds-management" element={<GameOddsManagement />} />
             
-            {/* Game Control Pages - accessible to everyone */}
-            <Route path="/superace-control" element={<React.Suspense fallback={<div>Loading...</div>}><SuperAceControl /></React.Suspense>} />
-            <Route path="/plinko-control" element={<React.Suspense fallback={<div>Loading...</div>}><PlinkoControl /></React.Suspense>} />
-            <Route path="/aviator-control" element={<React.Suspense fallback={<div>Loading...</div>}><AviatorControl /></React.Suspense>} />
-            <Route path="/coinup-control" element={<React.Suspense fallback={<div>Loading...</div>}><CoinUpControl /></React.Suspense>} />
-            <Route path="/moneygram-control" element={<React.Suspense fallback={<div>Loading...</div>}><MoneyGramControl /></React.Suspense>} />
-            <Route path="/superelements-control" element={<React.Suspense fallback={<div>Loading...</div>}><SuperElementsControl /></React.Suspense>} />
+            {/* Game Control Pages - fixed to work correctly */}
+            <Route path="/aviator-control" element={<AviatorControl />} />
+            <Route path="/superace-control" element={<SuperAceControl />} />
+            <Route path="/plinko-control" element={<PlinkoControl />} />
+            <Route path="/coinup-control" element={<CoinUpControl />} />
+            <Route path="/moneygram-control" element={<MoneyGramControl />} />
+            <Route path="/superelements-control" element={<SuperElementsControl />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

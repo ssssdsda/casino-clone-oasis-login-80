@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -11,11 +12,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Phone, User, Lock, Gift, Percent } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export function RegisterButton(props: any) {
   const [open, setOpen] = useState(false);
@@ -34,9 +35,25 @@ export function RegisterButton(props: any) {
   // Referral code
   const [referralCode, setReferralCode] = useState('');
   
-  const { register, registerWithPhone, isLoading } = useAuth();
+  const { register, registerWithPhone, isLoading, isAuthenticated } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useLanguage();
+
+  // Immediately open the dialog when mounted on register page
+  useEffect(() => {
+    if (props['data-register-button']) {
+      setOpen(true);
+    }
+  }, [props]);
+
+  // If user becomes authenticated, close the dialog and redirect
+  useEffect(() => {
+    if (isAuthenticated && open) {
+      setOpen(false);
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate, open]);
 
   // Load referral code from URL query params or localStorage if available
   useEffect(() => {
@@ -67,16 +84,25 @@ export function RegisterButton(props: any) {
     }
     
     try {
-      await register(email, password, username, referralCode);
-      setOpen(false);
-      toast.success("Registration Successful! You've received signup bonus!", {
-        className: "bg-green-600 text-white font-bold"
-      });
+      const success = await register(email, password, username, referralCode);
       
-      // Clear referral code from localStorage after successful registration
-      localStorage.removeItem('referralCode');
+      if (success) {
+        toast.success("Registration successful! You've received a signup bonus!", {
+          duration: 5000
+        });
+        
+        // Clear referral code from localStorage after successful registration
+        localStorage.removeItem('referralCode');
+        
+        // Close modal and redirect
+        setOpen(false);
+        navigate('/');
+      } else {
+        toast.error("Registration failed. Please try again.");
+      }
     } catch (error) {
-      // Error handled in register function
+      toast.error("Registration failed. Please try again.");
+      console.error("Registration error:", error);
     }
   };
 
@@ -93,17 +119,25 @@ export function RegisterButton(props: any) {
       const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+880${phoneNumber}`;
       
       // Register with phone
-      await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
-      setOpen(false);
+      const success = await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
       
-      toast.success(`Welcome! You've received signup bonus!`, {
-        className: "bg-green-600 text-white font-bold"
-      });
-      
-      // Clear referral code from localStorage after successful registration
-      localStorage.removeItem('referralCode');
+      if (success) {
+        toast.success(`Welcome ${phoneUsername}! You've received a signup bonus!`, {
+          duration: 5000
+        });
+        
+        // Clear referral code from localStorage after successful registration
+        localStorage.removeItem('referralCode');
+        
+        // Close modal and redirect
+        setOpen(false);
+        navigate('/');
+      } else {
+        toast.error("Registration failed. Please try again.");
+      }
     } catch (error) {
-      // Error handled in phone functions
+      toast.error("Registration failed. Please try again.");
+      console.error("Phone registration error:", error);
     }
   };
 
@@ -199,7 +233,6 @@ export function RegisterButton(props: any) {
                     className="bg-casino-dark border-gray-700 text-white"
                     placeholder="Your email address"
                   />
-                  <p className="text-xs text-blue-400">A verification link will be sent to this email.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="register-password" className="text-white flex items-center gap-2">
