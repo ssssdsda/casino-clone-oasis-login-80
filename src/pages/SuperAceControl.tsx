@@ -6,23 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ArrowLeft, RefreshCw, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getGameSettings, GameSettings } from '@/utils/bettingSystem';
 
 const SuperAceControl = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
   const [settings, setSettings] = useState({
-    winRate: 25,
-    minBet: 10,
+    winRate: 30,
+    minBet: 5,
     maxBet: 500,
-    maxWin: 5000,
+    maxWin: 3000,
     isActive: true
   });
   
@@ -32,14 +33,10 @@ const SuperAceControl = () => {
   useEffect(() => {
     const fetchGameSettings = async () => {
       try {
-        const settingsRef = doc(db, "admin", "gameSettings");
-        const settingsDoc = await getDoc(settingsRef);
+        const gameSettings = await getGameSettings();
         
-        if (settingsDoc.exists()) {
-          const data = settingsDoc.data();
-          if (data && data.games && data.games.SuperAce) {
-            setSettings(data.games.SuperAce);
-          }
+        if (gameSettings && gameSettings.games && gameSettings.games.SuperAce) {
+          setSettings(gameSettings.games.SuperAce);
         }
       } catch (error) {
         console.error("Error fetching game settings:", error);
@@ -72,10 +69,14 @@ const SuperAceControl = () => {
       const settingsRef = doc(db, "admin", "gameSettings");
       const settingsDoc = await getDoc(settingsRef);
       
-      let allSettings = { games: {} };
+      let allSettings: GameSettings = { games: {} };
       
       if (settingsDoc.exists()) {
-        allSettings = settingsDoc.data();
+        const data = settingsDoc.data();
+        // Ensure we have a games object
+        allSettings = { 
+          games: data.games || {} 
+        };
       }
       
       // Update just the SuperAce settings
@@ -147,7 +148,7 @@ const SuperAceControl = () => {
                   step={1} 
                   onValueChange={(value) => setSettings({...settings, winRate: value[0]})}
                 />
-                <p className="text-xs text-gray-400">Higher values mean players win more often but payouts may be lower</p>
+                <p className="text-xs text-gray-400">Higher values mean players win more often</p>
               </div>
             </CardContent>
           </Card>

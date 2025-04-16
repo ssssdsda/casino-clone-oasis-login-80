@@ -13,6 +13,7 @@ import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ArrowLeft, RefreshCw, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getGameSettings, GameSettings } from '@/utils/bettingSystem';
 
 const CoinUpControl = () => {
   const { toast } = useToast();
@@ -32,14 +33,10 @@ const CoinUpControl = () => {
   useEffect(() => {
     const fetchGameSettings = async () => {
       try {
-        const settingsRef = doc(db, "admin", "gameSettings");
-        const settingsDoc = await getDoc(settingsRef);
+        const gameSettings = await getGameSettings();
         
-        if (settingsDoc.exists()) {
-          const data = settingsDoc.data();
-          if (data && data.games && data.games.CoinUp) {
-            setSettings(data.games.CoinUp);
-          }
+        if (gameSettings && gameSettings.games && gameSettings.games.CoinUp) {
+          setSettings(gameSettings.games.CoinUp);
         }
       } catch (error) {
         console.error("Error fetching game settings:", error);
@@ -72,10 +69,14 @@ const CoinUpControl = () => {
       const settingsRef = doc(db, "admin", "gameSettings");
       const settingsDoc = await getDoc(settingsRef);
       
-      let allSettings = { games: {} };
+      let allSettings: GameSettings = { games: {} };
       
       if (settingsDoc.exists()) {
-        allSettings = settingsDoc.data();
+        const data = settingsDoc.data();
+        // Ensure we have a games object
+        allSettings = { 
+          games: data.games || {} 
+        };
       }
       
       // Update just the CoinUp settings

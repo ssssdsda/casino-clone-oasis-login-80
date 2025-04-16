@@ -13,16 +13,17 @@ import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ArrowLeft, RefreshCw, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getGameSettings, GameSettings } from '@/utils/bettingSystem';
 
 const SuperElementsControl = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
   const [settings, setSettings] = useState({
-    winRate: 25,
-    minBet: 10,
-    maxBet: 800,
-    maxWin: 6000,
+    winRate: 30,
+    minBet: 5,
+    maxBet: 500,
+    maxWin: 3000,
     isActive: true
   });
   
@@ -32,14 +33,10 @@ const SuperElementsControl = () => {
   useEffect(() => {
     const fetchGameSettings = async () => {
       try {
-        const settingsRef = doc(db, "admin", "gameSettings");
-        const settingsDoc = await getDoc(settingsRef);
+        const gameSettings = await getGameSettings();
         
-        if (settingsDoc.exists()) {
-          const data = settingsDoc.data();
-          if (data && data.games && data.games.SuperElement) {
-            setSettings(data.games.SuperElement);
-          }
+        if (gameSettings && gameSettings.games && gameSettings.games.SuperElements) {
+          setSettings(gameSettings.games.SuperElements);
         }
       } catch (error) {
         console.error("Error fetching game settings:", error);
@@ -53,9 +50,9 @@ const SuperElementsControl = () => {
     const unsubscribe = onSnapshot(settingsRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();
-        if (data && data.games && data.games.SuperElement) {
-          setSettings(data.games.SuperElement);
-          console.log("Real-time SuperElement settings update:", data.games.SuperElement);
+        if (data && data.games && data.games.SuperElements) {
+          setSettings(data.games.SuperElements);
+          console.log("Real-time SuperElements settings update:", data.games.SuperElements);
         }
       }
     });
@@ -72,16 +69,20 @@ const SuperElementsControl = () => {
       const settingsRef = doc(db, "admin", "gameSettings");
       const settingsDoc = await getDoc(settingsRef);
       
-      let allSettings = { games: {} };
+      let allSettings: GameSettings = { games: {} };
       
       if (settingsDoc.exists()) {
-        allSettings = settingsDoc.data();
+        const data = settingsDoc.data();
+        // Ensure we have a games object
+        allSettings = { 
+          games: data.games || {} 
+        };
       }
       
-      // Update just the SuperElement settings
+      // Update just the SuperElements settings
       allSettings.games = {
         ...allSettings.games,
-        SuperElement: settings
+        SuperElements: settings
       };
       
       await setDoc(settingsRef, allSettings);
