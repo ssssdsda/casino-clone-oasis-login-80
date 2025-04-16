@@ -61,7 +61,7 @@ initGameSettingsListener();
  * Fetches game settings from Firebase or falls back to localStorage
  * @returns Game settings object with win rates and other parameters
  */
-export async function getGameSettings() {
+async function getGameSettings() {
   // Use cache if it's less than 5 minutes old
   const now = Date.now();
   if (gameSettingsCache && (now - lastCacheTime < 5 * 60 * 1000)) {
