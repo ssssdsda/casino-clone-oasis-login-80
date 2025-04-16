@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -82,14 +83,16 @@ export function LoginButton(props: any) {
     }
     
     try {
-      await loginWithPhone(phoneNumber, phonePassword);
-      setOpen(false);
-      toast({
-        title: "Success",
-        description: "Login successful!",
-        variant: "default",
-        className: "bg-green-600 text-white"
-      });
+      const result = await loginWithPhone(phoneNumber, phonePassword);
+      if (result) {
+        setOpen(false);
+        toast({
+          title: "Success",
+          description: "Login successful!",
+          variant: "default",
+          className: "bg-green-600 text-white"
+        });
+      }
     } catch (error) {
       // Error handled in loginWithPhone function
     }

@@ -4,7 +4,7 @@
  * Controls winning odds for casino games to ensure fair play and player satisfaction
  */
 
-import { getDoc, doc, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { getDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Store user session data to track bets across sessions
@@ -21,69 +21,6 @@ const userBetCounts: Record<string, Record<string, number>> = {};
 // Cache for admin settings
 let gameSettingsCache: any = null;
 let lastCacheTime = 0;
-let gameSettingsListeners: Array<Function> = [];
-let isListeningToGameSettings = false;
-
-/**
- * Subscribe to real-time game settings updates
- * @param callback Function to call when game settings update
- * @returns Unsubscribe function
- */
-export const subscribeToGameSettings = (callback: Function): Function => {
-  gameSettingsListeners.push(callback);
-  
-  // Start listening to game settings changes if not already
-  if (!isListeningToGameSettings) {
-    startGameSettingsListener();
-  }
-  
-  // Return unsubscribe function
-  return () => {
-    gameSettingsListeners = gameSettingsListeners.filter(cb => cb !== callback);
-  };
-};
-
-/**
- * Start real-time listener for game settings
- */
-const startGameSettingsListener = () => {
-  if (isListeningToGameSettings) return;
-  
-  try {
-    const settingsRef = doc(db, "admin", "gameSettings");
-    
-    // Set up real-time listener
-    const unsubscribe = onSnapshot(settingsRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        if (data && data.games) {
-          gameSettingsCache = data;
-          lastCacheTime = Date.now();
-          console.log("Real-time game settings update received:", data);
-          
-          // Notify all listeners
-          gameSettingsListeners.forEach(callback => {
-            try {
-              callback(data);
-            } catch (e) {
-              console.error("Error in game settings callback:", e);
-            }
-          });
-        }
-      }
-    }, (error) => {
-      console.error("Error in game settings listener:", error);
-    });
-    
-    isListeningToGameSettings = true;
-    
-    // Clean up listener on window unload
-    window.addEventListener('beforeunload', unsubscribe);
-    
-  } catch (error) {
-    console.error("Error setting up game settings listener:", error);
-  }
-};
 
 /**
  * Fetches game settings from Firebase or falls back to localStorage
@@ -331,7 +268,7 @@ export const calculateWinAmount = async (
  * @returns The user ID as the referral code
  */
 export const generateReferralCode = (userId: string): string => {
-  return userId.substring(0, 8); // Use first 8 chars for shorter code
+  return userId;
 };
 
 /**
@@ -403,24 +340,9 @@ export const processReferralBonus = async (userId: string, depositAmount: number
     
     if (referrerDoc.exists()) {
       const currentBalance = referrerDoc.data().balance || 0;
-      const newBalance = currentBalance + 119;
-      
-      // Update balance in Firebase
-      await updateDoc(referrerRef, {
-        balance: newBalance
-      });
-      
-      // Also update local app state if there's a callback registered
-      if (gameSettingsListeners.length > 0) {
-        gameSettingsListeners.forEach(cb => {
-          try {
-            // Notify about balance update
-            cb({ type: 'BALANCE_UPDATE', userId: referrerId, newBalance });
-          } catch (e) {
-            console.error("Error in balance update callback:", e);
-          }
-        });
-      }
+      await setDoc(referrerRef, {
+        balance: currentBalance + 119
+      }, { merge: true });
       
       console.log(`Added ৳119 referral bonus to user ${referrerId}`);
     }
@@ -431,32 +353,3 @@ export const processReferralBonus = async (userId: string, depositAmount: number
     return false;
   }
 };
-
-/**
- * Update user balance in real-time
- * @param userId User ID to update
- * @param amount New balance amount
- * @returns Promise resolving to true if update was successful
- */
-export const updateUserBalanceInFirebase = async (userId: string, amount: number): Promise<boolean> => {
-  try {
-    if (!userId) {
-      console.error("Cannot update balance: No user ID provided");
-      return false;
-    }
-    
-    const userRef = doc(db, "users", userId);
-    await updateDoc(userRef, {
-      balance: amount
-    });
-    
-    console.log(`Updated balance for user ${userId} to ${amount}`);
-    return true;
-  } catch (error) {
-    console.error("Error updating user balance:", error);
-    return false;
-  }
-};
-
-// Start listening to game settings changes on module load
-startGameSettingsListener();

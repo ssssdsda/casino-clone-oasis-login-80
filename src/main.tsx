@@ -2,7 +2,6 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { onSnapshot, doc, getFirestore } from 'firebase/firestore';
 
 // Enhanced navigation handler with better error handling
 const handleNavigation = () => {
@@ -37,7 +36,7 @@ const handleNavigation = () => {
       }
       
       // Format 3: Try to extract from partial paths using regex
-      const refRegex = /\/(ref|r|referral)[\/=]?([a-zA-Z0-9_-]{1,16})/i;
+      const refRegex = /\/(ref|r|referral)[\/=]?([a-zA-Z0-9_-]+)/i;
       const match = path.match(refRegex);
       if (match && match[2] && match[2] !== 'undefined') {
         console.log(`Found referral code using regex: ${match[2]}`);
@@ -76,43 +75,6 @@ const handleNavigation = () => {
   }
 };
 
-// Create a utility function to load user data if available
-const setupUserSession = () => {
-  try {
-    const currentUserId = localStorage.getItem('currentUserId');
-    if (currentUserId) {
-      const db = getFirestore();
-      const userRef = doc(db, "users", currentUserId);
-      
-      // Set up real-time listener for user data
-      const unsubscribe = onSnapshot(userRef, (doc) => {
-        if (doc.exists()) {
-          const userData = doc.data();
-          // Update local storage with latest balance
-          if (userData.balance !== undefined) {
-            localStorage.setItem('userBalance', userData.balance.toString());
-            
-            // Dispatch a custom event that components can listen for
-            const event = new CustomEvent('userBalanceUpdated', { 
-              detail: { balance: userData.balance } 
-            });
-            window.dispatchEvent(event);
-            
-            console.log("Real-time balance update:", userData.balance);
-          }
-        }
-      }, (error) => {
-        console.error("Error in user listener:", error);
-      });
-      
-      // Clean up listener on window unload
-      window.addEventListener('beforeunload', unsubscribe);
-    }
-  } catch (error) {
-    console.error("Error setting up user session:", error);
-  }
-};
-
 // Register error event listener for handling routing errors
 window.addEventListener('error', (e) => {
   if (e.message && (e.message.includes('route') || e.message.includes('chunk') || 
@@ -127,9 +89,6 @@ window.addEventListener('error', (e) => {
 
 // Execute navigation handling on page load
 handleNavigation();
-
-// Setup user session for real-time updates
-setupUserSession();
 
 // Render the application
 createRoot(document.getElementById("root")!).render(<App />);
