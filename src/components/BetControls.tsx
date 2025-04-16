@@ -1,8 +1,7 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
-import { getGameSettings } from '@/utils/bettingSystem';
 
 interface BetControlsProps {
   betAmount: number;
@@ -14,7 +13,6 @@ interface BetControlsProps {
   balance: number;
   onBet: () => void;
   isSpinning: boolean;
-  gameType?: string;
 }
 
 const BetControls: React.FC<BetControlsProps> = ({
@@ -26,39 +24,15 @@ const BetControls: React.FC<BetControlsProps> = ({
   onBetDouble,
   balance,
   onBet,
-  isSpinning,
-  gameType = 'default'
+  isSpinning
 }) => {
-  const [minBet, setMinBet] = useState(10);
-  const [maxBet, setMaxBet] = useState(1000);
-  
-  // Fetch min/max bet limits from settings
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const settings = await getGameSettings();
-        
-        if (settings && settings.games) {
-          const gameSettings = settings.games[gameType] || settings.games.default;
-          
-          if (gameSettings) {
-            setMinBet(gameSettings.minBet || 10);
-            setMaxBet(gameSettings.maxBet || 1000);
-            console.log(`Loaded ${gameType} bet limits:`, gameSettings.minBet, gameSettings.maxBet);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading bet limits:", error);
-      }
-    };
-    
-    fetchSettings();
-  }, [gameType]);
+  const MIN_BET = 10;
+  const MAX_BET = 1000;
   
   const updateBetAmount = (amount: number) => {
     const newAmount = betAmount + amount;
-    // Ensure bet stays within limits
-    if (newAmount >= minBet && newAmount <= maxBet) {
+    // Ensure bet stays within limits (10-1000)
+    if (newAmount >= MIN_BET && newAmount <= MAX_BET) {
       onBetChange(newAmount);
     }
   };
@@ -72,7 +46,7 @@ const BetControls: React.FC<BetControlsProps> = ({
         <div className="flex items-center bg-gray-800 rounded-md">
           <button
             onClick={() => updateBetAmount(-10)}
-            disabled={isSpinning || betAmount <= minBet}
+            disabled={isSpinning || betAmount <= MIN_BET}
             className="px-4 py-2 text-gray-400 hover:text-white disabled:opacity-50"
           >
             <ChevronDown size={20} />
@@ -82,7 +56,7 @@ const BetControls: React.FC<BetControlsProps> = ({
           </div>
           <button
             onClick={() => updateBetAmount(10)}
-            disabled={isSpinning || betAmount >= maxBet}
+            disabled={isSpinning || betAmount >= MAX_BET}
             className="px-4 py-2 text-gray-400 hover:text-white disabled:opacity-50"
           >
             <ChevronUp size={20} />
@@ -141,7 +115,7 @@ const BetControls: React.FC<BetControlsProps> = ({
         >
           {isSpinning ? (
             <span className="flex items-center justify-center">
-              <Loader2 className="mr-2 h-5 w-4 animate-spin" /> 
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> 
               DROPPING...
             </span>
           ) : "DROP BALL"}
