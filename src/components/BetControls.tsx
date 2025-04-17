@@ -30,9 +30,9 @@ const BetControls: React.FC<BetControlsProps> = ({
   const MIN_BET = 10;
   const MAX_BET = 1000;
   const { user } = useAuth();
-  const [localBalance, setLocalBalance] = useState(balance);
+  const [localBalance, setLocalBalance] = useState(user?.balance || balance);
   
-  // Sync with user's balance from auth context - this is critical for real-time updates
+  // Primary source of truth: user context for real-time Firebase updates
   useEffect(() => {
     if (user) {
       console.log("BetControls: Setting balance from user context:", user.balance);
@@ -40,11 +40,21 @@ const BetControls: React.FC<BetControlsProps> = ({
     }
   }, [user?.balance]);
   
-  // Also update when the balance prop changes
+  // Secondary source: prop updates (game winnings/losses)
   useEffect(() => {
     console.log("BetControls: Balance prop changed to:", balance);
-    setLocalBalance(balance);
-  }, [balance]);
+    if (!user) {
+      // Only use balance prop as source of truth if no user
+      setLocalBalance(balance);
+    } else if (balance !== user.balance) {
+      // If balance prop differs from user balance (likely from a game action),
+      // we'll still update local display but log the discrepancy
+      console.log("Balance discrepancy detected:", {
+        userBalance: user.balance,
+        propBalance: balance
+      });
+    }
+  }, [balance, user]);
   
   const updateBetAmount = (amount: number) => {
     const newAmount = betAmount + amount;

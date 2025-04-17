@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -12,6 +11,7 @@ import {
 import { auth, db, setupBalanceListener } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { showSuccessToast, showErrorToast, showBalanceUpdateToast, showReferralToast } from '@/utils/toastUtils';
 
 interface User {
   id: string;
@@ -118,10 +118,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             
             console.log("Updating referrer balance from", referrerData.balance, "to", newBalance);
             
+            // Update the referrer's balance
             await updateDoc(doc(db, "users", userData.referredBy), {
               balance: newBalance
             });
             
+            // Record the referral in a separate collection
             await setDoc(doc(db, "referrals", `${userData.referredBy}_${userId}`), {
               referrer: userData.referredBy,
               referred: userId,
@@ -129,18 +131,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               timestamp: new Date()
             });
             
+            // Mark as processed in the user document
             await updateDoc(doc(db, "users", userId), {
               referralProcessed: true
             });
             
-            toast({
-              title: "Referral Bonus Paid!",
-              description: `A referral bonus of ৳${REFERRAL_BONUS} has been paid to your referrer.`,
-              variant: "default",
-              className: "bg-green-600 text-white font-bold"
-            });
+            // Show toast notification for the referrer (if they're the current user)
+            if (user && user.id === userData.referredBy) {
+              showSuccessToast(
+                "Referral Bonus Paid!",
+                `A referral bonus of ৳${REFERRAL_BONUS} has been paid to your account.`
+              );
+            }
             
-            // Also add bonus to the user who was referred
+            // Also add bonus to the user who was referred (the new user)
             const userBonus = userData.balance + REFERRAL_BONUS;
             await updateDoc(doc(db, "users", userId), {
               balance: userBonus
@@ -156,14 +160,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 ...user,
                 balance: userBonus
               }));
+              
+              showReferralToast();
             }
-            
-            toast({
-              title: "You Got a Bonus!",
-              description: `You received ৳${REFERRAL_BONUS} as a referral bonus!`,
-              variant: "default",
-              className: "bg-green-600 text-white font-bold"
-            });
             
             return true;
           } else {
@@ -206,14 +205,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return prevUser;
           });
           
-          // Show toast notification for balance updates
+          // Show toast notification for balance updates with RED background
           if (user.balance < newBalance) {
-            toast({
-              title: "Balance Updated",
-              description: `Your balance has increased to ৳${newBalance}`,
-              variant: "default",
-              className: "bg-green-600 text-white"
-            });
+            showBalanceUpdateToast(newBalance);
           }
         } else {
           console.log("Balance unchanged:", newBalance);
@@ -675,20 +669,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
         
         if (bonusApplied) {
-          toast({
-            title: "Bonus Applied!",
-            description: `You've received ৳${DEPOSIT_BONUS_AMOUNT} bonus for depositing ৳${DEPOSIT_BONUS_THRESHOLD}!`,
-            variant: "default",
-            className: "bg-green-600 text-white font-bold"
-          });
+          showSuccessToast(
+            "Bonus Applied!",
+            `You've received ৳${DEPOSIT_BONUS_AMOUNT} bonus for depositing ৳${DEPOSIT_BONUS_THRESHOLD}!`
+          );
         }
       } catch (error) {
         console.error("Error updating balance:", error);
-        toast({
-          title: "Error",
-          description: "Failed to update balance",
-          variant: "destructive"
-        });
+        showErrorToast(
+          "Error",
+          "Failed to update balance"
+        );
       }
     } else {
       console.error("Cannot update balance: user or db is not available");

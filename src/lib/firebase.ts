@@ -23,7 +23,7 @@ let analytics = null;
 let auth = null;
 let db = null;
 
-// Set up real-time balance updates
+// Set up real-time balance updates with improved reliability
 const setupBalanceListener = (userId, callback) => {
   if (!userId || !db) {
     console.log("Balance listener setup failed - missing userId or db", { userId, hasDb: !!db });
@@ -31,19 +31,29 @@ const setupBalanceListener = (userId, callback) => {
   }
   
   try {
-    console.log(`Setting up balance listener for user: ${userId}`);
+    console.log(`Setting up improved balance listener for user: ${userId}`);
     const userRef = doc(db, "users", userId);
-    return onSnapshot(userRef, (doc) => {
-      if (doc.exists() && doc.data().balance !== undefined) {
-        const newBalance = doc.data().balance;
-        console.log(`Balance update received: ${newBalance}`);
-        callback(newBalance);
-      } else {
-        console.log("Document exists but no balance found", doc.exists());
+    
+    // Use onSnapshot with immediate callback for initial data
+    const unsubscribe = onSnapshot(userRef, 
+      {
+        includeMetadataChanges: true // This ensures we get updates even with cached data
+      },
+      (doc) => {
+        if (doc.exists() && doc.data().balance !== undefined) {
+          const newBalance = doc.data().balance;
+          console.log(`Balance update received: ${newBalance} (from: ${doc.metadata.fromCache ? 'cache' : 'server'})`);
+          callback(newBalance);
+        } else {
+          console.log("Document exists but no balance found", doc.exists());
+        }
+      }, 
+      (error) => {
+        console.error("Balance listener error:", error);
       }
-    }, (error) => {
-      console.error("Balance listener error:", error);
-    });
+    );
+    
+    return unsubscribe;
   } catch (error) {
     console.error("Balance listener setup error:", error);
     return null;
