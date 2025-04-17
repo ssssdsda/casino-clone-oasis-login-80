@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +29,7 @@ const ReferralProgram = () => {
       const baseUrl = window.location.origin;
       // Use the register route for a more standard referral flow
       setReferralLink(`${baseUrl}/register?ref=${user.id}`);
+      console.log("Generated referral link:", `${baseUrl}/register?ref=${user.id}`);
       
       // Fetch real referral stats from Firebase
       const fetchReferralStats = async () => {

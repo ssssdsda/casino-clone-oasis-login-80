@@ -32,15 +32,17 @@ const BetControls: React.FC<BetControlsProps> = ({
   const { user } = useAuth();
   const [localBalance, setLocalBalance] = useState(balance);
   
-  // Sync with user's balance from auth context
+  // Sync with user's balance from auth context - this is critical for real-time updates
   useEffect(() => {
     if (user) {
+      console.log("BetControls: Setting balance from user context:", user.balance);
       setLocalBalance(user.balance);
     }
   }, [user?.balance]);
   
   // Also update when the balance prop changes
   useEffect(() => {
+    console.log("BetControls: Balance prop changed to:", balance);
     setLocalBalance(balance);
   }, [balance]);
   

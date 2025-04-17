@@ -45,6 +45,15 @@ export function RegisterButton(props: any) {
       setReferralCode(storedReferralCode);
       console.log(`Loaded referral code: ${storedReferralCode}`);
     }
+    
+    // Also try to extract from URL 
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    if (refCode) {
+      setReferralCode(refCode);
+      localStorage.setItem('referralCode', refCode);
+      console.log(`Loaded referral code from URL: ${refCode}`);
+    }
   }, []);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -88,6 +97,8 @@ export function RegisterButton(props: any) {
     try {
       // Format phone number to ensure it has Bangladesh code
       const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+880${phoneNumber}`;
+      
+      console.log("Registering with phone and referral code:", formattedPhone, referralCode);
       
       // Register with phone
       await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
@@ -153,7 +164,7 @@ export function RegisterButton(props: any) {
                 <Percent className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-green-300 font-medium text-sm">Referral Bonus Available!</p>
-                  <p className="text-white text-xs">You were referred by a friend! Complete registration to activate your referral bonus.</p>
+                  <p className="text-white text-xs">You were referred by a friend! Complete registration to activate your ৳119 referral bonus.</p>
                 </div>
               </div>
             </div>
@@ -280,4 +291,4 @@ export function RegisterButton(props: any) {
       </Dialog>
     </>
   );
-}
+};
