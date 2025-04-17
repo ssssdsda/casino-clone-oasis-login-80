@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
@@ -8,9 +9,9 @@ import {
   setPersistence,
   browserLocalPersistence
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db, setupBalanceListener } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc, setDoc, getFirestore, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 interface User {
   id: string;
@@ -39,10 +40,9 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const db = getFirestore();
 
 // Session timeout duration in minutes
-const SESSION_TIMEOUT_MINUTES = 10;
+const SESSION_TIMEOUT_MINUTES = 60; // Increased to 60 minutes for better user experience
 
 // Signup bonus amounts
 const EMAIL_SIGNUP_BONUS = 89;
@@ -57,11 +57,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-
+  const balanceListenerRef = useRef<any>(null);
+  
   const getUserBalance = async (userId: string) => {
     try {
       const userDoc = await getDoc(doc(db, "users", userId));
-      if (userDoc.exists() && userDoc.data().balance) {
+      if (userDoc.exists() && userDoc.data().balance !== undefined) {
         return userDoc.data().balance;
       }
       return 0;
@@ -154,6 +155,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Setup real-time balance listener
+  const setupUserBalanceListener = (userId: string) => {
+    if (balanceListenerRef.current) {
+      balanceListenerRef.current(); // Unsubscribe from previous listener
+    }
+    
+    balanceListenerRef.current = setupBalanceListener(userId, (newBalance: number) => {
+      if (user && user.balance !== newBalance) {
+        console.log("Balance updated from Firebase:", newBalance);
+        setUser(prevUser => {
+          if (prevUser) {
+            const updatedUser = { ...prevUser, balance: newBalance };
+            localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
+            return updatedUser;
+          }
+          return prevUser;
+        });
+      }
+    });
+  };
+
   useEffect(() => {
     // Set firebase persistence to local
     setPersistence(auth, browserLocalPersistence)
@@ -187,6 +209,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(userData);
           localStorage.setItem('casinoUser', JSON.stringify(userData));
           resetSessionTimeout();
+          
+          // Set up real-time balance listener
+          setupUserBalanceListener(firebaseUser.uid);
         } catch (error) {
           console.error("Error setting user data:", error);
         }
@@ -202,17 +227,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser(userData);
             console.log("Restored user from local storage:", userData.username);
             resetSessionTimeout();
+            
+            // Set up real-time balance listener for restored user
+            if (userData.id) {
+              setupUserBalanceListener(userData.id);
+            }
           } catch (e) {
             console.error("Error parsing stored user data:", e);
             localStorage.removeItem('casinoUser');
             localStorage.removeItem('sessionStart');
             setUser(null);
+            
+            if (balanceListenerRef.current) {
+              balanceListenerRef.current();
+              balanceListenerRef.current = null;
+            }
           }
         } else {
           // Session expired or no stored user
           setUser(null);
           localStorage.removeItem('casinoUser');
           localStorage.removeItem('sessionStart');
+          
+          if (balanceListenerRef.current) {
+            balanceListenerRef.current();
+            balanceListenerRef.current = null;
+          }
         }
       }
       setIsLoading(false);
@@ -222,8 +262,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const storedUser = localStorage.getItem('casinoUser');
     if (storedUser && isSessionValid()) {
       try {
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
         console.log("Initial session restore successful");
+        
+        // Set up real-time balance listener for restored user
+        if (userData.id) {
+          setupUserBalanceListener(userData.id);
+        }
       } catch (error) {
         console.error("Error restoring initial session:", error);
         localStorage.removeItem('casinoUser');
@@ -244,6 +290,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       window.removeEventListener('keypress', resetOnActivity);
       window.removeEventListener('scroll', resetOnActivity);
       window.removeEventListener('mousemove', resetOnActivity);
+      
+      if (balanceListenerRef.current) {
+        balanceListenerRef.current();
+      }
     };
   }, []);
 
@@ -528,10 +578,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           bonusApplied = true;
         }
         
+        // Update Firestore with the new balance
         if (auth.currentUser) {
-          await setDoc(doc(db, "users", auth.currentUser.uid), {
+          await updateDoc(doc(db, "users", auth.currentUser.uid), {
             balance: actualBalance
-          }, { merge: true });
+          });
           
           const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
           if (userDoc.exists()) {
@@ -546,6 +597,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }
         
+        // Update local user state
         const updatedUser = {
           ...user,
           balance: actualBalance
@@ -578,6 +630,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       localStorage.removeItem('casinoUser');
       localStorage.removeItem('sessionStart');
+      
+      // Unsubscribe from balance listener
+      if (balanceListenerRef.current) {
+        balanceListenerRef.current();
+        balanceListenerRef.current = null;
+      }
+      
       toast({
         title: "Logged out",
         description: "You have been logged out successfully",

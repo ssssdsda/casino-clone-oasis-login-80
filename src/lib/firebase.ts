@@ -2,8 +2,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, onSnapshot } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -29,5 +29,17 @@ setPersistence(auth, browserLocalPersistence)
   });
 
 export const db = getFirestore(app);
+
+// Set up real-time balance updates
+export const setupBalanceListener = (userId, callback) => {
+  if (!userId) return null;
+  
+  const userRef = doc(db, "users", userId);
+  return onSnapshot(userRef, (doc) => {
+    if (doc.exists() && doc.data().balance !== undefined) {
+      callback(doc.data().balance);
+    }
+  });
+};
 
 export default app;
