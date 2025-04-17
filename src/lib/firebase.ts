@@ -25,17 +25,27 @@ let db = null;
 
 // Set up real-time balance updates
 const setupBalanceListener = (userId, callback) => {
-  if (!userId || !db) return null;
+  if (!userId || !db) {
+    console.log("Balance listener setup failed - missing userId or db", { userId, hasDb: !!db });
+    return null;
+  }
   
   try {
+    console.log(`Setting up balance listener for user: ${userId}`);
     const userRef = doc(db, "users", userId);
     return onSnapshot(userRef, (doc) => {
       if (doc.exists() && doc.data().balance !== undefined) {
-        callback(doc.data().balance);
+        const newBalance = doc.data().balance;
+        console.log(`Balance update received: ${newBalance}`);
+        callback(newBalance);
+      } else {
+        console.log("Document exists but no balance found", doc.exists());
       }
+    }, (error) => {
+      console.error("Balance listener error:", error);
     });
   } catch (error) {
-    console.error("Balance listener error:", error);
+    console.error("Balance listener setup error:", error);
     return null;
   }
 };

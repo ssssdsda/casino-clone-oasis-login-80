@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Minus, Plus, ChevronDown } from 'lucide-react';
@@ -20,6 +19,7 @@ const AviatorGame = () => {
   const [currentWin, setCurrentWin] = useState(0);
   const [hasPlacedBet, setHasPlacedBet] = useState(false);
   const [betCount, setBetCount] = useState(0); // Track bets for betting system
+  const [userBalance, setUserBalance] = useState(user?.balance || 0);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   const planeRef = useRef<HTMLDivElement>(null);
   const multiplierHistoryRef = useRef([
@@ -31,6 +31,13 @@ const AviatorGame = () => {
   const takeoffSound = useRef(new Audio('/sounds/takeoff.mp3'));
   const cashoutSound = useRef(new Audio('/sounds/cashout.mp3'));
   const crashSound = useRef(new Audio('/sounds/crash.mp3'));
+
+  useEffect(() => {
+    if (user) {
+      console.log("AviatorGame: User balance updated from", userBalance, "to", user.balance);
+      setUserBalance(user.balance);
+    }
+  }, [user?.balance]);
 
   useEffect(() => {
     // Preload the Aviator image
@@ -58,7 +65,7 @@ const AviatorGame = () => {
       return;
     }
 
-    if (user.balance < betAmount) {
+    if (userBalance < betAmount) {
       toast({
         title: "Insufficient Balance",
         description: "Please deposit funds to continue",
@@ -70,6 +77,8 @@ const AviatorGame = () => {
     setIsFlying(false);
     
     setTimeout(() => {
+      setUserBalance(prev => prev - betAmount);
+      
       if (user && updateUserBalance) {
         updateUserBalance(user.balance - betAmount);
       }
@@ -80,17 +89,14 @@ const AviatorGame = () => {
       setHasPlacedBet(true);
       setIsFlying(true);
       
-      // Increment bet count for betting system
       setBetCount(prev => prev + 1);
       
       takeoffSound.current.play().catch(e => console.log("Audio play error:", e));
 
-      // Determine if this bet should win based on the rigged system
       const shouldWinThisBet = shouldBetWin(user?.id || 'anonymous');
       
-      // Set maximum multiplier based on whether user should win
       const maxMultiplier = shouldWinThisBet 
-        ? (betAmount > 50 ? 1.5 : 2 + Math.random() * 3) // Lower multiplier for high bets
+        ? (betAmount > 50 ? 1.5 : 2 + Math.random() * 3)
         : 1 + Math.random();
 
       animationRef.current = setInterval(() => {
@@ -125,12 +131,15 @@ const AviatorGame = () => {
     
     cashoutSound.current.play().catch(e => console.log("Audio play error:", e));
     
-    // Cap winnings at 100
     const rawWinnings = betAmount * multiplier;
     const winnings = Math.min(rawWinnings, 100);
     
+    setUserBalance(prev => prev + winnings);
+    
     if (user && updateUserBalance) {
-      updateUserBalance(user.balance + winnings);
+      const newBalance = user.balance + winnings - betAmount;
+      console.log("Updating balance after cashout:", user.balance, "->", newBalance);
+      updateUserBalance(newBalance);
     }
     
     toast({
@@ -373,7 +382,7 @@ const AviatorGame = () => {
                 ? 'bg-green-500 hover:bg-green-600' 
                 : 'bg-green-600 hover:bg-green-700'
             }`}
-            disabled={(hasPlacedBet && gameOver) || (!hasPlacedBet && (!user || (user && user.balance < betAmount)))}
+            disabled={(hasPlacedBet && gameOver) || (!hasPlacedBet && (!user || (user && userBalance < betAmount)))}
           >
             {hasPlacedBet ? (
               gameOver ? 'Game Over' : `Cash Out (${currentWin.toFixed(2)})`
@@ -387,7 +396,7 @@ const AviatorGame = () => {
           <div className="flex justify-between items-center mb-4">
             <div className="text-lg font-bold">Stats</div>
             <div className="text-gray-400 text-sm">
-              Balance: {user ? user.balance.toFixed(2) : '0.00'}
+              Balance: {userBalance.toFixed(2)}
             </div>
           </div>
           

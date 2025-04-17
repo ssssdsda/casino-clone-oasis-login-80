@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -100,6 +101,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userData = userDoc.data();
         console.log("User data:", userData);
         
+        // Check if already processed to avoid double bonuses
+        if (userData.referralProcessed) {
+          console.log("Referral already processed for this user");
+          return false;
+        }
+        
         if (userData.referredBy) {
           console.log("User was referred by:", userData.referredBy);
           
@@ -133,6 +140,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               className: "bg-green-600 text-white font-bold"
             });
             
+            // Also add bonus to the user who was referred
+            const userBonus = userData.balance + REFERRAL_BONUS;
+            await updateDoc(doc(db, "users", userId), {
+              balance: userBonus
+            });
+            
+            // Update the local user object if it matches the current user
+            if (user && user.id === userId) {
+              setUser({
+                ...user,
+                balance: userBonus
+              });
+              localStorage.setItem('casinoUser', JSON.stringify({
+                ...user,
+                balance: userBonus
+              }));
+            }
+            
+            toast({
+              title: "You Got a Bonus!",
+              description: `You received ৳${REFERRAL_BONUS} as a referral bonus!`,
+              variant: "default",
+              className: "bg-green-600 text-white font-bold"
+            });
+            
             return true;
           } else {
             console.log("Referrer document not found");
@@ -152,26 +184,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const setupUserBalanceListener = (userId: string) => {
+    // Clean up any existing listener
     if (balanceListenerRef.current) {
+      console.log("Cleaning up existing balance listener");
       balanceListenerRef.current();
+      balanceListenerRef.current = null;
     }
     
+    console.log("Setting up new balance listener for:", userId);
     balanceListenerRef.current = setupBalanceListener(userId, (newBalance: number) => {
-      if (user && user.balance !== newBalance) {
-        console.log("Balance updated from Firebase:", newBalance);
-        setUser(prevUser => {
-          if (prevUser) {
-            const updatedUser = { ...prevUser, balance: newBalance };
-            localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
-            return updatedUser;
+      console.log("Balance listener callback triggered with:", newBalance);
+      if (user) {
+        if (user.balance !== newBalance) {
+          console.log("Updating user with new balance:", newBalance, "Old balance was:", user.balance);
+          setUser(prevUser => {
+            if (prevUser) {
+              const updatedUser = { ...prevUser, balance: newBalance };
+              localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
+              return updatedUser;
+            }
+            return prevUser;
+          });
+          
+          // Show toast notification for balance updates
+          if (user.balance < newBalance) {
+            toast({
+              title: "Balance Updated",
+              description: `Your balance has increased to ৳${newBalance}`,
+              variant: "default",
+              className: "bg-green-600 text-white"
+            });
           }
-          return prevUser;
-        });
+        } else {
+          console.log("Balance unchanged:", newBalance);
+        }
       }
     });
+    
+    console.log("Balance listener setup complete");
   };
 
   useEffect(() => {
+    console.log("AuthContext effect running");
     if (!auth) {
       console.error("Firebase auth not initialized");
       setIsLoading(false);
@@ -184,6 +238,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("Auth state changed", !!firebaseUser);
       if (firebaseUser && db) {
         try {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
@@ -206,11 +261,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             referredBy: referredBy
           };
           
+          console.log("Setting authenticated user:", userData);
           setUser(userData);
           localStorage.setItem('casinoUser', JSON.stringify(userData));
           resetSessionTimeout();
           
+          // Set up real-time balance updates
           setupUserBalanceListener(firebaseUser.uid);
+          
+          // Process referral bonus if not processed yet
+          if (userDoc.exists() && userDoc.data().referredBy && !userDoc.data().referralProcessed) {
+            console.log("User has unprocessed referral, processing now");
+            processReferralBonus(firebaseUser.uid);
+          }
         } catch (error) {
           console.error("Error setting user data:", error);
         }
@@ -570,7 +633,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateUserBalance = async (newBalance: number) => {
-    if (user && auth && db) {
+    if (user && db) {
       try {
         let actualBalance = newBalance;
         let bonusApplied = false;
@@ -582,24 +645,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           bonusApplied = true;
         }
         
-        if (auth.currentUser) {
-          await updateDoc(doc(db, "users", auth.currentUser.uid), {
-            balance: actualBalance
-          });
-          
-          const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            if (userData.referredBy && !userData.referralProcessed) {
-              await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                referralProcessed: true
-              });
-              
-              await processReferralBonus(auth.currentUser.uid);
-            }
+        console.log(`Updating user balance from ${user.balance} to ${actualBalance} (${bonusApplied ? 'with' : 'without'} bonus applied)`);
+        
+        // Update database first
+        await updateDoc(doc(db, "users", user.id), {
+          balance: actualBalance
+        });
+        
+        // Check for unprocessed referral
+        const userDoc = await getDoc(doc(db, "users", user.id));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.referredBy && !userData.referralProcessed) {
+            await updateDoc(doc(db, "users", user.id), {
+              referralProcessed: true
+            });
+            
+            await processReferralBonus(user.id);
           }
         }
         
+        // Update local user object
         const updatedUser = {
           ...user,
           balance: actualBalance
@@ -624,6 +690,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           variant: "destructive"
         });
       }
+    } else {
+      console.error("Cannot update balance: user or db is not available");
     }
   };
 

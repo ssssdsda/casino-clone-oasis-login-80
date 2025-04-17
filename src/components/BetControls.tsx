@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface BetControlsProps {
   betAmount: number;
@@ -28,6 +29,20 @@ const BetControls: React.FC<BetControlsProps> = ({
 }) => {
   const MIN_BET = 10;
   const MAX_BET = 1000;
+  const { user } = useAuth();
+  const [localBalance, setLocalBalance] = useState(balance);
+  
+  // Sync with user's balance from auth context
+  useEffect(() => {
+    if (user) {
+      setLocalBalance(user.balance);
+    }
+  }, [user?.balance]);
+  
+  // Also update when the balance prop changes
+  useEffect(() => {
+    setLocalBalance(balance);
+  }, [balance]);
   
   const updateBetAmount = (amount: number) => {
     const newAmount = betAmount + amount;
@@ -37,7 +52,9 @@ const BetControls: React.FC<BetControlsProps> = ({
     }
   };
   
-  const isDisabled = isSpinning || balance < betAmount;
+  // Use the local balance for UI rendering and validation
+  const displayBalance = localBalance !== undefined ? localBalance : balance;
+  const isDisabled = isSpinning || displayBalance < betAmount;
   
   return (
     <div className="space-y-4">
@@ -124,7 +141,7 @@ const BetControls: React.FC<BetControlsProps> = ({
       
       <div>
         <div className="text-xs mb-1 text-gray-400">BALANCE</div>
-        <div className="text-center text-yellow-400 font-bold mb-1">৳{balance.toFixed(2)}</div>
+        <div className="text-center text-yellow-400 font-bold mb-1">৳{displayBalance.toFixed(2)}</div>
       </div>
     </div>
   );
