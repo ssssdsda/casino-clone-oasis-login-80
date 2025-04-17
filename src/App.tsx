@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { LanguageProvider } from "./context/LanguageContext";
 import Index from "./pages/Index";
 import ImagesChanger from "./pages/ImagesChanger";
 import SpinGame from "./pages/SpinGame";
@@ -28,7 +29,6 @@ import SuperElementGame from "./pages/SuperElementGame";
 import Bonus from "./pages/Bonus";
 import BonusControl from "./pages/BonusControl";
 import NotFound from "./pages/NotFound";
-import { LanguageProvider } from "./context/LanguageContext";
 import AviatorControl from "./pages/AviatorControl";
 import PopupCustomizer from "./pages/PopupCustomizer";
 import WithdrawalManager from "./pages/WithdrawalManager";
@@ -39,55 +39,51 @@ import Register from "./pages/Register";
 
 const queryClient = new QueryClient();
 
-const routes = [
-  <Route path="/" element={<Index />} />,
-  <Route path="/admin/images" element={<ImagesChanger />} />,
-  <Route path="/game/spin" element={<SpinGame />} />,
-  <Route path="/admin/spin-control" element={<SpinControl />} />,
-  <Route path="/game/megaspin" element={<MegaSpin />} />,
-  <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />,
-  <Route path="/game/moneygram" element={<MoneyGram />} />,
-  <Route path="/game/aviator" element={<AviatorGame />} />,
-  <Route path="/game/aviator-control" element={<AviatorControl />} />,
-  <Route path="/game/boxing-king" element={<BoxingKingGame />} />,
-  <Route path="/game/fortune-gems" element={<FortuneGemsGame />} />,
-  <Route path="/game/coin-up" element={<CoinUpGame />} />,
-  <Route path="/game/golden-basin" element={<GoldenBasinGame />} />,
-  <Route path="/game/super-element" element={<SuperElementGame />} />,
-  <Route path="/withdrawal" element={<Withdrawal />} />,
-  <Route path="/deposit" element={<Deposit />} />,
-  <Route path="/bonus" element={<Bonus />} />,
-  <Route path="/admin/bonus-control" element={<BonusControl />} />,
-  <Route path="/game/live-cricket" element={<LiveCricket />} />,
-  <Route path="/game/live-football" element={<LiveFootball />} />,
-  <Route path="/game/super-ace" element={<SuperAce />} />,
-  <Route path="/game/super-ace-casino" element={<SuperAceCasinoGame />} />,
-  <Route path="/game/777coins" element={<CoinsGame />} />,
-  <Route path="/admin/popup-customizer" element={<PopupCustomizer />} />,
-  <Route path="/admin/withdrawal-manager" element={<WithdrawalManager />} />,
-  <Route path="/referral" element={<ReferralProgram />} />,
-  <Route path="/game/plinko" element={<PlinkoGame />} />,
-  <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />,
-  <Route path="/register" element={<Register />} />,
-  <Route path="/signup" element={<Register />} />,
-  <Route path="*" element={<NotFound />} />
-];
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <LanguageProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <LanguageProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
             <Routes>
-              {routes}
+              <Route path="/" element={<Index />} />
+              <Route path="/admin/images" element={<ImagesChanger />} />
+              <Route path="/game/spin" element={<SpinGame />} />
+              <Route path="/admin/spin-control" element={<SpinControl />} />
+              <Route path="/game/megaspin" element={<MegaSpin />} />
+              <Route path="/admin/megaspin-control" element={<MegaSpinControl />} />
+              <Route path="/game/moneygram" element={<MoneyGram />} />
+              <Route path="/game/aviator" element={<AviatorGame />} />
+              <Route path="/game/aviator-control" element={<AviatorControl />} />
+              <Route path="/game/boxing-king" element={<BoxingKingGame />} />
+              <Route path="/game/fortune-gems" element={<FortuneGemsGame />} />
+              <Route path="/game/coin-up" element={<CoinUpGame />} />
+              <Route path="/game/golden-basin" element={<GoldenBasinGame />} />
+              <Route path="/game/super-element" element={<SuperElementGame />} />
+              <Route path="/withdrawal" element={<Withdrawal />} />
+              <Route path="/deposit" element={<Deposit />} />
+              <Route path="/bonus" element={<Bonus />} />
+              <Route path="/admin/bonus-control" element={<BonusControl />} />
+              <Route path="/game/live-cricket" element={<LiveCricket />} />
+              <Route path="/game/live-football" element={<LiveFootball />} />
+              <Route path="/game/super-ace" element={<SuperAce />} />
+              <Route path="/game/super-ace-casino" element={<SuperAceCasinoGame />} />
+              <Route path="/game/777coins" element={<CoinsGame />} />
+              <Route path="/admin/popup-customizer" element={<PopupCustomizer />} />
+              <Route path="/admin/withdrawal-manager" element={<WithdrawalManager />} />
+              <Route path="/referral" element={<ReferralProgram />} />
+              <Route path="/game/plinko" element={<PlinkoGame />} />
+              <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/signup" element={<Register />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </LanguageProvider>
-    </AuthProvider>
+          </TooltipProvider>
+        </LanguageProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 

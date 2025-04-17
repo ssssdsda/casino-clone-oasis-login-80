@@ -1,6 +1,5 @@
 
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter as Router } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 
@@ -12,11 +11,7 @@ if (!rootElement) {
 } else {
   try {
     const root = createRoot(rootElement);
-    root.render(
-      <Router>
-        <App />
-      </Router>
-    );
+    root.render(<App />);
   } catch (error) {
     console.error("Error rendering the application:", error);
   }
