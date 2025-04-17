@@ -17,39 +17,48 @@ const firebaseConfig = {
   measurementId: "G-77W1F0G8QV"
 };
 
-// Initialize Firebase - wrap in try/catch to handle any initialization errors
-try {
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  export const analytics = getAnalytics(app);
-  export const auth = getAuth(app);
-  export const db = getFirestore(app);
-  
-  // Set persistence to local to maintain session across page reloads
-  setPersistence(auth, browserLocalPersistence)
-    .catch((error) => {
-      console.error("Firebase persistence error:", error);
-    });
+// Initialize Firebase
+let app;
+let analytics = null;
+let auth = null;
+let db = null;
 
-  // Set up real-time balance updates
-  export const setupBalanceListener = (userId, callback) => {
-    if (!userId) return null;
-    
+// Set up real-time balance updates
+const setupBalanceListener = (userId, callback) => {
+  if (!userId || !db) return null;
+  
+  try {
     const userRef = doc(db, "users", userId);
     return onSnapshot(userRef, (doc) => {
       if (doc.exists() && doc.data().balance !== undefined) {
         callback(doc.data().balance);
       }
     });
-  };
+  } catch (error) {
+    console.error("Balance listener error:", error);
+    return null;
+  }
+};
+
+// Initialize Firebase with error handling
+try {
+  app = initializeApp(firebaseConfig);
+  analytics = getAnalytics(app);
+  auth = getAuth(app);
+  db = getFirestore(app);
   
-  export default app;
+  // Set persistence to local to maintain session across page reloads
+  if (auth) {
+    setPersistence(auth, browserLocalPersistence)
+      .catch((error) => {
+        console.error("Firebase persistence error:", error);
+      });
+  }
 } catch (error) {
   console.error("Firebase initialization error:", error);
-  // Export dummy implementations to prevent further errors
-  export const analytics = null;
-  export const auth = null;
-  export const db = null;
-  export const setupBalanceListener = () => null;
-  export default null;
+  app = null;
 }
+
+// Export all variables after initialization
+export { app, analytics, auth, db, setupBalanceListener };
+export default app;

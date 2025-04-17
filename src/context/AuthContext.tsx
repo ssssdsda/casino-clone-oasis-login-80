@@ -40,15 +40,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Session timeout duration in minutes
-const SESSION_TIMEOUT_MINUTES = 60; // Increased to 60 minutes for better user experience
-
-// Signup bonus amounts
+const SESSION_TIMEOUT_MINUTES = 60;
 const EMAIL_SIGNUP_BONUS = 89;
 const PHONE_SIGNUP_BONUS = 82;
 const REFERRAL_BONUS = 119;
-
-// Deposit bonus offer
 const DEPOSIT_BONUS_AMOUNT = 500;
 const DEPOSIT_BONUS_THRESHOLD = 500;
 
@@ -76,19 +71,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return urlParams.get('ref');
   };
 
-  // Initialize session timeout
   const resetSessionTimeout = () => {
-    // Store current timestamp
     localStorage.setItem('sessionStart', Date.now().toString());
   };
 
-  // Check if session is still valid
   const isSessionValid = () => {
     const sessionStart = localStorage.getItem('sessionStart');
     if (!sessionStart) return false;
     
     const now = Date.now();
-    const timeElapsed = (now - parseInt(sessionStart)) / (1000 * 60); // minutes
+    const timeElapsed = (now - parseInt(sessionStart)) / (1000 * 60);
     
     return timeElapsed < SESSION_TIMEOUT_MINUTES;
   };
@@ -96,6 +88,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const processReferralBonus = async (userId: string): Promise<boolean> => {
     try {
       console.log("Processing referral bonus for user:", userId);
+      
+      if (!db) {
+        console.error("Firestore database not initialized");
+        return false;
+      }
       
       const userDoc = await getDoc(doc(db, "users", userId));
       
@@ -154,10 +151,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Setup real-time balance listener
   const setupUserBalanceListener = (userId: string) => {
     if (balanceListenerRef.current) {
-      balanceListenerRef.current(); // Unsubscribe from previous listener
+      balanceListenerRef.current();
     }
     
     balanceListenerRef.current = setupBalanceListener(userId, (newBalance: number) => {
@@ -176,14 +172,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set firebase persistence to local
+    if (!auth) {
+      console.error("Firebase auth not initialized");
+      setIsLoading(false);
+      return;
+    }
+    
     setPersistence(auth, browserLocalPersistence)
       .catch(error => {
         console.error("Error setting persistence:", error);
       });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
+      if (firebaseUser && db) {
         try {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
@@ -209,25 +210,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           localStorage.setItem('casinoUser', JSON.stringify(userData));
           resetSessionTimeout();
           
-          // Set up real-time balance listener
           setupUserBalanceListener(firebaseUser.uid);
         } catch (error) {
           console.error("Error setting user data:", error);
         }
       } else {
-        // Check for stored user data in local storage
         const storedUser = localStorage.getItem('casinoUser');
         const storedAuthTime = localStorage.getItem('sessionStart');
         
         if (storedUser && storedAuthTime && isSessionValid()) {
-          // Session is still valid - restore the user
           try {
             const userData = JSON.parse(storedUser);
             setUser(userData);
             console.log("Restored user from local storage:", userData.username);
             resetSessionTimeout();
             
-            // Set up real-time balance listener for restored user
             if (userData.id) {
               setupUserBalanceListener(userData.id);
             }
@@ -243,7 +240,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }
         } else {
-          // Session expired or no stored user
           setUser(null);
           localStorage.removeItem('casinoUser');
           localStorage.removeItem('sessionStart');
@@ -257,7 +253,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
     });
 
-    // Existing session check
     const storedUser = localStorage.getItem('casinoUser');
     if (storedUser && isSessionValid()) {
       try {
@@ -265,7 +260,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(userData);
         console.log("Initial session restore successful");
         
-        // Set up real-time balance listener for restored user
         if (userData.id) {
           setupUserBalanceListener(userData.id);
         }
@@ -276,7 +270,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
     
-    // Reset session timeout on user activity
     const resetOnActivity = () => resetSessionTimeout();
     window.addEventListener('click', resetOnActivity);
     window.addEventListener('keypress', resetOnActivity);
@@ -299,6 +292,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const register = async (email: string, password: string, username: string, referralCode?: string) => {
     setIsLoading(true);
     try {
+      if (!auth || !db) {
+        throw new Error("Firebase not initialized");
+      }
+      
       const refCode = referralCode || extractReferralCode();
       console.log("Register with referral code:", refCode);
       
@@ -369,7 +366,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Ensure persistent session
+      if (!auth || !db) {
+        throw new Error("Firebase not initialized");
+      }
+      
       await setPersistence(auth, browserLocalPersistence);
       
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -413,6 +413,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loginWithPhone = async (phoneNumber: string, password: string): Promise<string> => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase not initialized");
+      }
+      
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("phone", "==", phoneNumber));
       const querySnapshot = await getDocs(q);
@@ -430,7 +434,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userData = userDoc.data();
       const userId = userDoc.id;
       
-      // Check password
       if (userData.password !== password) {
         toast({
           title: "Error",
@@ -479,7 +482,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const registerWithPhone = async (phoneNumber: string, username: string, password: string, referralCode?: string): Promise<string> => {
     setIsLoading(true);
     try {
-      // Check if the phone number is already registered
+      if (!db) {
+        throw new Error("Firebase not initialized");
+      }
+      
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("phone", "==", phoneNumber));
       const querySnapshot = await getDocs(q);
@@ -501,7 +507,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userData: any = {
         username: username,
         phone: phoneNumber,
-        password: password, // Store user provided password
+        password: password,
         balance: PHONE_SIGNUP_BONUS,
         createdAt: new Date(),
         phoneVerified: true,
@@ -564,7 +570,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateUserBalance = async (newBalance: number) => {
-    if (user) {
+    if (user && auth && db) {
       try {
         let actualBalance = newBalance;
         let bonusApplied = false;
@@ -576,7 +582,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           bonusApplied = true;
         }
         
-        // Update Firestore with the new balance
         if (auth.currentUser) {
           await updateDoc(doc(db, "users", auth.currentUser.uid), {
             balance: actualBalance
@@ -595,7 +600,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }
         
-        // Update local user state
         const updatedUser = {
           ...user,
           balance: actualBalance
@@ -624,12 +628,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = () => {
+    if (!auth) {
+      setUser(null);
+      localStorage.removeItem('casinoUser');
+      localStorage.removeItem('sessionStart');
+      return;
+    }
+    
     signOut(auth).then(() => {
       setUser(null);
       localStorage.removeItem('casinoUser');
       localStorage.removeItem('sessionStart');
       
-      // Unsubscribe from balance listener
       if (balanceListenerRef.current) {
         balanceListenerRef.current();
         balanceListenerRef.current = null;
