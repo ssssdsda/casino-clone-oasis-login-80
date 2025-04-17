@@ -7,6 +7,7 @@ export const showSuccessToast = (title: string, description: string) => {
     title,
     description,
     className: "bg-red-600 text-white font-bold",
+    duration: 1000, // Show for 1 second only
   });
 };
 
@@ -16,6 +17,7 @@ export const showErrorToast = (title: string, description: string) => {
     description,
     variant: "destructive",
     className: "bg-red-600 text-white font-bold",
+    duration: 1000, // Show for 1 second only
   });
 };
 
@@ -24,6 +26,7 @@ export const showInfoToast = (title: string, description: string) => {
     title,
     description,
     className: "bg-red-600 text-white",
+    duration: 1000, // Show for 1 second only
   });
 };
 
@@ -32,6 +35,7 @@ export const showBalanceUpdateToast = (newBalance: number) => {
     title: "Balance Updated",
     description: `Your balance is now ৳${newBalance.toFixed(2)}`,
     className: "bg-red-600 text-white font-bold",
+    duration: 1000, // Show for 1 second only
   });
 };
 
@@ -40,5 +44,6 @@ export const showReferralToast = () => {
     title: "Referral Bonus Received!",
     description: "You've received ৳119 as a referral bonus!",
     className: "bg-red-600 text-white font-bold",
+    duration: 1000, // Show for 1 second only
   });
 };

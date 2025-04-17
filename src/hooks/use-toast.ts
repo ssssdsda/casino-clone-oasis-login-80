@@ -7,7 +7,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000 // Reduced to 1 second
+const TOAST_REMOVE_DELAY = 1000 // Set to 1 second
 
 type ToasterToast = ToastProps & {
   id: string
@@ -150,11 +150,15 @@ function toast({ ...props }: Toast) {
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
+  // Set default duration to 1 second if not specified
+  const duration = props.duration !== undefined ? props.duration : 1000;
+
   dispatch({
     type: "ADD_TOAST",
     toast: {
       ...props,
       id,
+      duration: duration,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()

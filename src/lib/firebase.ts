@@ -1,9 +1,8 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, updateDoc } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -31,11 +30,12 @@ const setupBalanceListener = (userId, callback) => {
   }
   
   try {
-    console.log(`Setting up improved balance listener for user: ${userId}`);
+    console.log(`Setting up enhanced balance listener for user: ${userId}`);
     const userRef = doc(db, "users", userId);
     
-    // Use onSnapshot with immediate callback for initial data
-    const unsubscribe = onSnapshot(userRef, 
+    // Use onSnapshot with immediate callback and server prioritization
+    const unsubscribe = onSnapshot(
+      userRef, 
       {
         includeMetadataChanges: true // This ensures we get updates even with cached data
       },
@@ -43,7 +43,24 @@ const setupBalanceListener = (userId, callback) => {
         if (doc.exists() && doc.data().balance !== undefined) {
           const newBalance = doc.data().balance;
           console.log(`Balance update received: ${newBalance} (from: ${doc.metadata.fromCache ? 'cache' : 'server'})`);
+          
+          // Always trigger callback regardless of source to ensure UI is in sync
           callback(newBalance);
+          
+          // Update localStorage to keep local state in sync with Firebase
+          try {
+            const storedUser = localStorage.getItem('casinoUser');
+            if (storedUser) {
+              const userData = JSON.parse(storedUser);
+              if (userData.balance !== newBalance) {
+                userData.balance = newBalance;
+                localStorage.setItem('casinoUser', JSON.stringify(userData));
+                console.log("Updated local storage with new balance:", newBalance);
+              }
+            }
+          } catch (err) {
+            console.error("Error updating local storage:", err);
+          }
         } else {
           console.log("Document exists but no balance found", doc.exists());
         }
@@ -57,6 +74,56 @@ const setupBalanceListener = (userId, callback) => {
   } catch (error) {
     console.error("Balance listener setup error:", error);
     return null;
+  }
+};
+
+// Create functions to manage game betting system settings
+const getBettingSystemSettings = async () => {
+  if (!db) return null;
+  
+  try {
+    const settingsRef = doc(db, "gameSettings", "bettingSystem");
+    const settingsDoc = await getDoc(settingsRef);
+    
+    if (settingsDoc.exists()) {
+      return settingsDoc.data();
+    } else {
+      // Create default settings if none exist
+      const defaultSettings = {
+        minBet: 10,
+        maxBet: 1000,
+        winPatterns: {
+          aviator: [1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+          superAce: [1, 0, 1, 0, 1, 0, 1, 0, 0, 0]
+        },
+        referralBonus: 119,
+        depositBonusThreshold: 500,
+        depositBonusAmount: 500,
+        lastUpdated: new Date()
+      };
+      
+      await setDoc(settingsRef, defaultSettings);
+      return defaultSettings;
+    }
+  } catch (error) {
+    console.error("Error getting betting system settings:", error);
+    return null;
+  }
+};
+
+const updateBettingSystemSettings = async (newSettings) => {
+  if (!db) return false;
+  
+  try {
+    const settingsRef = doc(db, "gameSettings", "bettingSystem");
+    await updateDoc(settingsRef, {
+      ...newSettings,
+      lastUpdated: new Date()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error updating betting system settings:", error);
+    return false;
   }
 };
 
@@ -80,5 +147,13 @@ try {
 }
 
 // Export all variables after initialization
-export { app, analytics, auth, db, setupBalanceListener };
+export { 
+  app, 
+  analytics, 
+  auth, 
+  db, 
+  setupBalanceListener, 
+  getBettingSystemSettings, 
+  updateBettingSystemSettings 
+};
 export default app;

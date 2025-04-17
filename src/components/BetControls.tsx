@@ -32,27 +32,28 @@ const BetControls: React.FC<BetControlsProps> = ({
   const { user } = useAuth();
   const [localBalance, setLocalBalance] = useState(user?.balance || balance);
   
-  // Primary source of truth: user context for real-time Firebase updates
+  // First priority: real-time Firebase updates from user context
   useEffect(() => {
-    if (user) {
+    if (user && user.balance !== undefined) {
       console.log("BetControls: Setting balance from user context:", user.balance);
       setLocalBalance(user.balance);
     }
   }, [user?.balance]);
   
-  // Secondary source: prop updates (game winnings/losses)
+  // Second priority: prop updates for instant feedback during gameplay
   useEffect(() => {
-    console.log("BetControls: Balance prop changed to:", balance);
-    if (!user) {
-      // Only use balance prop as source of truth if no user
+    if (balance !== undefined && (!user || balance !== localBalance)) {
+      console.log("BetControls: Balance prop changed to:", balance);
       setLocalBalance(balance);
-    } else if (balance !== user.balance) {
-      // If balance prop differs from user balance (likely from a game action),
-      // we'll still update local display but log the discrepancy
-      console.log("Balance discrepancy detected:", {
-        userBalance: user.balance,
-        propBalance: balance
-      });
+      
+      // If user exists but balance differs significantly, log the discrepancy
+      if (user && Math.abs(balance - user.balance) > 1) {
+        console.log("Balance discrepancy detected:", {
+          userBalance: user.balance,
+          propBalance: balance,
+          diff: balance - user.balance
+        });
+      }
     }
   }, [balance, user]);
   

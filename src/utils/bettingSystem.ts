@@ -4,6 +4,9 @@
  * Controls winning odds for casino games to ensure specific win patterns
  */
 
+import { db, getBettingSystemSettings } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
 // Store user session data to track bets across sessions
 let betHistory: Array<{
   userId: string;
@@ -17,32 +20,63 @@ const userBetCounts: Record<string, number> = {};
 // Track the specific pattern of wins and losses
 const userBetPatterns: Record<string, number[]> = {};
 
+// Cached betting system settings
+let cachedSettings: any = null;
+
 /**
- * Determines if a bet should win based on the specified pattern:
- * - First 2 bets win
- * - Next 3 bets lose
- * - Next 1 bet wins
- * - Next 2 bets lose
- * - Next 2 bets win
- * - Next 5 bets lose
- * Then repeat the pattern
+ * Get the betting system settings from Firebase or cache
+ */
+const getSettings = async () => {
+  if (cachedSettings) return cachedSettings;
+  
+  const settings = await getBettingSystemSettings();
+  if (settings) {
+    cachedSettings = settings;
+    return settings;
+  }
+  
+  // Default settings if Firebase fails
+  return {
+    minBet: 10,
+    maxBet: 1000,
+    winPatterns: {
+      aviator: [1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+      superAce: [1, 0, 1, 0, 1, 0, 1, 0, 0, 0]
+    },
+    referralBonus: 119
+  };
+};
+
+/**
+ * Refresh settings from Firebase
+ */
+const refreshSettings = () => {
+  cachedSettings = null;
+};
+
+/**
+ * Determines if a bet should win based on the specified pattern
  * 
  * @param userId The ID of the user placing the bet
  * @param betAmount The bet amount placed by the user
  * @returns Whether this bet should win
  */
-export const shouldBetWin = (userId: string, betAmount = 10): boolean => {
+export const shouldBetWin = async (userId: string, betAmount = 10): Promise<boolean> => {
   // Initialize bet count for new users
   if (!userBetCounts[userId]) {
     userBetCounts[userId] = 0;
-    userBetPatterns[userId] = [1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0];
+    
+    // Get patterns from Firebase settings
+    const settings = await getSettings();
+    userBetPatterns[userId] = settings.winPatterns?.aviator || 
+      [1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0];
   }
   
   // Increment bet count
   userBetCounts[userId]++;
   const betCount = userBetCounts[userId];
   
-  // For larger bets (>200), never win (new requirement)
+  // For larger bets (>200), never win
   if (betAmount > 200) {
     console.log(`Bet ${betCount} - Large bet amount (${betAmount}), forced loss`);
     return false;
@@ -84,12 +118,13 @@ export const calculateWinAmount = (betAmount: number, multiplier: number): numbe
 
 /**
  * Generates a referral code for a user
- * This function now returns the user ID directly as the referral code
+ * Uses the user ID directly as the referral code
  * 
  * @param userId The ID of the user
  * @returns The user ID as the referral code
  */
 export const generateReferralCode = (userId: string): string => {
+  // Using user ID directly as referral code ensures uniqueness
   return userId;
 };
 
@@ -111,3 +146,5 @@ export const trackReferral = async (referrerId: string, referredId: string): Pro
     return false;
   }
 };
+
+export { refreshSettings, getSettings };
