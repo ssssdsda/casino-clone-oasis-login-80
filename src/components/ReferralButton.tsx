@@ -10,7 +10,11 @@ const ReferralButton = () => {
   const { t } = useLanguage();
   
   const handleReferralClick = () => {
-    navigate('/referral');
+    try {
+      navigate('/referral');
+    } catch (error) {
+      console.error("Navigation error:", error);
+    }
   };
   
   return (
@@ -20,7 +24,7 @@ const ReferralButton = () => {
       className="bg-gradient-to-r from-green-600 to-green-700 border-green-500 text-white font-semibold flex gap-2 items-center justify-center animate-pulse-slow"
     >
       <Users className="h-4 w-4" />
-      {t('referral')}
+      {t('referral') || 'Refer & Earn'}
     </Button>
   );
 };
