@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -414,7 +413,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loginWithPhone = async (phoneNumber: string, password: string): Promise<string> => {
     setIsLoading(true);
     try {
-      const db = getFirestore();
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("phone", "==", phoneNumber));
       const querySnapshot = await getDocs(q);
