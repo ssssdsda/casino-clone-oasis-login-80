@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,7 @@ const generateCardGrid = (): CardType[][] => {
   const grid: CardType[][] = [];
   for (let i = 0; i < 4; i++) {
     const row: CardType[] = [];
-    for (let j = 0; j < 4; j++) { // 4x4 grid as requested
+    for (let j = 0; j < 4; j++) {
       row.push(generateRandomCard());
     }
     grid.push(row);
@@ -146,7 +145,7 @@ const CardGrid = ({
   winningLines?: number[][];
 }) => {
   return (
-    <div className="grid grid-cols-4 gap-1 p-2 relative"> {/* Changed from grid-cols-5 to grid-cols-4 */}
+    <div className="grid grid-cols-4 gap-1 p-2 relative">
       {cards.map((row, rowIndex) => (
         row.map((card, colIndex) => (
           <div key={`${rowIndex}-${colIndex}`} className="relative">
@@ -156,7 +155,7 @@ const CardGrid = ({
               isGolden={card.isGolden} 
               isSpinning={isSpinning} 
               isHighlighted={winningLines.some(line => 
-                line.some(pos => pos === rowIndex * 4 + colIndex) // Changed from 5 to 4 columns
+                line.some(pos => pos === rowIndex * 4 + colIndex)
               )}
             />
           </div>
@@ -166,47 +165,43 @@ const CardGrid = ({
   );
 };
 
-// Main Game Component
 const SuperAceCasinoGame = () => {
   const navigate = useNavigate();
   const { user, updateUserBalance } = useAuth();
   
   const [gameState, setGameState] = useState({
-    balance: user?.balance || 1000,
-    bet: 2,
-    multiplier: 1,
     cards: generateCardGrid(),
     isSpinning: false,
     isTurboMode: false,
     winningLines: [] as number[][],
     lastWin: 0,
-    betCount: 0 // Track number of bets to control wins/losses
+    betCount: 0,
+    bet: 2
   });
   
-  // Update balance when user changes
   useEffect(() => {
     if (user) {
-      setGameState(prev => ({ ...prev, balance: user.balance }));
+      console.log("User balance updated:", user.balance);
     }
   }, [user?.balance, user]);
   
   const handleSpin = async () => {
-    if (gameState.isSpinning || gameState.balance < gameState.bet) return;
-    
-    // Deduct bet from balance
-    const newBalance = gameState.balance - gameState.bet;
-    
-    // Update user balance in auth context
-    if (user) {
-      updateUserBalance(newBalance);
+    if (!user) {
+      showErrorToast("Not logged in", "Please log in to play");
+      return;
+    }
+
+    if (gameState.isSpinning || user.balance < gameState.bet) {
+      return;
     }
     
-    // Increment bet count
+    const newBalance = user.balance - gameState.bet;
+    updateUserBalance(newBalance);
+    
     const newBetCount = gameState.betCount + 1;
     
     setGameState(prev => ({
       ...prev,
-      balance: newBalance,
       isSpinning: true,
       winningLines: [],
       lastWin: 0,
@@ -218,28 +213,22 @@ const SuperAceCasinoGame = () => {
     setTimeout(async () => {
       const newCards = generateCardGrid();
       
-      // Determine if the player should win based on bet count and betting system
-      // First 2 bets always win, all subsequent bets have controlled odds
-      const shouldWin = newBetCount <= 2 || await shouldBetWin(user?.id || 'anonymous', gameState.bet);
+      const shouldWin = newBetCount <= 2 || await shouldBetWin(user.id || 'anonymous', gameState.bet);
       
-      // Calculate win amount
       let totalWin = 0;
       if (shouldWin) {
-        // Use calculateWinAmount from bettingSystem
         totalWin = calculateWinAmount(gameState.bet, Math.floor(Math.random() * 5 + 5));
       }
       
       const finalBalance = newBalance + totalWin;
       
-      // Update user balance in auth context if there's a win
-      if (user && totalWin > 0) {
+      if (totalWin > 0) {
         updateUserBalance(finalBalance);
       }
       
-      // Create some fake winning lines if the player won
       const fakeWinningLines = shouldWin ? [
-        [0, 1, 2, 3], // Top row
-        [4, 5, 6, 7]  // Second row
+        [0, 1, 2, 3],
+        [4, 5, 6, 7]
       ] : [];
       
       setGameState(prev => ({
@@ -247,7 +236,6 @@ const SuperAceCasinoGame = () => {
         cards: newCards,
         isSpinning: false,
         lastWin: totalWin,
-        balance: finalBalance,
         winningLines: fakeWinningLines
       }));
       
@@ -258,12 +246,11 @@ const SuperAceCasinoGame = () => {
       }
     }, spinDuration);
   };
-  
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-black">
       <Header />
       <div className="max-w-md mx-auto w-full flex flex-col flex-grow bg-gray-900">
-        {/* Header */}
         <div className="py-2 text-center relative">
           <button 
             onClick={() => navigate('/')} 
@@ -277,7 +264,6 @@ const SuperAceCasinoGame = () => {
           </button>
         </div>
         
-        {/* Multipliers */}
         <div className="flex justify-center space-x-1 py-2">
           {MULTIPLIERS.map((multiplier, index) => (
             <button
@@ -295,7 +281,6 @@ const SuperAceCasinoGame = () => {
           ))}
         </div>
         
-        {/* Game Grid */}
         <div className="flex-grow overflow-hidden relative rounded-lg mx-2 mb-2 bg-gradient-to-b from-blue-900 to-blue-700">
           <CardGrid 
             cards={gameState.cards} 
@@ -304,14 +289,13 @@ const SuperAceCasinoGame = () => {
           />
         </div>
         
-        {/* Controls */}
         <div className="bg-gradient-to-b from-gray-800 to-black rounded-t-xl pb-4">
           <div className="flex justify-between items-center px-4 py-2">
             <div className="text-white text-lg">
               Win <span className="ml-2 text-yellow-500 font-bold">{gameState.lastWin}</span>
             </div>
             <div className="text-white text-lg">
-              Balance <span className="ml-2 text-yellow-500 font-bold">{gameState.balance}</span>
+              Balance <span className="ml-2 text-yellow-500 font-bold">{user?.balance || 0}</span>
             </div>
           </div>
           
@@ -347,7 +331,7 @@ const SuperAceCasinoGame = () => {
                   : 'bg-gradient-to-b from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500'}
               `}
               onClick={handleSpin}
-              disabled={gameState.isSpinning || gameState.balance < gameState.bet}
+              disabled={gameState.isSpinning || (user?.balance || 0) < gameState.bet}
               variant="ghost"
             >
               SPIN
