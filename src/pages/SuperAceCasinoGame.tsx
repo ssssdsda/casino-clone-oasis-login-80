@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +17,18 @@ interface CardType {
   suit: CardSuit;
   value: CardValue;
   isGolden?: boolean;
+}
+
+interface GameState {
+  balance: number;
+  bet: number;
+  multiplier: number; // Added this property to fix the TypeScript error
+  cards: CardType[][];
+  isSpinning: boolean;
+  isTurboMode: boolean;
+  winningLines: number[][];
+  lastWin: number;
+  betCount: number;
 }
 
 // Utils
@@ -170,7 +183,7 @@ const SuperAceCasinoGame = () => {
   const navigate = useNavigate();
   const { user, updateUserBalance } = useAuth();
   
-  const [gameState, setGameState] = useState({
+  const [gameState, setGameState] = useState<GameState>({
     balance: user?.balance || 1000,
     bet: 2,
     multiplier: 1,
@@ -219,7 +232,7 @@ const SuperAceCasinoGame = () => {
       
       // Determine if the player should win based on bet count
       // First 2 bets always win, all subsequent bets have controlled odds
-      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.id || 'anonymous');
+      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.id || 'anonymous', gameState.bet);
       
       // Calculate win amount
       let totalWin = 0;
@@ -283,15 +296,15 @@ const SuperAceCasinoGame = () => {
           {MULTIPLIERS.map((multiplier, index) => (
             <button
               key={index}
-              onClick={() => setGameState(prev => ({ ...prev, multiplier: index }))}
+              onClick={() => setGameState(prev => ({ ...prev, multiplier: multiplier }))}
               className={`
                 px-3 py-1 rounded-full font-bold text-lg transition-all
-                ${gameState.multiplier === index 
+                ${gameState.multiplier === multiplier 
                   ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 text-white shadow-lg transform scale-110' 
                   : 'bg-gradient-to-b from-gray-300 to-gray-500 text-gray-800 hover:from-yellow-300 hover:to-yellow-500'}
               `}
             >
-              ×{MULTIPLIERS[index]}
+              ×{multiplier}
             </button>
           ))}
         </div>
