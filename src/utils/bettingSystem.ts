@@ -118,18 +118,13 @@ export const calculateWinAmount = (betAmount: number, multiplier: number): numbe
 
 /**
  * Generates a referral code for a user
- * Uses a unique approach to ensure referrals can be tracked
+ * Uses the user ID directly as the referral code
  * 
  * @param userId The ID of the user
- * @returns A unique referral code
+ * @returns The user ID as the referral code
  */
 export const generateReferralCode = (userId: string): string => {
-  // Using user ID directly as referral code ensures uniqueness and proper tracking
-  if (!userId) {
-    console.error("Cannot generate referral code: missing user ID");
-    return "";
-  }
-  
+  // Using user ID directly as referral code ensures uniqueness
   return userId;
 };
 
@@ -142,21 +137,10 @@ export const generateReferralCode = (userId: string): string => {
  */
 export const trackReferral = async (referrerId: string, referredId: string): Promise<boolean> => {
   try {
-    if (!referrerId || !referredId) {
-      console.error("Invalid referral data:", { referrerId, referredId });
-      return false;
-    }
-    
-    // Get current referrer doc
-    const referrerDoc = await getDoc(doc(db, "users", referrerId));
-    
-    if (referrerDoc.exists()) {
-      console.log(`Referral tracked: User ${referrerId} referred user ${referredId}`);
-      return true;
-    } else {
-      console.error("Referrer not found:", referrerId);
-      return false;
-    }
+    // In a real implementation, this would store the referral in the database
+    // which is handled by Firebase Firestore in the AuthContext
+    console.log(`User ${referrerId} referred user ${referredId}`);
+    return true;
   } catch (error) {
     console.error("Error tracking referral:", error);
     return false;

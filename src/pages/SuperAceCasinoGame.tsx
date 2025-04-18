@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Settings } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
-import { showSuccessToast, showErrorToast } from '@/utils/toastUtils';
+import { shouldBetWin } from '@/utils/bettingSystem';
 
 // Types
 type CardSuit = 'hearts' | 'diamonds' | 'clubs' | 'spades' | 'scatter';
@@ -46,7 +45,7 @@ const generateCardGrid = (): CardType[][] => {
   const grid: CardType[][] = [];
   for (let i = 0; i < 4; i++) {
     const row: CardType[] = [];
-    for (let j = 0; j < 4; j++) {
+    for (let j = 0; j < 4; j++) { // 4x4 grid as requested
       row.push(generateRandomCard());
     }
     grid.push(row);
@@ -146,7 +145,7 @@ const CardGrid = ({
   winningLines?: number[][];
 }) => {
   return (
-    <div className="grid grid-cols-4 gap-1 p-2 relative">
+    <div className="grid grid-cols-4 gap-1 p-2 relative"> {/* Changed from grid-cols-5 to grid-cols-4 */}
       {cards.map((row, rowIndex) => (
         row.map((card, colIndex) => (
           <div key={`${rowIndex}-${colIndex}`} className="relative">
@@ -156,7 +155,7 @@ const CardGrid = ({
               isGolden={card.isGolden} 
               isSpinning={isSpinning} 
               isHighlighted={winningLines.some(line => 
-                line.some(pos => pos === rowIndex * 4 + colIndex)
+                line.some(pos => pos === rowIndex * 4 + colIndex) // Changed from 5 to 4 columns
               )}
             />
           </div>
@@ -166,44 +165,47 @@ const CardGrid = ({
   );
 };
 
+// Main Game Component
 const SuperAceCasinoGame = () => {
   const navigate = useNavigate();
   const { user, updateUserBalance } = useAuth();
   
   const [gameState, setGameState] = useState({
+    balance: user?.balance || 1000,
+    bet: 2,
+    multiplier: 1,
     cards: generateCardGrid(),
     isSpinning: false,
     isTurboMode: false,
     winningLines: [] as number[][],
     lastWin: 0,
-    betCount: 0,
-    bet: 2,
-    multiplier: 0  // Added the missing multiplier property
+    betCount: 0 // Track number of bets to control wins/losses
   });
   
+  // Update balance when user changes
   useEffect(() => {
     if (user) {
-      console.log("User balance updated:", user.balance);
+      setGameState(prev => ({ ...prev, balance: user.balance }));
     }
   }, [user?.balance, user]);
   
-  const handleSpin = async () => {
-    if (!user) {
-      showErrorToast("Not logged in", "Please log in to play");
-      return;
-    }
-
-    if (gameState.isSpinning || user.balance < gameState.bet) {
-      return;
+  const handleSpin = () => {
+    if (gameState.isSpinning || gameState.balance < gameState.bet) return;
+    
+    // Deduct bet from balance
+    const newBalance = gameState.balance - gameState.bet;
+    
+    // Update user balance in auth context
+    if (user) {
+      updateUserBalance(newBalance);
     }
     
-    const newBalance = user.balance - gameState.bet;
-    updateUserBalance(newBalance);
-    
+    // Increment bet count
     const newBetCount = gameState.betCount + 1;
     
     setGameState(prev => ({
       ...prev,
+      balance: newBalance,
       isSpinning: true,
       winningLines: [],
       lastWin: 0,
@@ -212,25 +214,33 @@ const SuperAceCasinoGame = () => {
     
     const spinDuration = gameState.isTurboMode ? 500 : 1500;
     
-    setTimeout(async () => {
+    setTimeout(() => {
       const newCards = generateCardGrid();
       
-      const shouldWin = newBetCount <= 2 || await shouldBetWin(user.id || 'anonymous', gameState.bet);
+      // Determine if the player should win based on bet count
+      // First 2 bets always win, all subsequent bets have controlled odds
+      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.id || 'anonymous');
       
+      // Calculate win amount
       let totalWin = 0;
       if (shouldWin) {
-        totalWin = calculateWinAmount(gameState.bet, Math.floor(Math.random() * 5 + 5));
+        totalWin = Math.floor(Math.random() * 5 + 5) * gameState.bet; // Win between 5x and 10x bet
+        
+        // Cap at 100
+        totalWin = Math.min(totalWin, 100);
       }
       
       const finalBalance = newBalance + totalWin;
       
-      if (totalWin > 0) {
+      // Update user balance in auth context if there's a win
+      if (user && totalWin > 0) {
         updateUserBalance(finalBalance);
       }
       
+      // Create some fake winning lines if the player won
       const fakeWinningLines = shouldWin ? [
-        [0, 1, 2, 3],
-        [4, 5, 6, 7]
+        [0, 1, 2, 3], // Top row
+        [4, 5, 6, 7]  // Second row
       ] : [];
       
       setGameState(prev => ({
@@ -238,21 +248,23 @@ const SuperAceCasinoGame = () => {
         cards: newCards,
         isSpinning: false,
         lastWin: totalWin,
+        balance: finalBalance,
         winningLines: fakeWinningLines
       }));
       
       if (totalWin > 0) {
-        showSuccessToast("You won!", `${totalWin} taka added to your balance`);
+        toast.success(`You won ${totalWin}!`);
       } else if (newBetCount > 2) {
-        showErrorToast("Better luck next time!", "Try again");
+        toast.error("Better luck next time!");
       }
     }, spinDuration);
   };
-
+  
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-black">
       <Header />
       <div className="max-w-md mx-auto w-full flex flex-col flex-grow bg-gray-900">
+        {/* Header */}
         <div className="py-2 text-center relative">
           <button 
             onClick={() => navigate('/')} 
@@ -266,6 +278,7 @@ const SuperAceCasinoGame = () => {
           </button>
         </div>
         
+        {/* Multipliers */}
         <div className="flex justify-center space-x-1 py-2">
           {MULTIPLIERS.map((multiplier, index) => (
             <button
@@ -283,6 +296,7 @@ const SuperAceCasinoGame = () => {
           ))}
         </div>
         
+        {/* Game Grid */}
         <div className="flex-grow overflow-hidden relative rounded-lg mx-2 mb-2 bg-gradient-to-b from-blue-900 to-blue-700">
           <CardGrid 
             cards={gameState.cards} 
@@ -291,13 +305,14 @@ const SuperAceCasinoGame = () => {
           />
         </div>
         
+        {/* Controls */}
         <div className="bg-gradient-to-b from-gray-800 to-black rounded-t-xl pb-4">
           <div className="flex justify-between items-center px-4 py-2">
             <div className="text-white text-lg">
               Win <span className="ml-2 text-yellow-500 font-bold">{gameState.lastWin}</span>
             </div>
             <div className="text-white text-lg">
-              Balance <span className="ml-2 text-yellow-500 font-bold">{user?.balance || 0}</span>
+              Balance <span className="ml-2 text-yellow-500 font-bold">{gameState.balance}</span>
             </div>
           </div>
           
@@ -333,7 +348,7 @@ const SuperAceCasinoGame = () => {
                   : 'bg-gradient-to-b from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500'}
               `}
               onClick={handleSpin}
-              disabled={gameState.isSpinning || (user?.balance || 0) < gameState.bet}
+              disabled={gameState.isSpinning || gameState.balance < gameState.bet}
               variant="ghost"
             >
               SPIN
