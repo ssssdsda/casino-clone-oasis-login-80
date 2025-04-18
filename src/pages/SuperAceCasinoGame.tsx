@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -176,7 +177,8 @@ const SuperAceCasinoGame = () => {
     winningLines: [] as number[][],
     lastWin: 0,
     betCount: 0,
-    bet: 2
+    bet: 2,
+    multiplier: 0  // Added the missing multiplier property
   });
   
   useEffect(() => {
