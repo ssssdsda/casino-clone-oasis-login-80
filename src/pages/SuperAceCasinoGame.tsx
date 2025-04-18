@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Settings } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { shouldBetWin } from '@/utils/bettingSystem';
+import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
+import { showSuccessToast, showErrorToast } from '@/utils/toastUtils';
 
 // Types
 type CardSuit = 'hearts' | 'diamonds' | 'clubs' | 'spades' | 'scatter';
@@ -189,7 +190,7 @@ const SuperAceCasinoGame = () => {
     }
   }, [user?.balance, user]);
   
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (gameState.isSpinning || gameState.balance < gameState.bet) return;
     
     // Deduct bet from balance
@@ -214,20 +215,18 @@ const SuperAceCasinoGame = () => {
     
     const spinDuration = gameState.isTurboMode ? 500 : 1500;
     
-    setTimeout(() => {
+    setTimeout(async () => {
       const newCards = generateCardGrid();
       
-      // Determine if the player should win based on bet count
+      // Determine if the player should win based on bet count and betting system
       // First 2 bets always win, all subsequent bets have controlled odds
-      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.id || 'anonymous');
+      const shouldWin = newBetCount <= 2 || await shouldBetWin(user?.id || 'anonymous', gameState.bet);
       
       // Calculate win amount
       let totalWin = 0;
       if (shouldWin) {
-        totalWin = Math.floor(Math.random() * 5 + 5) * gameState.bet; // Win between 5x and 10x bet
-        
-        // Cap at 100
-        totalWin = Math.min(totalWin, 100);
+        // Use calculateWinAmount from bettingSystem
+        totalWin = calculateWinAmount(gameState.bet, Math.floor(Math.random() * 5 + 5));
       }
       
       const finalBalance = newBalance + totalWin;
@@ -253,9 +252,9 @@ const SuperAceCasinoGame = () => {
       }));
       
       if (totalWin > 0) {
-        toast.success(`You won ${totalWin}!`);
+        showSuccessToast("You won!", `${totalWin} taka added to your balance`);
       } else if (newBetCount > 2) {
-        toast.error("Better luck next time!");
+        showErrorToast("Better luck next time!", "Try again");
       }
     }, spinDuration);
   };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
 import { doc, getDoc, collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
+import { showSuccessToast } from '@/utils/toastUtils';
 
 const ReferralProgram = () => {
   const { user } = useAuth();
@@ -28,23 +28,10 @@ const ReferralProgram = () => {
     // Generate referral link based on user ID
     if (user) {
       const baseUrl = window.location.origin;
-      // Use the register route for a more standard referral flow
+      // Use the register route with the user ID as the referral code
       const fullReferralLink = `${baseUrl}/register?ref=${user.id}`;
       setReferralLink(fullReferralLink);
       console.log("Generated referral link:", fullReferralLink);
-      
-      // Try to open the URL in an invisible iframe to preload it
-      try {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = fullReferralLink;
-        document.body.appendChild(iframe);
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-      } catch (error) {
-        console.error("Failed to preload referral URL:", error);
-      }
       
       // Fetch real referral stats from Firebase
       const fetchReferralStats = async () => {
@@ -93,11 +80,10 @@ const ReferralProgram = () => {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink).then(() => {
-      toast({
-        title: "Link Copied!",
-        description: "Your referral link has been copied to clipboard.",
-        className: "bg-red-600 text-white font-bold",
-      });
+      showSuccessToast(
+        "Link Copied!",
+        "Your referral link has been copied to clipboard."
+      );
     }).catch(err => {
       toast({
         title: "Copy Failed",
