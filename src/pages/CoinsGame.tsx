@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
+import { shouldGameBetWin } from '@/lib/firebase';
 
 // Coin UI Component with colorful icons
 interface CoinProps {
@@ -17,10 +17,10 @@ const Coin: React.FC<CoinProps> = ({ value, isSpinning, isSelected }) => {
   // Function to choose coin color based on value
   const getCoinColor = (value: number) => {
     switch (value) {
-      case 1: return { bg: 'bg-bronze', text: 'text-white' }; // Changed to white
-      case 3: return { bg: 'bg-silver', text: 'text-white' }; // Changed to white
+      case 1: return { bg: 'bg-bronze', text: 'text-white' };
+      case 3: return { bg: 'bg-silver', text: 'text-white' };
       case 5: return { bg: 'bg-gold', text: 'text-yellow-800' };
-      case 6: return { bg: 'bg-purple-500', text: 'text-white' }; // Changed to white
+      case 6: return { bg: 'bg-purple-500', text: 'text-white' };
       case 10: return { bg: 'bg-blue-500', text: 'text-white' };
       case 20: return { bg: 'bg-green-500', text: 'text-white' };
       case 77: return { bg: 'bg-gradient-to-br from-red-500 to-yellow-500', text: 'text-white' };
@@ -76,7 +76,7 @@ const CoinsGame: React.FC = () => {
   }, [user?.balance]);
 
   // Function to handle coin spinning
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (spinning) return;
     
     if (!user) {
@@ -115,60 +115,40 @@ const CoinsGame: React.FC = () => {
     setSelectedCoinIndex(null);
     
     // Determine if this spin should win based on the betting system
-    shouldBetWin(user?.id || 'anonymous')
-      .then(shouldWin => {
-        // Generate a random result, but rig it based on shouldWin
-        setTimeout(() => {
-          let targetIndex: number;
-          
-          if (shouldWin) {
-            // If should win, choose a winning value (7, 10, 20, or 77)
-            const winningValues = [7, 10, 20];
-            // Only occasionally give the jackpot (77)
-            if (Math.random() < 0.1) {
-              winningValues.push(77);
-            }
-            const winValue = winningValues[Math.floor(Math.random() * winningValues.length)];
-            targetIndex = coins.findIndex(c => c === winValue);
-          } else {
-            // If should lose, choose a low value (1, 3, 5)
-            const losingValues = [1, 3, 5];
-            const loseValue = losingValues[Math.floor(Math.random() * losingValues.length)];
-            targetIndex = coins.findIndex(c => c === loseValue);
-          }
-          
-          // If we couldn't find the target, pick a random position
-          if (targetIndex === -1) {
-            targetIndex = Math.floor(Math.random() * coins.length);
-          }
-          
-          // Calculate the win amount
-          const winMultiplier = coins[targetIndex];
-          
-          // Handle the async calculateWinAmount properly
-          calculateWinAmount(currentBet, winMultiplier)
-            .then(winAmount => {
-              // Animate spinning and stopping
-              animateSpinToIndex(targetIndex, winAmount);
-            })
-            .catch(error => {
-              console.error("Error calculating win amount:", error);
-              // Fallback to a simple calculation if the async calculation fails
-              const fallbackWinAmount = currentBet * winMultiplier;
-              animateSpinToIndex(targetIndex, fallbackWinAmount);
-            });
-          
-        }, 500);
-      })
-      .catch(error => {
-        console.error("Error determining win:", error);
-        setSpinning(false);
-        toast({
-          title: "Error",
-          description: "Something went wrong. Please try again.",
-          variant: "destructive"
-        });
-      });
+    const shouldWin = await shouldGameBetWin(user.id || 'anonymous', 'coins', currentBet);
+    
+    // Generate a random result, but rig it based on shouldWin
+    setTimeout(() => {
+      let targetIndex: number;
+      
+      if (shouldWin) {
+        // If should win, choose a winning value (7, 10, 20, or 77)
+        const winningValues = [7, 10, 20];
+        // Only occasionally give the jackpot (77)
+        if (Math.random() < 0.1) {
+          winningValues.push(77);
+        }
+        const winValue = winningValues[Math.floor(Math.random() * winningValues.length)];
+        targetIndex = coins.findIndex(c => c === winValue);
+      } else {
+        // If should lose, choose a low value (1, 3, 5)
+        const losingValues = [1, 3, 5];
+        const loseValue = losingValues[Math.floor(Math.random() * losingValues.length)];
+        targetIndex = coins.findIndex(c => c === loseValue);
+      }
+      
+      // If we couldn't find the target, pick a random position
+      if (targetIndex === -1) {
+        targetIndex = Math.floor(Math.random() * coins.length);
+      }
+      
+      // Calculate the win amount
+      const winMultiplier = coins[targetIndex];
+      const winAmount = currentBet * winMultiplier;
+      
+      // Animate spinning and stopping
+      animateSpinToIndex(targetIndex, winAmount);
+    }, 500);
   };
 
   // Animate the spin to land on a specific index

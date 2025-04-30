@@ -4,21 +4,30 @@
  * Controls winning odds for casino games to ensure specific win patterns
  */
 
-import { db, getBettingSystemSettings, recordBet, updateUserBalance } from '@/lib/firebase';
+import { 
+  db, 
+  getBettingSystemSettings, 
+  recordBet, 
+  updateUserBalance, 
+  getGameWinPattern, 
+  getGameWinRatio, 
+  shouldGameBetWin 
+} from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 // Store user session data to track bets across sessions
 let betHistory: Array<{
   userId: string;
+  gameType: string;
   didWin: boolean;
   timestamp: number;
 }> = [];
 
 // Track how many bets each user has made in the current session
-const userBetCounts: Record<string, number> = {};
+const userBetCounts: Record<string, Record<string, number>> = {};
 
 // Track the specific pattern of wins and losses
-const userBetPatterns: Record<string, number[]> = {};
+const userBetPatterns: Record<string, Record<string, number[]>> = {};
 
 // Cached betting system settings
 let cachedSettings: any = null;
@@ -41,7 +50,23 @@ const getSettings = async () => {
     maxBet: 1000,
     winPatterns: {
       aviator: [1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0],
-      superAce: [1, 0, 1, 0, 1, 0, 1, 0, 0, 0]
+      superAce: [1, 0, 1, 0, 1, 0, 1, 0, 0, 0],
+      goldenBasin: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+      coinUp: [1, 0, 0, 1, 0, 0, 0, 0, 1],
+      fruityBonanza: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+      megaSpin: [1, 0, 0, 0, 1, 0, 0, 1, 0],
+      fortuneGems: [1, 0, 0, 0, 0, 1, 0, 0, 0],
+      coins: [1, 0, 0, 0, 0, 0, 1, 0, 0],
+    },
+    winRatios: {
+      aviator: 0.25,
+      superAce: 0.3,
+      goldenBasin: 0.2,
+      coinUp: 0.25,
+      fruityBonanza: 0.2,
+      megaSpin: 0.3,
+      fortuneGems: 0.2,
+      coins: 0.2
     },
     referralBonus: 119
   };
@@ -58,53 +83,19 @@ const refreshSettings = () => {
  * Determines if a bet should win based on the specified pattern
  * 
  * @param userId The ID of the user placing the bet
+ * @param gameType The type of game being played
  * @param betAmount The bet amount placed by the user
  * @returns Whether this bet should win
  */
-export const shouldBetWin = async (userId: string, betAmount = 10): Promise<boolean> => {
-  // Initialize bet count for new users
-  if (!userBetCounts[userId]) {
-    userBetCounts[userId] = 0;
-    
-    // Get patterns from Firebase settings
-    const settings = await getSettings();
-    const gameType = 'superAce'; // Default to superAce pattern if game type not specified
-    userBetPatterns[userId] = settings.winPatterns?.[gameType] || 
-      [1, 0, 1, 0, 1, 0, 1, 0, 0, 0];
-  }
-  
-  // Increment bet count
-  userBetCounts[userId]++;
-  const betCount = userBetCounts[userId];
-  
-  // For larger bets (>200), make wins less likely
-  if (betAmount > 200) {
-    console.log(`Bet ${betCount} - Large bet amount (${betAmount}), forced loss`);
+export const shouldBetWin = async (userId: string, gameType = 'superAce', betAmount = 10): Promise<boolean> => {
+  try {
+    // Use the Firebase function for consistency across all games
+    return await shouldGameBetWin(userId, gameType, betAmount);
+  } catch (error) {
+    console.error("Error determining win:", error);
+    // Default to a loss if there's an error
     return false;
   }
-  
-  // For bets within the predefined pattern, return the predetermined result
-  const patternLength = userBetPatterns[userId].length;
-  if (betCount <= patternLength) {
-    const shouldWin = userBetPatterns[userId][betCount - 1] === 1;
-    console.log(`Bet ${betCount} - Following pattern: ${shouldWin ? 'Win' : 'Loss'}`);
-    return shouldWin;
-  }
-  
-  // After the pattern, repeat the pattern
-  const patternPosition = (betCount - 1) % patternLength;
-  const shouldWin = userBetPatterns[userId][patternPosition] === 1;
-  
-  console.log(`Bet ${betCount} - Pattern position ${patternPosition}: ${shouldWin ? 'Win' : 'Loss'}`);
-  
-  // Record this bet in history for data analysis
-  betHistory.push({
-    userId,
-    didWin: shouldWin,
-    timestamp: Date.now()
-  });
-  
-  return shouldWin;
 };
 
 /**
@@ -163,8 +154,8 @@ export const placeBet = async (
   const newBalance = currentBalance - betAmount;
   await updateUserBalance(userId, newBalance);
   
-  // Determine if the bet should win
-  const shouldWin = await shouldBetWin(userId, betAmount);
+  // Determine if the bet should win using our enhanced system
+  const shouldWin = await shouldBetWin(userId, gameType, betAmount);
   
   // Record the bet
   await recordBet(userId, gameType, betAmount, 0, {

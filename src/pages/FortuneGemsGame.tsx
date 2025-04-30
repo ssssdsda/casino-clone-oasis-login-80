@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Gem, Crown, DollarSign, Settings, RefreshCw, Zap, Diamond, Heart, Club, Spade } from 'lucide-react';
-import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
+import { shouldGameBetWin } from '@/lib/firebase';
 
 // Game symbols with colorful icons instead of images
 const gameSymbols = [
@@ -59,7 +58,7 @@ const FortuneGemsGame = () => {
   }, []);
   
   // Handle spin
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (!user) {
       toast({
         title: "Login Required",
@@ -108,11 +107,11 @@ const FortuneGemsGame = () => {
     // Calculate win after a delay
     if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current);
     
-    spinTimeoutRef.current = setTimeout(() => {
+    spinTimeoutRef.current = setTimeout(async () => {
       clearInterval(spinAnimation);
       
-      // Check if user should win based on betting system
-      const shouldWin = shouldBetWin(user?.id || 'anonymous');
+      // Check if user should win based on Firebase betting system
+      const shouldWin = await shouldGameBetWin(user?.id || 'anonymous', 'fortuneGems', betAmount * selectedMultiplier);
       
       // Generate final result
       let finalReels: string[][];

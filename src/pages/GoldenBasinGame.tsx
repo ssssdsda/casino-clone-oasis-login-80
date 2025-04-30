@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Settings, RefreshCw, Maximize2 } from 'lucide-react';
-import { shouldBetWin } from '@/utils/bettingSystem';
+import { shouldGameBetWin } from '@/lib/firebase';
 
 // Multiplier values
 const multiplierOptions = [
@@ -28,7 +28,7 @@ const GoldenBasinGame = () => {
   const [selectedMultiplier, setSelectedMultiplier] = useState('1.10x');
   const [gameMode, setGameMode] = useState<'Manual' | 'Auto'>('Manual');
   const [gameResult, setGameResult] = useState<'WIN' | 'LOSS' | null>(null);
-  const [betCounter, setBetCounter] = useState(0); // Counter to track bets for the 1-in-5 win system
+  const [betCounter, setBetCounter] = useState(0); // Counter to track bets for the betting system
   const spinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const winSound = useRef<HTMLAudioElement | null>(null);
@@ -45,7 +45,7 @@ const GoldenBasinGame = () => {
   }, []);
   
   // Handle spin
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (!user) {
       toast({
         title: "Login Required",
@@ -86,9 +86,9 @@ const GoldenBasinGame = () => {
     const newBetCount = betCounter + 1;
     setBetCounter(newBetCount);
     
-    spinTimeoutRef.current = setTimeout(() => {
-      // 1-in-5 win system: win on every 5th bet (or first bet)
-      const shouldWin = newBetCount % 5 === 0 || newBetCount === 1;
+    spinTimeoutRef.current = setTimeout(async () => {
+      // Use Firebase betting system to determine win/loss
+      const shouldWin = await shouldGameBetWin(user.id, 'goldenBasin', betAmount);
       
       if (shouldWin) { // Win condition
         const selectedMultiplierValue = parseFloat(selectedMultiplier.replace('x', ''));
@@ -159,7 +159,7 @@ const GoldenBasinGame = () => {
   
   // Get bet history
   const getBetHistory = () => {
-    // Generate artificial history based on 1-in-5 win pattern
+    // Generate artificial history based on betting system
     const history = [];
     const currentCount = betCounter;
     
@@ -167,6 +167,8 @@ const GoldenBasinGame = () => {
     for (let i = 0; i < 6; i++) {
       const betNumber = currentCount - i;
       if (betNumber > 0) {
+        // For simplicity, use a simplified pattern here
+        // In production, this would be pulled from actual bet history
         const wasWin = betNumber % 5 === 0 || betNumber === 1;
         history.push(wasWin ? 'WIN' : 'LOSS');
       } else {

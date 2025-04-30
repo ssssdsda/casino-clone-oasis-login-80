@@ -1,4 +1,3 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
@@ -115,9 +114,26 @@ const getBettingSystemSettings = async () => {
       const defaultSettings = {
         minBet: 10,
         maxBet: 1000,
+        maxWinAmount: 5000, // Maximum win amount per bet
         winPatterns: {
           aviator: [1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0],
-          superAce: [1, 0, 1, 0, 1, 0, 1, 0, 0, 0]
+          superAce: [1, 0, 1, 0, 1, 0, 1, 0, 0, 0],
+          goldenBasin: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+          coinUp: [1, 0, 0, 1, 0, 0, 0, 0, 1],
+          fruityBonanza: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+          megaSpin: [1, 0, 0, 0, 1, 0, 0, 1, 0],
+          fortuneGems: [1, 0, 0, 0, 0, 1, 0, 0, 0],
+          coins: [1, 0, 0, 0, 0, 0, 1, 0, 0],
+        },
+        winRatios: {
+          aviator: 0.25, // 25% win rate
+          superAce: 0.3,  // 30% win rate
+          goldenBasin: 0.2, // 20% win rate
+          coinUp: 0.25, // 25% win rate
+          fruityBonanza: 0.2, // 20% win rate
+          megaSpin: 0.3, // 30% win rate
+          fortuneGems: 0.2, // 20% win rate
+          coins: 0.2 // 20% win rate
         },
         referralBonus: 119,
         depositBonusThreshold: 500,
@@ -172,6 +188,42 @@ const updateUserBalance = async (userId, newBalance) => {
   }
 };
 
+// Function to check if a user has reached the maximum win amount
+const hasReachedMaxWinAmount = async (userId) => {
+  if (!db || !userId) return false;
+  
+  try {
+    // Get current settings
+    const settings = await getBettingSystemSettings();
+    const maxWinAmount = settings?.maxWinAmount || 5000;
+    
+    // Get today's bets for this user
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    
+    const betsRef = collection(db, "bets");
+    const q = query(
+      betsRef, 
+      where("userId", "==", userId),
+      where("timestamp", ">=", todayStart)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    // Calculate total winnings for today
+    let totalWinnings = 0;
+    querySnapshot.forEach((doc) => {
+      totalWinnings += doc.data().winAmount || 0;
+    });
+    
+    // Return true if user has reached max win amount
+    return totalWinnings >= maxWinAmount;
+  } catch (error) {
+    console.error("Error checking max win amount:", error);
+    return false;
+  }
+};
+
 const updateBettingSystemSettings = async (newSettings) => {
   if (!db) return false;
   
@@ -188,6 +240,73 @@ const updateBettingSystemSettings = async (newSettings) => {
   }
 };
 
+// Get game-specific win pattern
+const getGameWinPattern = async (gameType) => {
+  try {
+    const settings = await getBettingSystemSettings();
+    if (settings && settings.winPatterns && settings.winPatterns[gameType]) {
+      return settings.winPatterns[gameType];
+    }
+    // Default pattern if specific game pattern not found
+    return [1, 0, 0, 0, 1, 0, 0, 0, 0];
+  } catch (error) {
+    console.error(`Error getting win pattern for ${gameType}:`, error);
+    // Return a default pattern
+    return [1, 0, 0, 0, 1, 0, 0, 0, 0];
+  }
+};
+
+// Get game-specific win ratio
+const getGameWinRatio = async (gameType) => {
+  try {
+    const settings = await getBettingSystemSettings();
+    if (settings && settings.winRatios && settings.winRatios[gameType]) {
+      return settings.winRatios[gameType];
+    }
+    // Default win ratio if specific game ratio not found
+    return 0.25; // 25% win rate
+  } catch (error) {
+    console.error(`Error getting win ratio for ${gameType}:`, error);
+    // Return a default win ratio
+    return 0.25;
+  }
+};
+
+// Check if a bet should win based on game-specific settings
+const shouldGameBetWin = async (userId, gameType, betAmount) => {
+  if (!userId) return false;
+  
+  try {
+    // Check if user has reached max win amount
+    const maxWinReached = await hasReachedMaxWinAmount(userId);
+    if (maxWinReached) {
+      console.log(`User ${userId} has reached maximum win amount for today`);
+      return false;
+    }
+    
+    // Get game-specific win ratio
+    const winRatio = await getGameWinRatio(gameType);
+    
+    // For large bets, make wins less likely
+    let adjustedWinRatio = winRatio;
+    if (betAmount > 200) {
+      adjustedWinRatio = winRatio * 0.5; // Reduce win chance by half for large bets
+    }
+    
+    // Random number between 0 and 1
+    const randomValue = Math.random();
+    
+    // Log for debugging
+    console.log(`Game ${gameType} - Win ratio: ${adjustedWinRatio}, Random value: ${randomValue}`);
+    
+    // Return true if random number is less than win ratio
+    return randomValue < adjustedWinRatio;
+  } catch (error) {
+    console.error("Error in shouldGameBetWin:", error);
+    return false;
+  }
+};
+
 // Export all variables and functions
 export { 
   app, 
@@ -200,6 +319,10 @@ export {
   updateBettingSystemSettings,
   recordBet,
   updateUserBalance,
-  shouldBetWin
+  shouldBetWin,
+  getGameWinPattern,
+  getGameWinRatio,
+  shouldGameBetWin,
+  hasReachedMaxWinAmount
 };
 export default app;

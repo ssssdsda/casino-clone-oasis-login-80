@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { shouldBetWin } from '@/utils/bettingSystem';
+import { shouldGameBetWin } from '@/lib/firebase';
 
 // Fruit symbols for the game with proper icons
 const symbols = [
@@ -97,7 +97,7 @@ const FruityBonanzaGame: React.FC = () => {
     setReels(newReels);
   };
   
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (isSpinning) return;
     
     if (!user) {
@@ -136,20 +136,20 @@ const FruityBonanzaGame: React.FC = () => {
     setWinAmount(0);
     
     // Simulate spinning animation
-    setTimeout(() => {
+    setTimeout(async () => {
       // Generate new symbols for each position
       generateReels();
       
       // Calculate win based on updated betting pattern
-      calculateWin();
+      await calculateWin();
       
       setIsSpinning(false);
     }, 2000);
   };
   
-  const calculateWin = () => {
-    // Use the improved betting system
-    const shouldWin = shouldBetWin(user?.id || 'anonymous');
+  const calculateWin = async () => {
+    // Use the improved betting system with Firebase integration
+    const shouldWin = await shouldGameBetWin(user?.id || 'anonymous', 'fruityBonanza', betAmount);
     
     if (shouldWin) {
       // Random win amount between 1x and 10x bet
