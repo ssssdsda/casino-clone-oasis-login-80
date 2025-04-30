@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -7,7 +8,7 @@ const MegaSpinControl = () => {
   const { user } = useAuth();
   
   useEffect(() => {
-    // Now checking if username contains 'admin' instead of checking email
+    // Check if username contains 'admin' instead of checking email
     const isAdmin = user && user.username?.toLowerCase().includes('admin');
     
     if (!isAdmin) {

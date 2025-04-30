@@ -4,6 +4,7 @@ import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, setDoc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { shouldBetWin } from "@/utils/bettingSystem";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -198,6 +199,7 @@ export {
   getBettingSystemSettings, 
   updateBettingSystemSettings,
   recordBet,
-  updateUserBalance
+  updateUserBalance,
+  shouldBetWin
 };
 export default app;

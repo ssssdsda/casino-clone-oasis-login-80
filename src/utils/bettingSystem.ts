@@ -247,4 +247,4 @@ export const trackReferral = async (referrerId: string, referredId: string): Pro
   }
 };
 
-export { refreshSettings, getSettings, placeBet, completeBet };
+export { refreshSettings, getSettings };

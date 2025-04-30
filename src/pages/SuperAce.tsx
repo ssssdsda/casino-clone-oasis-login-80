@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, RotateCw, Plus, Minus, RefreshCw, Heart, Target, Crown } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db, getBettingSystemSettings, recordBet, updateUserBalance, shouldBetWin } from '@/lib/firebase';
+import { db, getBettingSystemSettings, recordBet, updateUserBalance } from '@/lib/firebase';
+import { shouldBetWin } from '@/utils/bettingSystem';
 
 // Card suits and values
 const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
@@ -334,15 +334,24 @@ const SuperAce = () => {
     // Display cards with animation
     setDisplayedCards(drawnCards);
     
-    // Use shouldBetWin to determine if this bet should win
-    const shouldWin = await shouldBetWin(user.id, bet);
-    
-    // Check for win
-    setTimeout(() => {
-      // Calculate win based on the shouldWin result
-      const win = shouldWin ? calculateWin(drawnCards) : 0;
-      handleGameResult(win);
-    }, 1500);
+    try {
+      // Use shouldBetWin to determine if this bet should win
+      const shouldWin = await shouldBetWin(user.id, bet);
+      
+      // Check for win
+      setTimeout(() => {
+        // Calculate win based on the shouldWin result
+        const win = shouldWin ? calculateWin(drawnCards) : 0;
+        handleGameResult(win);
+      }, 1500);
+    } catch (error) {
+      console.error("Error determining game outcome:", error);
+      // Fallback to random outcome
+      setTimeout(() => {
+        const randomWin = Math.random() > 0.7 ? calculateWin(drawnCards) : 0;
+        handleGameResult(randomWin);
+      }, 1500);
+    }
   };
   
   // Calculate win based on card combinations
