@@ -57,7 +57,8 @@ export function LoginButton(props: any) {
         className: "bg-green-600 text-white"
       });
     } catch (error) {
-      // Error handled in login function
+      // Error is handled in the login function
+      console.error("Login error in component:", error);
     }
   };
 
@@ -86,15 +87,9 @@ export function LoginButton(props: any) {
       const result = await loginWithPhone(phoneNumber, phonePassword);
       if (result) {
         setOpen(false);
-        toast({
-          title: "Success",
-          description: "Login successful!",
-          variant: "default",
-          className: "bg-green-600 text-white"
-        });
       }
     } catch (error) {
-      // Error handled in loginWithPhone function
+      console.error("Phone login error in component:", error);
     }
   };
 

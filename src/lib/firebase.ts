@@ -1,8 +1,9 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -118,6 +119,44 @@ const getBettingSystemSettings = async () => {
   }
 };
 
+// Function to record betting history
+const recordBet = async (userId, gameType, betAmount, winAmount, details) => {
+  if (!db || !userId) return false;
+  
+  try {
+    await addDoc(collection(db, "bets"), {
+      userId,
+      gameType,
+      betAmount,
+      winAmount,
+      details,
+      timestamp: serverTimestamp()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error recording bet:", error);
+    return false;
+  }
+};
+
+// Function to update user balance
+const updateUserBalance = async (userId, newBalance) => {
+  if (!db || !userId) return false;
+  
+  try {
+    const userRef = doc(db, "users", userId);
+    await updateDoc(userRef, {
+      balance: newBalance,
+      lastUpdated: serverTimestamp()
+    });
+    console.log(`Updated balance for user ${userId} to ${newBalance}`);
+    return true;
+  } catch (error) {
+    console.error("Error updating user balance:", error);
+    return false;
+  }
+};
+
 const updateBettingSystemSettings = async (newSettings) => {
   if (!db) return false;
   
@@ -142,6 +181,8 @@ export {
   db, 
   setupBalanceListener, 
   getBettingSystemSettings, 
-  updateBettingSystemSettings 
+  updateBettingSystemSettings,
+  recordBet,
+  updateUserBalance
 };
 export default app;

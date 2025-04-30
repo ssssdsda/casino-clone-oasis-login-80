@@ -72,19 +72,9 @@ export function RegisterButton(props: any) {
       console.log("Attempting registration with email:", email);
       await register(email, password, username, referralCode);
       setOpen(false);
-      toast({
-        title: "Registration Successful!",
-        description: "You've received signup bonus!",
-        variant: "default",
-        className: "bg-green-600 text-white font-bold"
-      });
     } catch (error: any) {
       console.error("Registration error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Registration failed",
-        variant: "destructive"
-      });
+      // Errors are handled in the register function
     }
   };
 
@@ -107,23 +97,13 @@ export function RegisterButton(props: any) {
       console.log("Registering with phone and referral code:", formattedPhone, referralCode);
       
       // Register with phone
-      await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
-      setOpen(false);
-      
-      toast({
-        title: "Registration Successful!",
-        description: `Welcome! You've received signup bonus!`,
-        variant: "default",
-        className: "bg-green-600 text-white font-bold"
-      });
-      
+      const success = await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
+      if (success) {
+        setOpen(false);
+      }
     } catch (error: any) {
       console.error("Phone registration error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Phone registration failed",
-        variant: "destructive"
-      });
+      // Errors are handled in the registerWithPhone function
     }
   };
 
