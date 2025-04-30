@@ -9,6 +9,7 @@ import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, updateDoc } 
 const firebaseConfig = {
   apiKey: "AIzaSyDoLZlYqlNBgaSAEwKvJ3MX1VE-mnARxjk",
   authDomain: "riskhaw-7eabf.firebaseapp.com",
+  databaseURL: "https://riskhaw-7eabf-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "riskhaw-7eabf",
   storageBucket: "riskhaw-7eabf.firebasestorage.app",
   messagingSenderId: "755847944149",
@@ -17,10 +18,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app;
-let analytics = null;
-let auth = null;
-let db = null;
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Set persistence to local to maintain session across page reloads
+setPersistence(auth, browserLocalPersistence)
+  .catch((error) => {
+    console.error("Firebase persistence error:", error);
+  });
 
 // Set up real-time balance updates with improved reliability
 const setupBalanceListener = (userId, callback) => {
@@ -127,26 +134,7 @@ const updateBettingSystemSettings = async (newSettings) => {
   }
 };
 
-// Initialize Firebase with error handling
-try {
-  app = initializeApp(firebaseConfig);
-  analytics = getAnalytics(app);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  
-  // Set persistence to local to maintain session across page reloads
-  if (auth) {
-    setPersistence(auth, browserLocalPersistence)
-      .catch((error) => {
-        console.error("Firebase persistence error:", error);
-      });
-  }
-} catch (error) {
-  console.error("Firebase initialization error:", error);
-  app = null;
-}
-
-// Export all variables after initialization
+// Export all variables and functions
 export { 
   app, 
   analytics, 

@@ -69,6 +69,7 @@ export function RegisterButton(props: any) {
     }
     
     try {
+      console.log("Attempting registration with email:", email);
       await register(email, password, username, referralCode);
       setOpen(false);
       toast({
@@ -77,8 +78,13 @@ export function RegisterButton(props: any) {
         variant: "default",
         className: "bg-green-600 text-white font-bold"
       });
-    } catch (error) {
-      // Error handled in register function
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Registration failed",
+        variant: "destructive"
+      });
     }
   };
 
@@ -111,8 +117,13 @@ export function RegisterButton(props: any) {
         className: "bg-green-600 text-white font-bold"
       });
       
-    } catch (error) {
-      // Error handled in phone functions
+    } catch (error: any) {
+      console.error("Phone registration error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Phone registration failed",
+        variant: "destructive"
+      });
     }
   };
 

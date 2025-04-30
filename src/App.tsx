@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { LanguageProvider } from "./context/LanguageContext";
+import { WelcomePopup } from "./components/WelcomePopup"; 
 import Index from "./pages/Index";
 import ImagesChanger from "./pages/ImagesChanger";
 import SpinGame from "./pages/SpinGame";
@@ -47,6 +48,7 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            <WelcomePopup />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/admin/images" element={<ImagesChanger />} />
