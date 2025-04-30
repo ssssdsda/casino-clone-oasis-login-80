@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Save, ArrowLeft, Percent, DollarSign, RefreshCw, Settings, AlertCircle, Save as SaveIcon } from 'lucide-react';
@@ -40,13 +39,10 @@ const SpinControl = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [autoAdjust, setAutoAdjust] = useState(true);
   
-  // Check if the current user is admin - fixed to check for username instead of role
+  // Check if the current user is admin - fixed to check for username instead of email
   React.useEffect(() => {
-    // Assume admin privileges for users with admin in their username or email
-    const isAdmin = user && (
-      user.username?.toLowerCase().includes('admin') || 
-      user.email?.toLowerCase().includes('admin')
-    );
+    // Assume admin privileges for users with admin in their username
+    const isAdmin = user && user.username?.toLowerCase().includes('admin');
     
     if (!isAuthenticated || !isAdmin) {
       toast({

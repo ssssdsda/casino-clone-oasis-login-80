@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Save, ArrowLeft, Percent, DollarSign, RefreshCw, Settings, AlertCircle } from 'lucide-react';
@@ -27,11 +26,8 @@ const MegaSpinControl = () => {
   
   // Check if the current user is admin
   React.useEffect(() => {
-    // Assume admin privileges for users with admin in their username or email
-    const isAdmin = user && (
-      user.username?.toLowerCase().includes('admin') || 
-      user.email?.toLowerCase().includes('admin')
-    );
+    // Assume admin privileges for users with admin in their username
+    const isAdmin = user && user.username?.toLowerCase().includes('admin');
     
     if (!isAuthenticated || !isAdmin) {
       toast({

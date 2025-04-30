@@ -6,7 +6,7 @@ import {
   onAuthStateChanged,
   sendEmailVerification
 } from 'firebase/auth';
-import { auth, db, setupBalanceListener, updateUserBalance as firebaseUpdateBalance } from '@/lib/firebase';
+import { db, setupBalanceListener, updateUserBalance as firebaseUpdateBalance } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';

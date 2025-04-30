@@ -1,7 +1,9 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, setDoc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -19,6 +21,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 // Set up real-time balance updates with improved reliability
 const setupBalanceListener = (userId, callback) => {
@@ -188,7 +191,8 @@ const updateBettingSystemSettings = async (newSettings) => {
 export { 
   app, 
   analytics, 
-  db, 
+  db,
+  auth, 
   setupBalanceListener,
   getUserByPhone,
   getBettingSystemSettings, 
