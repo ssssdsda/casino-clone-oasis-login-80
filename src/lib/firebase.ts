@@ -1,34 +1,24 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, onSnapshot, collection, setDoc, getDoc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, setDoc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDoLZlYqlNBgaSAEwKvJ3MX1VE-mnARxjk",
-  authDomain: "riskhaw-7eabf.firebaseapp.com",
-  databaseURL: "https://riskhaw-7eabf-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "riskhaw-7eabf",
-  storageBucket: "riskhaw-7eabf.firebasestorage.app",
-  messagingSenderId: "755847944149",
-  appId: "1:755847944149:web:d30cbddddf0f2040c88f5c",
-  measurementId: "G-77W1F0G8QV"
+  apiKey: "AIzaSyBeFcEoUHonLQ13yyhtFZvbNw9Qk91Tuz0",
+  authDomain: "jjjjj-95391.firebaseapp.com",
+  projectId: "jjjjj-95391",
+  storageBucket: "jjjjj-95391.firebasestorage.app",
+  messagingSenderId: "973934686350",
+  appId: "1:973934686350:web:904a9860d211b1736e59df",
+  measurementId: "G-3YPMC06R8N"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
-const auth = getAuth(app);
 const db = getFirestore(app);
-
-// Set persistence to local to maintain session across page reloads
-setPersistence(auth, browserLocalPersistence)
-  .catch((error) => {
-    console.error("Firebase persistence error:", error);
-  });
 
 // Set up real-time balance updates with improved reliability
 const setupBalanceListener = (userId, callback) => {
@@ -81,6 +71,27 @@ const setupBalanceListener = (userId, callback) => {
     return unsubscribe;
   } catch (error) {
     console.error("Balance listener setup error:", error);
+    return null;
+  }
+};
+
+// Function to get user profile by phone number
+const getUserByPhone = async (phoneNumber) => {
+  try {
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("phone", "==", phoneNumber));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const userDoc = querySnapshot.docs[0];
+      return {
+        id: userDoc.id,
+        ...userDoc.data()
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting user by phone:", error);
     return null;
   }
 };
@@ -177,9 +188,9 @@ const updateBettingSystemSettings = async (newSettings) => {
 export { 
   app, 
   analytics, 
-  auth, 
   db, 
-  setupBalanceListener, 
+  setupBalanceListener,
+  getUserByPhone,
   getBettingSystemSettings, 
   updateBettingSystemSettings,
   recordBet,

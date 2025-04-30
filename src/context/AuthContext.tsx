@@ -14,11 +14,9 @@ import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serv
 interface User {
   id: string;
   username: string;
-  email?: string;
-  phone?: string;
+  phone: string;
   balance: number;
   role?: string;
-  emailVerified?: boolean;
   phoneVerified?: boolean;
   referralCode?: string;
   referredBy?: string;
@@ -26,9 +24,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
   loginWithPhone: (phoneNumber: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, username: string, referralCode?: string) => Promise<void>;
   registerWithPhone: (phoneNumber: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -40,7 +36,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SESSION_TIMEOUT_MINUTES = 60;
-const EMAIL_SIGNUP_BONUS = 89;
 const PHONE_SIGNUP_BONUS = 82;
 const REFERRAL_BONUS = 119;
 const DEPOSIT_BONUS_AMOUNT = 500;
@@ -214,106 +209,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     console.log("AuthContext effect running");
-    if (!auth) {
-      console.error("Firebase auth not initialized");
-      setIsLoading(false);
-      return;
-    }
+    setIsLoading(true);
     
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("Auth state changed", !!firebaseUser);
-      if (firebaseUser && db) {
+    try {
+      // Check for stored user session
+      const storedUser = localStorage.getItem('casinoUser');
+      const storedAuthTime = localStorage.getItem('sessionStart');
+      
+      if (storedUser && storedAuthTime && isSessionValid()) {
         try {
-          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-          const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
-          const userRole = userDoc.exists() ? userDoc.data().role : undefined;
-          const phoneVerified = userDoc.exists() ? userDoc.data().phoneVerified : false;
-          const referralCode = userDoc.exists() ? userDoc.data().referralCode : firebaseUser.uid;
-          const referredBy = userDoc.exists() ? userDoc.data().referredBy : undefined;
-          
-          const userData = {
-            id: firebaseUser.uid,
-            username: userDoc.exists() ? userDoc.data().username : 'User',
-            email: firebaseUser.email || undefined,
-            phone: firebaseUser.phoneNumber || undefined,
-            balance: userBalance,
-            role: userRole,
-            emailVerified: firebaseUser.emailVerified,
-            phoneVerified: phoneVerified,
-            referralCode: referralCode,
-            referredBy: referredBy
-          };
-          
-          console.log("Setting authenticated user:", userData);
+          const userData = JSON.parse(storedUser);
           setUser(userData);
-          localStorage.setItem('casinoUser', JSON.stringify(userData));
+          console.log("Restored user from local storage:", userData.username);
           resetSessionTimeout();
           
-          // Set up real-time balance updates
-          setupUserBalanceListener(firebaseUser.uid);
-          
-          // Process referral bonus if not processed yet
-          if (userDoc.exists() && userDoc.data().referredBy && !userDoc.data().referralProcessed) {
-            console.log("User has unprocessed referral, processing now");
-            processReferralBonus(firebaseUser.uid);
+          if (userData.id) {
+            setupUserBalanceListener(userData.id);
           }
-        } catch (error) {
-          console.error("Error setting user data:", error);
-        }
-      } else {
-        const storedUser = localStorage.getItem('casinoUser');
-        const storedAuthTime = localStorage.getItem('sessionStart');
-        
-        if (storedUser && storedAuthTime && isSessionValid()) {
-          try {
-            const userData = JSON.parse(storedUser);
-            setUser(userData);
-            console.log("Restored user from local storage:", userData.username);
-            resetSessionTimeout();
-            
-            if (userData.id) {
-              setupUserBalanceListener(userData.id);
-            }
-          } catch (e) {
-            console.error("Error parsing stored user data:", e);
-            localStorage.removeItem('casinoUser');
-            localStorage.removeItem('sessionStart');
-            setUser(null);
-            
-            if (balanceListenerRef.current) {
-              balanceListenerRef.current();
-              balanceListenerRef.current = null;
-            }
-          }
-        } else {
-          setUser(null);
+        } catch (e) {
+          console.error("Error parsing stored user data:", e);
           localStorage.removeItem('casinoUser');
           localStorage.removeItem('sessionStart');
+          setUser(null);
           
           if (balanceListenerRef.current) {
             balanceListenerRef.current();
             balanceListenerRef.current = null;
           }
         }
-      }
-      setIsLoading(false);
-    });
-
-    const storedUser = localStorage.getItem('casinoUser');
-    if (storedUser && isSessionValid()) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        console.log("Initial session restore successful");
-        
-        if (userData.id) {
-          setupUserBalanceListener(userData.id);
-        }
-      } catch (error) {
-        console.error("Error restoring initial session:", error);
+      } else {
+        setUser(null);
         localStorage.removeItem('casinoUser');
         localStorage.removeItem('sessionStart');
+        
+        if (balanceListenerRef.current) {
+          balanceListenerRef.current();
+          balanceListenerRef.current = null;
+        }
       }
+    } catch (error) {
+      console.error("Error in auth initialization:", error);
+    } finally {
+      setIsLoading(false);
     }
     
     // Keep session alive based on user activity
@@ -324,7 +261,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     window.addEventListener('mousemove', resetOnActivity);
 
     return () => {
-      unsubscribe();
       window.removeEventListener('click', resetOnActivity);
       window.removeEventListener('keypress', resetOnActivity);
       window.removeEventListener('scroll', resetOnActivity);
@@ -335,151 +271,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
   }, []);
-
-  const register = async (email: string, password: string, username: string, referralCode?: string) => {
-    setIsLoading(true);
-    try {
-      if (!auth || !db) {
-        throw new Error("Firebase not initialized");
-      }
-      
-      const refCode = referralCode || extractReferralCode();
-      console.log("Register with referral code:", refCode);
-      
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      await sendEmailVerification(userCredential.user);
-      
-      const userData: any = {
-        username,
-        email,
-        balance: EMAIL_SIGNUP_BONUS,
-        createdAt: serverTimestamp(),
-        emailVerified: false,
-        phoneVerified: false,
-        referralCode: userCredential.user.uid
-      };
-      
-      if (refCode) {
-        userData.referredBy = refCode;
-        userData.referralProcessed = false;
-        
-        const referrerDoc = await getDoc(doc(db, "users", refCode));
-        if (referrerDoc.exists()) {
-          await updateDoc(doc(db, "users", refCode), {
-            referralCount: (referrerDoc.data().referralCount || 0) + 1,
-            lastUpdated: serverTimestamp()
-          });
-        }
-      }
-      
-      await setDoc(doc(db, "users", userCredential.user.uid), userData);
-      
-      const newUser = {
-        id: userCredential.user.uid,
-        username,
-        email,
-        balance: EMAIL_SIGNUP_BONUS,
-        emailVerified: false,
-        phoneVerified: false,
-        referralCode: userCredential.user.uid,
-        referredBy: refCode || undefined
-      };
-      
-      setUser(newUser);
-      localStorage.setItem('casinoUser', JSON.stringify(newUser));
-      resetSessionTimeout();
-      
-      // Set up real-time balance updates
-      setupUserBalanceListener(userCredential.user.uid);
-      
-      toast({
-        title: "Registration successful!",
-        description: "Please verify your email to complete registration. A verification link has been sent to your email address. You've received ৳89 as a signup bonus!",
-        variant: "default",
-        className: "bg-green-600 text-white"
-      });
-      
-      if (refCode) {
-        await processReferralBonus(userCredential.user.uid);
-      }
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      toast({
-        title: "Registration Failed",
-        description: error.message || "An unknown error occurred",
-        variant: "destructive"
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      if (!auth || !db) {
-        throw new Error("Firebase not initialized");
-      }
-      
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-      
-      if (!userDoc.exists()) {
-        // Create user document if it doesn't exist (should not happen in normal flow)
-        await setDoc(doc(db, "users", userCredential.user.uid), {
-          username: email.split('@')[0],
-          email: email,
-          balance: 0,
-          createdAt: serverTimestamp(),
-          emailVerified: userCredential.user.emailVerified,
-          phoneVerified: false,
-          referralCode: userCredential.user.uid
-        });
-      }
-      
-      const userBalance = userDoc.exists() ? (userDoc.data().balance || 0) : 0;
-      const phoneVerified = userDoc.exists() ? userDoc.data().phoneVerified : false;
-      
-      const userData = {
-        id: userCredential.user.uid,
-        username: userDoc.exists() ? userDoc.data().username : email.split('@')[0],
-        email: userCredential.user.email || undefined,
-        phone: userCredential.user.phoneNumber || undefined,
-        balance: userBalance,
-        emailVerified: userCredential.user.emailVerified,
-        phoneVerified: phoneVerified,
-        referralCode: userDoc.exists() ? userDoc.data().referralCode : userCredential.user.uid,
-        referredBy: userDoc.exists() ? userDoc.data().referredBy : undefined
-      };
-      
-      setUser(userData);
-      localStorage.setItem('casinoUser', JSON.stringify(userData));
-      resetSessionTimeout();
-      
-      // Set up real-time balance updates
-      setupUserBalanceListener(userCredential.user.uid);
-      
-      toast({
-        title: "Login Successful",
-        description: "Welcome back!",
-        variant: "default",
-        className: "bg-green-600 text-white"
-      });
-    } catch (error: any) {
-      console.error("Login error:", error);
-      toast({
-        title: "Login Failed",
-        description: error.message || "Invalid email or password",
-        variant: "destructive"
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const loginWithPhone = async (phoneNumber: string, password: string): Promise<boolean> => {
     setIsLoading(true);
@@ -520,7 +311,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         phone: phoneNumber,
         balance: userData.balance || 0,
         phoneVerified: true,
-        emailVerified: false,
+        role: userData.role,
         referralCode: userData.referralCode || userId,
         referredBy: userData.referredBy
       };
@@ -586,7 +377,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         balance: PHONE_SIGNUP_BONUS,
         createdAt: serverTimestamp(),
         phoneVerified: true,
-        emailVerified: false,
         referralCode: mockUserId
       };
       
@@ -613,7 +403,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         phone: phoneNumber,
         balance: PHONE_SIGNUP_BONUS,
         phoneVerified: true,
-        emailVerified: false,
         referralCode: mockUserId,
         referredBy: refCode || undefined
       };
@@ -718,43 +507,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = () => {
-    if (!auth) {
-      setUser(null);
-      localStorage.removeItem('casinoUser');
-      localStorage.removeItem('sessionStart');
-      return;
+    setUser(null);
+    localStorage.removeItem('casinoUser');
+    localStorage.removeItem('sessionStart');
+    
+    if (balanceListenerRef.current) {
+      balanceListenerRef.current();
+      balanceListenerRef.current = null;
     }
     
-    signOut(auth).then(() => {
-      setUser(null);
-      localStorage.removeItem('casinoUser');
-      localStorage.removeItem('sessionStart');
-      
-      if (balanceListenerRef.current) {
-        balanceListenerRef.current();
-        balanceListenerRef.current = null;
-      }
-      
-      toast({
-        title: "Logged Out",
-        description: "You have been logged out successfully",
-      });
-    }).catch((error) => {
-      console.error("Logout error:", error);
-      toast({
-        title: "Error",
-        description: "Logout failed",
-        variant: "destructive"
-      });
+    toast({
+      title: "Logged Out",
+      description: "You have been logged out successfully",
     });
   };
 
   return (
     <AuthContext.Provider value={{ 
       user, 
-      login,
       loginWithPhone,
-      register,
       registerWithPhone,
       logout, 
       isAuthenticated: !!user,

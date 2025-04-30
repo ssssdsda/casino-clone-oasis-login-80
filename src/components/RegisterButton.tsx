@@ -13,18 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone, User, Lock, Gift, Percent } from 'lucide-react';
+import { Phone, User, Lock, Gift, Percent } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export function RegisterButton(props: any) {
   const [open, setOpen] = useState(false);
-  const [registerMethod, setRegisterMethod] = useState<'email' | 'phone'>('phone');
-  
-  // Email register state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
   
   // Phone register state
   const [phoneNumber, setPhoneNumber] = useState('+880');
@@ -34,7 +27,7 @@ export function RegisterButton(props: any) {
   // Referral code
   const [referralCode, setReferralCode] = useState('');
   
-  const { register, registerWithPhone, isLoading } = useAuth();
+  const { registerWithPhone, isLoading } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
 
@@ -55,28 +48,6 @@ export function RegisterButton(props: any) {
       console.log(`Loaded referral code from URL: ${refCode}`);
     }
   }, []);
-
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password || !username) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      console.log("Attempting registration with email:", email);
-      await register(email, password, username, referralCode);
-      setOpen(false);
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      // Errors are handled in the register function
-    }
-  };
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,9 +79,6 @@ export function RegisterButton(props: any) {
   };
 
   const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setUsername('');
     setPhoneNumber('+880');
     setPhonePassword('');
     setPhoneUsername('');
@@ -161,123 +129,55 @@ export function RegisterButton(props: any) {
             </div>
           )}
           
-          <Tabs defaultValue="phone" value={registerMethod} onValueChange={(v) => setRegisterMethod(v as 'email' | 'phone')}>
-            <TabsList className="grid grid-cols-2 mb-4">
-              <TabsTrigger value="email" className="flex items-center gap-1">
-                <Mail className="h-4 w-4" />
-                <span className="text-white">{t('email')}</span>
-              </TabsTrigger>
-              <TabsTrigger value="phone" className="flex items-center gap-1">
-                <Phone className="h-4 w-4" />
-                <span className="text-white">{t('phone')}</span>
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="email">
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-username" className="text-white flex items-center gap-2">
-                    <User className="h-4 w-4" /> {t('username')}
-                  </Label>
-                  <Input 
-                    id="email-username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="bg-casino-dark border-gray-700 text-white"
-                    placeholder="Enter your username"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-email" className="text-white flex items-center gap-2">
-                    <Mail className="h-4 w-4" /> {t('email')}
-                  </Label>
-                  <Input 
-                    id="register-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="bg-casino-dark border-gray-700 text-white"
-                    placeholder="Your email address"
-                  />
-                  <p className="text-xs text-blue-400">A verification link will be sent to this email.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-password" className="text-white flex items-center gap-2">
-                    <Lock className="h-4 w-4" /> {t('password')}
-                  </Label>
-                  <Input
-                    id="register-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="bg-casino-dark border-gray-700 text-white"
-                    placeholder="Your password"
-                  />
-                </div>
-                <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
-                  <Button 
-                    type="submit" 
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Processing...' : t('register')}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="phone">
-              <form onSubmit={handlePhoneSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone-username" className="text-white flex items-center gap-2">
-                    <User className="h-4 w-4" /> {t('username')}
-                  </Label>
-                  <Input 
-                    id="phone-username"
-                    value={phoneUsername}
-                    onChange={(e) => setPhoneUsername(e.target.value)}
-                    className="bg-casino-dark border-gray-700 text-white"
-                    placeholder="Enter your username"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-phone" className="text-white flex items-center gap-2">
-                    <Phone className="h-4 w-4" /> {t('phone')}
-                  </Label>
-                  <Input 
-                    id="register-phone"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="bg-casino-dark border-gray-700 text-white"
-                    placeholder="+8801XXXXXXXXX"
-                  />
-                  <p className="text-xs text-blue-400">Bangladesh number (+880)</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-phone-password" className="text-white flex items-center gap-2">
-                    <Lock className="h-4 w-4" /> {t('password')}
-                  </Label>
-                  <Input
-                    id="register-phone-password"
-                    type="password"
-                    value={phonePassword}
-                    onChange={(e) => setPhonePassword(e.target.value)}
-                    className="bg-casino-dark border-gray-700 text-white"
-                    placeholder="Your password"
-                  />
-                </div>
-                <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
-                  <Button 
-                    type="submit" 
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Processing...' : 'Register Now'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </TabsContent>
-          </Tabs>
+          <form onSubmit={handlePhoneSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone-username" className="text-white flex items-center gap-2">
+                <User className="h-4 w-4" /> {t('username')}
+              </Label>
+              <Input 
+                id="phone-username"
+                value={phoneUsername}
+                onChange={(e) => setPhoneUsername(e.target.value)}
+                className="bg-casino-dark border-gray-700 text-white"
+                placeholder="Enter your username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="register-phone" className="text-white flex items-center gap-2">
+                <Phone className="h-4 w-4" /> {t('phone')}
+              </Label>
+              <Input 
+                id="register-phone"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="bg-casino-dark border-gray-700 text-white"
+                placeholder="+8801XXXXXXXXX"
+              />
+              <p className="text-xs text-blue-400">Bangladesh number (+880)</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="register-phone-password" className="text-white flex items-center gap-2">
+                <Lock className="h-4 w-4" /> {t('password')}
+              </Label>
+              <Input
+                id="register-phone-password"
+                type="password"
+                value={phonePassword}
+                onChange={(e) => setPhonePassword(e.target.value)}
+                className="bg-casino-dark border-gray-700 text-white"
+                placeholder="Your password"
+              />
+            </div>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button 
+                type="submit" 
+                className="bg-green-600 hover:bg-green-700 text-white font-bold w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Processing...' : 'Register Now'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>
