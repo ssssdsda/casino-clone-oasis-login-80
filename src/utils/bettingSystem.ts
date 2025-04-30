@@ -4,7 +4,7 @@
  * Controls winning odds for casino games to ensure specific win patterns
  */
 
-import { db, getBettingSystemSettings } from '@/lib/firebase';
+import { db, getBettingSystemSettings, recordBet, updateUserBalance } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 // Store user session data to track bets across sessions
@@ -68,15 +68,16 @@ export const shouldBetWin = async (userId: string, betAmount = 10): Promise<bool
     
     // Get patterns from Firebase settings
     const settings = await getSettings();
-    userBetPatterns[userId] = settings.winPatterns?.aviator || 
-      [1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0];
+    const gameType = 'superAce'; // Default to superAce pattern if game type not specified
+    userBetPatterns[userId] = settings.winPatterns?.[gameType] || 
+      [1, 0, 1, 0, 1, 0, 1, 0, 0, 0];
   }
   
   // Increment bet count
   userBetCounts[userId]++;
   const betCount = userBetCounts[userId];
   
-  // For larger bets (>200), never win
+  // For larger bets (>200), make wins less likely
   if (betAmount > 200) {
     console.log(`Bet ${betCount} - Large bet amount (${betAmount}), forced loss`);
     return false;
@@ -95,25 +96,124 @@ export const shouldBetWin = async (userId: string, betAmount = 10): Promise<bool
   const shouldWin = userBetPatterns[userId][patternPosition] === 1;
   
   console.log(`Bet ${betCount} - Pattern position ${patternPosition}: ${shouldWin ? 'Win' : 'Loss'}`);
+  
+  // Record this bet in history for data analysis
+  betHistory.push({
+    userId,
+    didWin: shouldWin,
+    timestamp: Date.now()
+  });
+  
   return shouldWin;
 };
 
 /**
- * Calculates a winning amount that's capped at 100
+ * Calculates a winning amount based on configured settings
  * @param betAmount The original bet amount
  * @param multiplier The game's standard multiplier
- * @returns A winning amount capped at 100
+ * @returns A winning amount based on settings
  */
-export const calculateWinAmount = (betAmount: number, multiplier: number): number => {
+export const calculateWinAmount = async (betAmount: number, multiplier: number): Promise<number> => {
+  // Get latest settings
+  const settings = await getSettings();
+  
   // Calculate the standard win amount
   let winAmount = betAmount * multiplier;
   
-  // Cap the win amount at 100
-  if (winAmount > 100) {
-    winAmount = 100;
+  // Apply maximum win cap if defined in settings
+  const maxWin = settings.maxWin || 100;
+  if (winAmount > maxWin) {
+    winAmount = maxWin;
   }
   
   return Math.floor(winAmount);
+};
+
+/**
+ * Handles a bet using the Firebase system
+ * @param userId The user ID
+ * @param gameType The type of game being played
+ * @param betAmount The bet amount
+ * @param currentBalance The user's current balance
+ */
+export const placeBet = async (
+  userId: string,
+  gameType: string,
+  betAmount: number,
+  currentBalance: number
+): Promise<{
+  shouldWin: boolean;
+  newBalance: number;
+}> => {
+  // Check if bet amount is within limits
+  const settings = await getSettings();
+  const minBet = settings.minBet || 10;
+  const maxBet = settings.maxBet || 1000;
+  
+  if (betAmount < minBet || betAmount > maxBet) {
+    throw new Error(`Bet amount must be between ${minBet} and ${maxBet}`);
+  }
+  
+  // Check if user has enough balance
+  if (currentBalance < betAmount) {
+    throw new Error("Insufficient balance");
+  }
+  
+  // Deduct bet amount from balance
+  const newBalance = currentBalance - betAmount;
+  await updateUserBalance(userId, newBalance);
+  
+  // Determine if the bet should win
+  const shouldWin = await shouldBetWin(userId, betAmount);
+  
+  // Record the bet
+  await recordBet(userId, gameType, betAmount, 0, {
+    shouldWin,
+    timestamp: Date.now()
+  });
+  
+  return {
+    shouldWin,
+    newBalance
+  };
+};
+
+/**
+ * Completes a bet by awarding winnings if applicable
+ * @param userId The user ID
+ * @param gameType The type of game being played
+ * @param betAmount The original bet amount
+ * @param winAmount The win amount (0 if no win)
+ * @param currentBalance The user's current balance after the bet was placed
+ */
+export const completeBet = async (
+  userId: string,
+  gameType: string,
+  betAmount: number,
+  winAmount: number,
+  currentBalance: number
+): Promise<number> => {
+  if (winAmount > 0) {
+    // Add win amount to balance
+    const newBalance = currentBalance + winAmount;
+    await updateUserBalance(userId, newBalance);
+    
+    // Update the bet record
+    await recordBet(userId, gameType, betAmount, winAmount, {
+      isWin: true,
+      timestamp: Date.now()
+    });
+    
+    return newBalance;
+  }
+  
+  // For losses, just record the completed bet
+  await recordBet(userId, gameType, betAmount, 0, {
+    isWin: false,
+    timestamp: Date.now()
+  });
+  
+  return currentBalance;
 };
 
 /**
@@ -147,4 +247,4 @@ export const trackReferral = async (referrerId: string, referredId: string): Pro
   }
 };
 
-export { refreshSettings, getSettings };
+export { refreshSettings, getSettings, placeBet, completeBet };

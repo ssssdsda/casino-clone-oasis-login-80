@@ -39,7 +39,7 @@ const SpinControl = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [autoAdjust, setAutoAdjust] = useState(true);
   
-  // Check if the current user is admin - fixed to check for username instead of email
+  // Check if the current user is admin - using username instead of email
   React.useEffect(() => {
     // Assume admin privileges for users with admin in their username
     const isAdmin = user && user.username?.toLowerCase().includes('admin');

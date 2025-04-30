@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -9,10 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, RotateCw, Plus, Minus, RefreshCw, Heart, Target, Crown } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
-import app from '@/lib/firebase';
-
-const firestore = getFirestore(app);
+import { db, getBettingSystemSettings, recordBet, updateUserBalance, shouldBetWin } from '@/lib/firebase';
 
 // Card suits and values
 const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
@@ -189,7 +186,7 @@ const PHASES = {
 const SuperAce = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, updateUserBalance: authUpdateBalance } = useAuth();
   
   const [deck, setDeck] = useState([]);
   const [displayedCards, setDisplayedCards] = useState([]);
@@ -200,14 +197,41 @@ const SuperAce = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [winAmount, setWinAmount] = useState(0);
   const [feature, setFeature] = useState(1); // Feature multiplier
+  const [minBet, setMinBet] = useState(10);
+  const [maxBet, setMaxBet] = useState(500);
+  const [gameSettings, setGameSettings] = useState(null);
   
-  // Initialize game
+  // Initialize game and load settings
   useEffect(() => {
-    setTimeout(() => {
+    const loadSettingsAndInitialize = async () => {
+      try {
+        // Load betting system settings from Firebase
+        const settings = await getBettingSystemSettings();
+        if (settings) {
+          setGameSettings(settings);
+          setMinBet(settings.minBet || 10);
+          setMaxBet(settings.maxBet || 500);
+          
+          // Set initial bet to min bet or 50, whichever is higher
+          setBet(Math.max(settings.minBet || 10, 50));
+        }
+      } catch (error) {
+        console.error("Error loading game settings:", error);
+      }
+      
       initializeGame();
       setIsLoading(false);
-    }, 1500);
+    };
+    
+    loadSettingsAndInitialize();
   }, []);
+  
+  // Update balance when user changes
+  useEffect(() => {
+    if (user) {
+      setBalance(user.balance || 0);
+    }
+  }, [user?.balance]);
   
   // Initialize or reset the game
   const initializeGame = () => {
@@ -242,6 +266,15 @@ const SuperAce = () => {
   
   // Deal cards
   const startGame = async () => {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to play",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (balance < bet) {
       toast({
         title: "Insufficient Balance",
@@ -251,27 +284,40 @@ const SuperAce = () => {
       return;
     }
     
-    setBalance(prev => prev - bet);
+    // Deduct bet from balance
+    const newBalance = balance - bet;
+    setBalance(newBalance);
+    
+    // Update balance in Firebase
+    try {
+      await updateUserBalance(user.id, newBalance);
+      
+      // Also update in auth context
+      authUpdateBalance(newBalance);
+    } catch (error) {
+      console.error("Error updating balance:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update balance",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setGamePhase(PHASES.DEALING);
     
-    // Save bet to Firebase
+    // Record bet in Firebase
     try {
-      await addDoc(collection(firestore, "bets"), {
-        userId: user?.id || "anonymous",
-        betAmount: bet,
-        game: "SuperAce",
-        timestamp: serverTimestamp(),
-        userBalance: balance - bet
-      });
+      await recordBet(user.id, "SuperAce", bet, 0, { feature });
     } catch (error) {
-      console.error("Error saving bet: ", error);
+      console.error("Error recording bet:", error);
     }
     
     // Deal random cards
     const newDeck = [...deck];
     const drawnCards = [];
     
-    // Draw 16 cards for the 4x4 grid (changed from 25 for 5x5)
+    // Draw 16 cards for the 4x4 grid
     for (let i = 0; i < 16; i++) {
       if (newDeck.length > 0) {
         drawnCards.push(newDeck.pop());
@@ -279,7 +325,7 @@ const SuperAce = () => {
     }
     
     // Add special positions (targets)
-    for (const pos of [5, 10]) { // Changed positions for 4x4 grid
+    for (const pos of [5, 10]) {
       if (drawnCards[pos]) {
         drawnCards[pos].isTarget = true;
       }
@@ -288,9 +334,13 @@ const SuperAce = () => {
     // Display cards with animation
     setDisplayedCards(drawnCards);
     
+    // Use shouldBetWin to determine if this bet should win
+    const shouldWin = await shouldBetWin(user.id, bet);
+    
     // Check for win
     setTimeout(() => {
-      const win = calculateWin(drawnCards);
+      // Calculate win based on the shouldWin result
+      const win = shouldWin ? calculateWin(drawnCards) : 0;
       handleGameResult(win);
     }, 1500);
   };
@@ -333,12 +383,31 @@ const SuperAce = () => {
   };
   
   // Handle game result
-  const handleGameResult = (win) => {
+  const handleGameResult = async (win) => {
     setGamePhase(PHASES.RESULT);
     setWinAmount(win);
     
     if (win > 0) {
-      setBalance(prev => prev + win);
+      const finalBalance = balance + win;
+      setBalance(finalBalance);
+      
+      // Update balance in Firebase and record the winning bet
+      if (user) {
+        try {
+          await updateUserBalance(user.id, finalBalance);
+          
+          // Also update in auth context
+          authUpdateBalance(finalBalance);
+          
+          // Record the winning bet
+          await recordBet(user.id, "SuperAce", bet, win, {
+            feature,
+            isWin: true
+          });
+        } catch (error) {
+          console.error("Error updating balance after win:", error);
+        }
+      }
       
       // Determine result message based on win amount
       let resultType = 'WIN';
@@ -359,6 +428,18 @@ const SuperAce = () => {
     } else {
       setResult('LOSE');
       
+      // Record the losing bet if user is logged in
+      if (user) {
+        try {
+          await recordBet(user.id, "SuperAce", bet, 0, {
+            feature,
+            isWin: false
+          });
+        } catch (error) {
+          console.error("Error recording losing bet:", error);
+        }
+      }
+      
       toast({
         title: "No Win",
         description: "Try again!",
@@ -374,7 +455,7 @@ const SuperAce = () => {
   
   // Change bet amount
   const changeBet = (amount) => {
-    const newBet = Math.max(10, Math.min(500, bet + amount));
+    const newBet = Math.max(minBet, Math.min(maxBet, bet + amount));
     setBet(newBet);
   };
   
@@ -543,6 +624,7 @@ const SuperAce = () => {
               variant="ghost"
               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
               onClick={() => changeBet(-10)}
+              disabled={gamePhase !== PHASES.BETTING || bet <= minBet}
             >
               <Minus className="h-5 w-5" />
             </Button>
@@ -550,7 +632,7 @@ const SuperAce = () => {
             {gamePhase === PHASES.BETTING && (
               <Button
                 onClick={startGame}
-                disabled={isLoading || balance < bet}
+                disabled={isLoading || !user || balance < bet}
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-full h-16 w-16 flex items-center justify-center p-0"
               >
                 <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full h-14 w-14 flex items-center justify-center">
@@ -573,6 +655,7 @@ const SuperAce = () => {
               variant="ghost"
               className="bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-full h-10 w-10 flex items-center justify-center p-0"
               onClick={() => changeBet(10)}
+              disabled={gamePhase !== PHASES.BETTING || bet >= maxBet}
             >
               <Plus className="h-5 w-5" />
             </Button>
