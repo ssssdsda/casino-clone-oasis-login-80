@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -232,7 +231,7 @@ const SuperAceCasinoGame = () => {
       
       // Determine if the player should win based on bet count
       // First 2 bets always win, all subsequent bets have controlled odds
-      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.id || 'anonymous', gameState.bet);
+      const shouldWin = newBetCount <= 2 || shouldBetWin(user?.id || 'anonymous', 'superAce', gameState.bet);
       
       // Calculate win amount
       let totalWin = 0;
