@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -9,7 +10,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { shouldBetWin, calculateWinAmount } from '@/utils/bettingSystem';
+import { shouldGameBetWin } from '@/lib/firebase'; // Changed to use shouldGameBetWin from firebase
 import { 
   ElementSymbol,
   ElementGrid,
@@ -66,6 +67,7 @@ const SuperElementGame = () => {
   const [showRules, setShowRules] = useState(false);
   const [autoSpin, setAutoSpin] = useState(false);
   const [extraBet, setExtraBet] = useState(false);
+  const [betCount, setBetCount] = useState(0); // Track bet count for pattern
   
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const winSound = useRef<HTMLAudioElement | null>(null);
@@ -123,7 +125,7 @@ const SuperElementGame = () => {
     setExtraBet(!extraBet);
   };
   
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (spinning) return;
     
     if (!user) {
@@ -150,6 +152,9 @@ const SuperElementGame = () => {
     setWinAmount(0);
     setWinningLines([]);
     
+    // Increment bet count for tracking pattern
+    setBetCount(prev => prev + 1);
+    
     // Play spin sound
     if (spinSound.current) {
       spinSound.current.currentTime = 0;
@@ -175,11 +180,14 @@ const SuperElementGame = () => {
       setGrid(randomGrid);
     }, 100);
     
-    // Determine spin result
-    setTimeout(() => {
+    // Determine spin result using Firebase betting system
+    setTimeout(async () => {
       clearInterval(spinInterval);
       
-      const shouldWin = shouldBetWin(user?.id || 'anonymous');
+      // Use Firebase shouldGameBetWin to determine outcome
+      const shouldWin = await shouldGameBetWin(user.id || 'anonymous', 'superElement', actualBet);
+      console.log(`SuperElement bet: ${shouldWin ? 'Win' : 'Lose'}, Bet amount: ${actualBet}`);
+      
       let finalGrid;
       
       if (shouldWin) {
@@ -199,7 +207,7 @@ const SuperElementGame = () => {
       if (wins > 0) {
         // Calculate win multiplier based on number of winning lines and symbol values
         const baseWin = wins * actualBet;
-        // Cap win at 100x bet
+        // Cap win at 100x bet based on Firebase max win setting
         const maxWin = 100 * actualBet;
         const finalWin = Math.min(baseWin, maxWin);
         

@@ -46,6 +46,7 @@ const FruityBonanzaGame: React.FC = () => {
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [winAmount, setWinAmount] = useState<number>(0);
   const [reels, setReels] = useState<number[][]>([]);
+  const [betCount, setBetCount] = useState<number>(0); // Track number of bets
   const [jackpots, setJackpots] = useState<Jackpot[]>([
     { type: 'GRAND', amount: 2000.00, color: 'bg-red-600' },
     { type: 'MAJOR', amount: 50.00, color: 'bg-pink-500' },
@@ -118,6 +119,9 @@ const FruityBonanzaGame: React.FC = () => {
       return;
     }
     
+    // Increment bet count
+    setBetCount(prev => prev + 1);
+    
     // Deduct bet amount
     const newBalance = balance - betAmount;
     setBalance(newBalance);
@@ -140,48 +144,49 @@ const FruityBonanzaGame: React.FC = () => {
       // Generate new symbols for each position
       generateReels();
       
-      // Calculate win based on updated betting pattern
-      await calculateWin();
+      // Calculate win based on improved Firebase betting system
+      try {
+        // Use the Firebase function with proper parameters (userId, gameType, betAmount)
+        const shouldWin = await shouldGameBetWin(user?.id || 'anonymous', 'fruityBonanza', betAmount);
+        console.log(`FruityBonanza bet: ${shouldWin ? 'Win' : 'Lose'}, Bet amount: ${betAmount}`);
+      
+        if (shouldWin) {
+          // Random win amount between 1x and 10x bet
+          const multiplier = Math.random() * 9 + 1;
+          const win = Math.round(betAmount * multiplier * 100) / 100;
+          
+          // Update balance
+          const winningBalance = newBalance + win;
+          setBalance(winningBalance);
+          if (user) {
+            updateUserBalance(winningBalance);
+          }
+          
+          // Update win amount
+          setWinAmount(win);
+          
+          // Play win sound
+          if (winSound.current) {
+            winSound.current.currentTime = 0;
+            winSound.current.play().catch(e => console.error("Error playing sound:", e));
+          }
+          
+          // Show win toast
+          toast({
+            title: "You Won!",
+            description: `${win.toFixed(2)} coins`,
+            variant: "default",
+            className: "bg-green-500 text-white font-bold"
+          });
+        } else {
+          setWinAmount(0);
+        }
+      } catch (error) {
+        console.error("Error calculating win:", error);
+      }
       
       setIsSpinning(false);
     }, 2000);
-  };
-  
-  const calculateWin = async () => {
-    // Use the improved betting system with Firebase integration
-    const shouldWin = await shouldGameBetWin(user?.id || 'anonymous', 'fruityBonanza', betAmount);
-    
-    if (shouldWin) {
-      // Random win amount between 1x and 10x bet
-      const multiplier = Math.random() * 9 + 1;
-      const win = Math.round(betAmount * multiplier * 100) / 100;
-      
-      // Update balance
-      const newBalance = balance + win;
-      setBalance(newBalance);
-      if (user) {
-        updateUserBalance(newBalance);
-      }
-      
-      // Update win amount
-      setWinAmount(win);
-      
-      // Play win sound
-      if (winSound.current) {
-        winSound.current.currentTime = 0;
-        winSound.current.play().catch(e => console.error("Error playing sound:", e));
-      }
-      
-      // Show win toast
-      toast({
-        title: "You Won!",
-        description: `${win.toFixed(2)} coins`,
-        variant: "default",
-        className: "bg-green-500 text-white font-bold"
-      });
-    } else {
-      setWinAmount(0);
-    }
   };
   
   const changeBetAmount = (amount: number) => {

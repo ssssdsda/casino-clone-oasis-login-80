@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Minus, Plus, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { shouldBetWin } from '@/utils/bettingSystem';
+import { shouldGameBetWin } from '@/lib/firebase'; // Changed to use shouldGameBetWin from firebase
 
 const AviatorGame = () => {
   const { user, updateUserBalance } = useAuth();
@@ -55,7 +56,7 @@ const AviatorGame = () => {
     navigate('/game/aviator-control');
   };
 
-  const startGame = () => {
+  const startGame = async () => {
     if (!user) {
       toast({
         title: "Error",
@@ -93,31 +94,40 @@ const AviatorGame = () => {
       
       takeoffSound.current.play().catch(e => console.log("Audio play error:", e));
 
-      const shouldWinThisBet = shouldBetWin(user?.id || 'anonymous');
+      // Use Firebase betting system to determine outcome
+      const checkWin = async () => {
+        // Use shouldGameBetWin with the game type parameter
+        return await shouldGameBetWin(user?.id || 'anonymous', 'aviator', betAmount);
+      };
       
-      const maxMultiplier = shouldWinThisBet 
-        ? (betAmount > 50 ? 1.5 : 2 + Math.random() * 3)
-        : 1 + Math.random();
+      checkWin().then(shouldWinThisBet => {
+        console.log(`Aviator bet: ${shouldWinThisBet ? 'Win' : 'Lose'}, Bet amount: ${betAmount}`);
+        
+        // Set max multiplier based on whether it should win and bet amount
+        const maxMultiplier = shouldWinThisBet 
+          ? (betAmount > 50 ? 1.5 : 2 + Math.random() * 3)
+          : 1 + Math.random();
 
-      animationRef.current = setInterval(() => {
-        setMultiplier(prev => {
-          const increment = prev < 1.5 ? 0.01 : (prev < 5 ? 0.03 : 0.1);
-          const newMultiplier = +(prev + increment).toFixed(2);
-          
-          setCurrentWin(betAmount * newMultiplier);
-          
-          if (autoCashout && newMultiplier >= autoCashoutMultiplier) {
-            cashOut();
-          }
-          
-          if (newMultiplier >= maxMultiplier) {
-            gameCrash();
-            return maxMultiplier;
-          }
-          
-          return newMultiplier;
-        });
-      }, 100);
+        animationRef.current = setInterval(() => {
+          setMultiplier(prev => {
+            const increment = prev < 1.5 ? 0.01 : (prev < 5 ? 0.03 : 0.1);
+            const newMultiplier = +(prev + increment).toFixed(2);
+            
+            setCurrentWin(betAmount * newMultiplier);
+            
+            if (autoCashout && newMultiplier >= autoCashoutMultiplier) {
+              cashOut();
+            }
+            
+            if (newMultiplier >= maxMultiplier) {
+              gameCrash();
+              return maxMultiplier;
+            }
+            
+            return newMultiplier;
+          });
+        }, 100);
+      });
     }, 300);
   };
 

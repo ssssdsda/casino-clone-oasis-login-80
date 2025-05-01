@@ -3,7 +3,6 @@ import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, setDoc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { shouldBetWin } from "@/utils/bettingSystem";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -124,6 +123,7 @@ const getBettingSystemSettings = async () => {
           megaSpin: [1, 0, 0, 0, 1, 0, 0, 1, 0],
           fortuneGems: [1, 0, 0, 0, 0, 1, 0, 0, 0],
           coins: [1, 0, 0, 0, 0, 0, 1, 0, 0],
+          superElement: [1, 0, 0, 0, 1, 0, 0, 1, 0], // Added win pattern for Super Element
         },
         winRatios: {
           aviator: 0.25, // 25% win rate
@@ -133,7 +133,8 @@ const getBettingSystemSettings = async () => {
           fruityBonanza: 0.2, // 20% win rate
           megaSpin: 0.3, // 30% win rate
           fortuneGems: 0.2, // 20% win rate
-          coins: 0.2 // 20% win rate
+          coins: 0.2, // 20% win rate
+          superElement: 0.25, // Added win ratio for Super Element
         },
         referralBonus: 119,
         depositBonusThreshold: 500,
@@ -269,6 +270,25 @@ const getGameWinRatio = async (gameType) => {
     console.error(`Error getting win ratio for ${gameType}:`, error);
     // Return a default win ratio
     return 0.25;
+  }
+};
+
+/**
+ * Determines if a bet should win based on the specified pattern
+ * 
+ * @param userId The ID of the user placing the bet
+ * @param gameType The type of game being played
+ * @param betAmount The bet amount placed by the user
+ * @returns Whether this bet should win
+ */
+const shouldBetWin = async (userId: string, gameType = 'superAce', betAmount = 10): Promise<boolean> => {
+  try {
+    // Use the shouldGameBetWin function for consistency across all games
+    return await shouldGameBetWin(userId, gameType, betAmount);
+  } catch (error) {
+    console.error("Error determining win:", error);
+    // Default to a loss if there's an error
+    return false;
   }
 };
 
