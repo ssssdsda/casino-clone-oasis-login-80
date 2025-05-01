@@ -11,85 +11,107 @@ import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
 import { doc, getDoc, collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
+import { generateUniqueReferralCode } from '@/lib/firebase';
 
 const ReferralProgram = () => {
   const { user } = useAuth();
   const [referralLink, setReferralLink] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [referralStats, setReferralStats] = useState({
     totalReferrals: 0,
     pendingRewards: 0,
     totalEarned: 0,
   });
+  const [isGenerating, setIsGenerating] = useState(false);
   const isMobile = useIsMobile();
   const { t } = useLanguage();
   const db = getFirestore();
 
   useEffect(() => {
-    // Generate referral link based on user ID
-    if (user) {
-      const baseUrl = window.location.origin;
-      // Use the register route for a more standard referral flow
-      const fullReferralLink = `${baseUrl}/register?ref=${user.id}`;
-      setReferralLink(fullReferralLink);
-      console.log("Generated referral link:", fullReferralLink);
-      
-      // Try to open the URL in an invisible iframe to preload it
-      try {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = fullReferralLink;
-        document.body.appendChild(iframe);
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-      } catch (error) {
-        console.error("Failed to preload referral URL:", error);
-      }
-      
-      // Fetch real referral stats from Firebase
-      const fetchReferralStats = async () => {
+    const setupReferralSystem = async () => {
+      if (user && user.id) {
         try {
-          // Get referrals where this user is the referrer
-          const referralsRef = collection(db, "referrals");
-          const q = query(referralsRef, where("referrer", "==", user.id));
-          const querySnapshot = await getDocs(q);
+          // First get user details to check if they have a referral code
+          const userRef = doc(db, "users", user.id);
+          const userDoc = await getDoc(userRef);
           
-          // Calculate stats
-          let totalRefs = 0;
-          let totalEarned = 0;
-          
-          querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            totalRefs++;
-            if (data.bonusPaid) {
-              totalEarned += data.bonusPaid;
+          let code = '';
+          if (userDoc.exists() && userDoc.data().referralCode) {
+            // User already has a referral code
+            code = userDoc.data().referralCode;
+            setReferralCode(code);
+          } else {
+            // Generate a new referral code for the user
+            setIsGenerating(true);
+            try {
+              code = await generateUniqueReferralCode(user.id);
+              setReferralCode(code);
+            } catch (error) {
+              console.error("Error generating referral code:", error);
+            } finally {
+              setIsGenerating(false);
             }
-          });
+          }
           
-          // Get pending referrals (users referred but haven't made a deposit yet)
-          const usersRef = collection(db, "users");
-          const pendingQuery = query(usersRef, where("referredBy", "==", user.id), where("referralProcessed", "==", false));
-          const pendingSnapshot = await getDocs(pendingQuery);
+          // Generate the full referral link
+          if (code) {
+            const baseUrl = window.location.origin;
+            // Use the register route with the ref parameter
+            const fullReferralLink = `${baseUrl}/register?ref=${code}`;
+            setReferralLink(fullReferralLink);
+          }
           
-          setReferralStats({
-            totalReferrals: totalRefs,
-            pendingRewards: pendingSnapshot.size,
-            totalEarned: totalEarned
-          });
+          // Fetch referral stats
+          fetchReferralStats(user.id);
         } catch (error) {
-          console.error("Error fetching referral stats:", error);
-          // Fallback to zeros if there's an error
-          setReferralStats({
-            totalReferrals: 0,
-            pendingRewards: 0,
-            totalEarned: 0,
-          });
+          console.error("Error setting up referral system:", error);
         }
-      };
-      
-      fetchReferralStats();
-    }
+      }
+    };
+    
+    setupReferralSystem();
   }, [user, db]);
+
+  const fetchReferralStats = async (userId: string) => {
+    try {
+      // Get referrals where this user is the referrer
+      const referralsRef = collection(db, "referrals");
+      const q = query(referralsRef, where("referrer", "==", userId));
+      const querySnapshot = await getDocs(q);
+      
+      // Calculate stats
+      let totalRefs = 0;
+      let totalEarned = 0;
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        totalRefs++;
+        if (data.bonusPaid) {
+          totalEarned += data.bonusAmount || 119;
+        }
+      });
+      
+      // Get pending referrals (users referred but haven't had bonus processed yet)
+      const pendingQuery = query(referralsRef, 
+                                where("referrer", "==", userId), 
+                                where("bonusPaid", "==", false));
+      const pendingSnapshot = await getDocs(pendingQuery);
+      
+      setReferralStats({
+        totalReferrals: totalRefs,
+        pendingRewards: pendingSnapshot.size,
+        totalEarned: totalEarned
+      });
+    } catch (error) {
+      console.error("Error fetching referral stats:", error);
+      // Fallback to zeros if there's an error
+      setReferralStats({
+        totalReferrals: 0,
+        pendingRewards: 0,
+        totalEarned: 0,
+      });
+    }
+  };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink).then(() => {
@@ -137,7 +159,7 @@ const ReferralProgram = () => {
               <CardDescription className="text-white">Login to access your personal referral link</CardDescription>
             </CardHeader>
             <CardFooter>
-              <Button className="w-full">Login to Continue</Button>
+              <Button className="w-full" onClick={() => navigate('/login')}>Login to Continue</Button>
             </CardFooter>
           </Card>
         </div>
@@ -163,65 +185,94 @@ const ReferralProgram = () => {
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-6 text-white">
-                <div>
-                  <p className="text-sm font-medium mb-1.5 text-white">Your Referral Link:</p>
-                  <div className="flex">
-                    <Input 
-                      value={referralLink}
-                      readOnly
-                      className="rounded-r-none bg-gray-800 text-white border-gray-700"
-                    />
-                    <Button
-                      onClick={copyToClipboard}
-                      className="rounded-l-none"
-                      variant="secondary"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                {isGenerating ? (
+                  <div className="flex justify-center items-center py-6">
+                    <div className="w-8 h-8 border-4 border-t-green-500 border-green-200 rounded-full animate-spin"></div>
+                    <span className="ml-3">Generating your referral code...</span>
                   </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button 
-                    onClick={copyToClipboard} 
-                    className="flex-1 bg-purple-700 hover:bg-purple-800"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy Link
-                  </Button>
-                  <Button 
-                    onClick={shareReferralLink} 
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                  >
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share Link
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-                  <Card className="bg-purple-900/20 border-purple-800">
-                    <CardContent className="p-4 flex flex-col items-center justify-center">
-                      <Users className="h-8 w-8 mb-2 text-purple-500" />
-                      <div className="text-2xl font-bold text-white">{referralStats.totalReferrals}</div>
-                      <div className="text-sm text-gray-300">Total Referrals</div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-blue-900/20 border-blue-800">
-                    <CardContent className="p-4 flex flex-col items-center justify-center">
-                      <Gift className="h-8 w-8 mb-2 text-blue-500" />
-                      <div className="text-2xl font-bold text-white">{referralStats.pendingRewards}</div>
-                      <div className="text-sm text-gray-300">Pending</div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-green-900/20 border-green-800">
-                    <CardContent className="p-4 flex flex-col items-center justify-center">
-                      <div className="text-2xl font-bold text-white">৳{referralStats.totalEarned}</div>
-                      <div className="text-sm text-gray-300">Total Earned</div>
-                    </CardContent>
-                  </Card>
-                </div>
+                ) : (
+                  <>
+                    {referralCode && (
+                      <div className="mb-4">
+                        <p className="text-sm font-medium mb-1.5 text-white">Your Referral Code:</p>
+                        <div className="flex">
+                          <Input
+                            value={referralCode}
+                            readOnly
+                            className="rounded-r-none bg-gray-800 text-white border-gray-700 text-center font-bold text-lg"
+                          />
+                          <Button
+                            onClick={() => navigator.clipboard.writeText(referralCode)}
+                            className="rounded-l-none"
+                            variant="secondary"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <p className="text-sm font-medium mb-1.5 text-white">Your Referral Link:</p>
+                      <div className="flex">
+                        <Input 
+                          value={referralLink}
+                          readOnly
+                          className="rounded-r-none bg-gray-800 text-white border-gray-700"
+                        />
+                        <Button
+                          onClick={copyToClipboard}
+                          className="rounded-l-none"
+                          variant="secondary"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Button 
+                        onClick={copyToClipboard} 
+                        className="flex-1 bg-purple-700 hover:bg-purple-800"
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Link
+                      </Button>
+                      <Button 
+                        onClick={shareReferralLink} 
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share Link
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                      <Card className="bg-purple-900/20 border-purple-800">
+                        <CardContent className="p-4 flex flex-col items-center justify-center">
+                          <Users className="h-8 w-8 mb-2 text-purple-500" />
+                          <div className="text-2xl font-bold text-white">{referralStats.totalReferrals}</div>
+                          <div className="text-sm text-gray-300">Total Referrals</div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-blue-900/20 border-blue-800">
+                        <CardContent className="p-4 flex flex-col items-center justify-center">
+                          <Gift className="h-8 w-8 mb-2 text-blue-500" />
+                          <div className="text-2xl font-bold text-white">{referralStats.pendingRewards}</div>
+                          <div className="text-sm text-gray-300">Pending</div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-green-900/20 border-green-800">
+                        <CardContent className="p-4 flex flex-col items-center justify-center">
+                          <div className="text-2xl font-bold text-white">৳{referralStats.totalEarned}</div>
+                          <div className="text-sm text-gray-300">Total Earned</div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </>
+                )}
               </div>
             </CardContent>
             <CardFooter className="bg-gray-900 border-t border-gray-800 flex justify-center">
@@ -240,13 +291,13 @@ const ReferralProgram = () => {
                 <div className="bg-green-700 rounded-full h-8 w-8 flex items-center justify-center shrink-0">
                   <span className="text-white font-bold">1</span>
                 </div>
-                <p className="text-gray-300">Share your unique referral link with friends</p>
+                <p className="text-gray-300">Share your unique referral code or link with friends</p>
               </div>
               <div className="flex items-start gap-4">
                 <div className="bg-green-700 rounded-full h-8 w-8 flex items-center justify-center shrink-0">
                   <span className="text-white font-bold">2</span>
                 </div>
-                <p className="text-gray-300">Your friend registers using your link</p>
+                <p className="text-gray-300">Your friend registers using your code/link</p>
               </div>
               <div className="flex items-start gap-4">
                 <div className="bg-green-700 rounded-full h-8 w-8 flex items-center justify-center shrink-0">

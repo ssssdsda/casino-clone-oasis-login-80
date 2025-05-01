@@ -1,3 +1,4 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
@@ -281,7 +282,7 @@ const getGameWinRatio = async (gameType) => {
  * @param betAmount The bet amount placed by the user
  * @returns Whether this bet should win
  */
-const shouldBetWin = async (userId: string, gameType = 'superAce', betAmount = 10): Promise<boolean> => {
+const shouldBetWin = async (userId: string, gameType: string, betAmount = 10): Promise<boolean> => {
   try {
     // Use the shouldGameBetWin function for consistency across all games
     return await shouldGameBetWin(userId, gameType, betAmount);
@@ -327,6 +328,184 @@ const shouldGameBetWin = async (userId, gameType, betAmount) => {
   }
 };
 
+/**
+ * Generates a unique referral code for a user
+ * @param userId The ID of the user
+ * @returns A unique referral code
+ */
+const generateUniqueReferralCode = async (userId: string): Promise<string> => {
+  if (!userId) return '';
+  
+  try {
+    // Check if user already has a referral code
+    const userRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists() && userDoc.data().referralCode) {
+      return userDoc.data().referralCode;
+    }
+    
+    // Generate a unique code using userId and a random string
+    const randomChars = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const referralCode = `${randomChars}${userId.substring(0, 4)}`;
+    
+    // Save the referral code to the user's document
+    await updateDoc(userRef, {
+      referralCode: referralCode,
+      referralCreatedAt: serverTimestamp()
+    });
+    
+    console.log(`Generated unique referral code for user ${userId}: ${referralCode}`);
+    return referralCode;
+  } catch (error) {
+    console.error("Error generating unique referral code:", error);
+    return '';
+  }
+};
+
+/**
+ * Retrieves a user by their referral code
+ * @param referralCode The referral code to look up
+ * @returns The user document or null if not found
+ */
+const getUserByReferralCode = async (referralCode: string) => {
+  if (!referralCode) return null;
+  
+  try {
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("referralCode", "==", referralCode));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const userDoc = querySnapshot.docs[0];
+      return {
+        id: userDoc.id,
+        ...userDoc.data()
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting user by referral code:", error);
+    return null;
+  }
+};
+
+/**
+ * Records a referral in the database
+ * @param referrerId The ID of the user who referred
+ * @param referredId The ID of the user who was referred
+ * @returns Whether the referral was successfully recorded
+ */
+const recordReferral = async (referrerId: string, referredId: string): Promise<boolean> => {
+  if (!referrerId || !referredId || referrerId === referredId) return false;
+  
+  try {
+    // Check if referral already exists to prevent duplicates
+    const referralsRef = collection(db, "referrals");
+    const q = query(
+      referralsRef, 
+      where("referrer", "==", referrerId),
+      where("referred", "==", referredId)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      console.log("Referral already exists");
+      return false;
+    }
+    
+    // Add the new referral
+    await addDoc(referralsRef, {
+      referrer: referrerId,
+      referred: referredId,
+      createdAt: serverTimestamp(),
+      bonusPaid: false
+    });
+    
+    // Update the referred user to mark them as referred
+    const referredUserRef = doc(db, "users", referredId);
+    await updateDoc(referredUserRef, {
+      referredBy: referrerId,
+      referralProcessed: false
+    });
+    
+    console.log(`Recorded referral: ${referrerId} referred ${referredId}`);
+    return true;
+  } catch (error) {
+    console.error("Error recording referral:", error);
+    return false;
+  }
+};
+
+/**
+ * Processes a referral bonus when a referred user makes a deposit
+ * @param userId The ID of the user who made a deposit
+ * @param depositAmount The amount deposited
+ * @returns Whether the referral bonus was successfully processed
+ */
+const processReferralBonus = async (userId: string, depositAmount: number): Promise<boolean> => {
+  if (!userId || depositAmount <= 0) return false;
+  
+  try {
+    // Get the user to check if they were referred
+    const userRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists() || !userDoc.data().referredBy || userDoc.data().referralProcessed) {
+      return false;
+    }
+    
+    const referrerId = userDoc.data().referredBy;
+    
+    // Get the referrer
+    const referrerRef = doc(db, "users", referrerId);
+    const referrerDoc = await getDoc(referrerRef);
+    
+    if (!referrerDoc.exists()) {
+      return false;
+    }
+    
+    // Get the betting system settings for the bonus amount
+    const settings = await getBettingSystemSettings();
+    const bonusAmount = settings?.referralBonus || 119;
+    
+    // Update the referrer's balance
+    const currentBalance = referrerDoc.data().balance || 0;
+    await updateDoc(referrerRef, {
+      balance: currentBalance + bonusAmount
+    });
+    
+    // Mark the referral as processed
+    await updateDoc(userRef, {
+      referralProcessed: true
+    });
+    
+    // Update the referral document
+    const referralsRef = collection(db, "referrals");
+    const q = query(
+      referralsRef,
+      where("referrer", "==", referrerId),
+      where("referred", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const referralDoc = querySnapshot.docs[0];
+      await updateDoc(doc(db, "referrals", referralDoc.id), {
+        bonusPaid: true,
+        bonusAmount: bonusAmount,
+        processedAt: serverTimestamp()
+      });
+    }
+    
+    console.log(`Processed referral bonus: ${referrerId} received ${bonusAmount} for referring ${userId}`);
+    return true;
+  } catch (error) {
+    console.error("Error processing referral bonus:", error);
+    return false;
+  }
+};
+
 // Export all variables and functions
 export { 
   app, 
@@ -343,6 +522,10 @@ export {
   getGameWinPattern,
   getGameWinRatio,
   shouldGameBetWin,
-  hasReachedMaxWinAmount
+  hasReachedMaxWinAmount,
+  generateUniqueReferralCode,
+  getUserByReferralCode,
+  recordReferral,
+  processReferralBonus
 };
 export default app;

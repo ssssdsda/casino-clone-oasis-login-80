@@ -11,7 +11,9 @@ import {
   updateUserBalance, 
   getGameWinPattern, 
   getGameWinRatio, 
-  shouldGameBetWin 
+  shouldGameBetWin,
+  generateUniqueReferralCode,
+  recordReferral 
 } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -57,6 +59,7 @@ const getSettings = async () => {
       megaSpin: [1, 0, 0, 0, 1, 0, 0, 1, 0],
       fortuneGems: [1, 0, 0, 0, 0, 1, 0, 0, 0],
       coins: [1, 0, 0, 0, 0, 0, 1, 0, 0],
+      superElement: [1, 0, 0, 0, 1, 0, 0, 1, 0],
     },
     winRatios: {
       aviator: 0.25,
@@ -66,7 +69,8 @@ const getSettings = async () => {
       fruityBonanza: 0.2,
       megaSpin: 0.3,
       fortuneGems: 0.2,
-      coins: 0.2
+      coins: 0.2,
+      superElement: 0.25
     },
     referralBonus: 119
   };
@@ -208,15 +212,15 @@ export const completeBet = async (
 };
 
 /**
- * Generates a referral code for a user
- * Uses the user ID directly as the referral code
+ * Generates a unique referral code for a user
+ * Uses the Firebase function to ensure uniqueness
  * 
  * @param userId The ID of the user
- * @returns The user ID as the referral code
+ * @returns A unique referral code for the user
  */
-export const generateReferralCode = (userId: string): string => {
-  // Using user ID directly as referral code ensures uniqueness
-  return userId;
+export const generateReferralCode = async (userId: string): Promise<string> => {
+  // Use Firebase function to generate and store a unique referral code
+  return await generateUniqueReferralCode(userId);
 };
 
 /**
@@ -228,10 +232,8 @@ export const generateReferralCode = (userId: string): string => {
  */
 export const trackReferral = async (referrerId: string, referredId: string): Promise<boolean> => {
   try {
-    // In a real implementation, this would store the referral in the database
-    // which is handled by Firebase Firestore in the AuthContext
-    console.log(`User ${referrerId} referred user ${referredId}`);
-    return true;
+    // Use Firebase function to record the referral
+    return await recordReferral(referrerId, referredId);
   } catch (error) {
     console.error("Error tracking referral:", error);
     return false;
