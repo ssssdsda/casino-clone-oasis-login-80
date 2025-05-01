@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
 import { doc, getDoc, collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
 import { generateUniqueReferralCode } from '@/lib/firebase';
+import { useNavigate } from 'react-router-dom';
 
 const ReferralProgram = () => {
   const { user } = useAuth();
@@ -26,6 +26,7 @@ const ReferralProgram = () => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
   const db = getFirestore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const setupReferralSystem = async () => {
