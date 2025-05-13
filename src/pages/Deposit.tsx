@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -7,9 +7,9 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, CheckCircle, Wallet, PlusCircle, Clock } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Wallet, PlusCircle, Clock, Copy, QrCode } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import app from '@/lib/firebase';
@@ -19,6 +19,13 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const firestore = getFirestore(app);
 
 const DEPOSIT_AMOUNTS = [100, 200, 300, 500, 800, 1000, 1500, 2000];
+
+// Payment method options
+const PAYMENT_METHODS = [
+  { id: 'bkash', name: 'bKash', image: '/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png' },
+  { id: 'bitcoin', name: 'Bitcoin', image: '/lovable-uploads/8f9f67ea-c522-40f0-856a-b28bf290cf13.png', address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' },
+  { id: 'usdt', name: 'USDT (TRC20)', image: '/lovable-uploads/6fc263a6-a7b2-4cf2-afe5-9fb0b99fdd91.png', address: 'TF17BgPaZYbz8oxbjhriubPDsA7ArKoLX3' },
+];
 
 const Deposit = () => {
   const navigate = useNavigate();
@@ -35,13 +42,16 @@ const Deposit = () => {
   const [depositStatus, setDepositStatus] = useState<string>('');
   const [walletNumber, setWalletNumber] = useState<string>('');
   const [paymentDialogOpen, setPaymentDialogOpen] = useState<boolean>(false);
-  const [paymentURL, setPaymentURL] = useState<string>('');
-  const [popupTimer, setPopupTimer] = useState<number>(240); // 4 minutes in seconds
+  const [paymentMethod, setPaymentMethod] = useState<string>('bkash');
+  const [transactionId, setTransactionId] = useState<string>('');
+  const [qrDialogOpen, setQrDialogOpen] = useState<boolean>(false);
   
+  // Handle selecting different payment amounts
   const handleAmountSelect = (amt: number) => {
     setAmount(amt);
   };
   
+  // Timer for pending deposits
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     
@@ -56,29 +66,7 @@ const Deposit = () => {
     };
   }, [depositStatus, isComplete]);
 
-  useEffect(() => {
-    let popupTimerInterval: NodeJS.Timeout | null = null;
-    
-    if (paymentDialogOpen && popupTimer > 0) {
-      popupTimerInterval = setInterval(() => {
-        setPopupTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(popupTimerInterval as NodeJS.Timeout);
-            setPaymentDialogOpen(false);
-            return 240; // Reset timer for next use
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    
-    return () => {
-      if (popupTimerInterval) {
-        clearInterval(popupTimerInterval);
-      }
-    };
-  }, [paymentDialogOpen, popupTimer]);
-  
+  // Listen for deposit status updates
   useEffect(() => {
     if (!depositId) return;
     
@@ -120,12 +108,45 @@ const Deposit = () => {
     return () => unsubscribe();
   }, [depositId, amount, navigate, toast, updateUserBalance, user, t]);
   
-  const formatRemainingTime = () => {
-    const minutes = Math.floor(popupTimer / 60);
-    const seconds = popupTimer % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  // Get selected payment method details
+  const getSelectedPaymentMethod = () => {
+    return PAYMENT_METHODS.find(method => method.id === paymentMethod) || PAYMENT_METHODS[0];
+  };
+
+  // Handle copying crypto address to clipboard
+  const handleCopyAddress = () => {
+    const method = getSelectedPaymentMethod();
+    if (method && method.address) {
+      navigator.clipboard.writeText(method.address);
+      toast({
+        title: "Address Copied",
+        description: "Cryptocurrency address copied to clipboard",
+        variant: "default",
+      });
+    }
   };
   
+  // Format elapsed time display
+  const formatElapsedTime = () => {
+    const minutes = Math.floor(elapsedTime / 60);
+    const seconds = elapsedTime % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+  
+  // Handle wallet number input changes
+  const handleWalletNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setWalletNumber(value);
+    }
+  };
+
+  // Handle transaction ID input changes
+  const handleTransactionIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTransactionId(e.target.value);
+  };
+  
+  // Handle deposit submission
   const handleSubmit = async () => {
     if (amount <= 0) {
       toast({
@@ -136,48 +157,115 @@ const Deposit = () => {
       return;
     }
 
-    if (!walletNumber) {
-      toast({
-        title: t('walletNumber'),
-        description: t('walletNumberInstruction'),
-        variant: "destructive",
-      });
-      return;
+    // Different validation based on payment method
+    if (paymentMethod === 'bkash') {
+      if (!walletNumber) {
+        toast({
+          title: t('walletNumber'),
+          description: t('walletNumberInstruction'),
+          variant: "destructive",
+        });
+        return;
+      }
+      setPaymentDialogOpen(true);
+    } else {
+      // For crypto payments
+      if (!transactionId && !qrDialogOpen) {
+        setQrDialogOpen(true);
+        return;
+      }
+      
+      // Submit the deposit request
+      try {
+        setIsProcessing(true);
+        const depositRef = await addDoc(collection(firestore, "deposits"), {
+          userId: user?.id || "anonymous",
+          amount,
+          paymentMethod,
+          walletNumber: walletNumber || null,
+          transactionId: transactionId || "Pending verification",
+          status: "pending",
+          timestamp: serverTimestamp()
+        });
+        
+        setDepositId(depositRef.id);
+        setDepositStatus('pending');
+        setQrDialogOpen(false);
+        
+        toast({
+          title: "Deposit Request Submitted",
+          description: "We are processing your deposit request",
+          variant: "default",
+          className: "bg-blue-600 text-white",
+        });
+      } catch (error) {
+        console.error("Error submitting deposit:", error);
+        setIsProcessing(false);
+        toast({
+          title: "Error",
+          description: "Failed to submit deposit request. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+  
+  // Handle bKash payment
+  const handleBkashPayment = async () => {
+    // Get payment URL based on amount
+    let paymentURL = '';
+    if (amount === 100) {
+      paymentURL = 'https://shop.bkash.com/general-store01817757355/pay/bdt100/OO0xWr';
+    } else if (amount === 200) {
+      paymentURL = 'https://shop.bkash.com/general-store01817757355/pay/bdt200/cAVSkv';
+    } else if (amount === 300) {
+      paymentURL = 'https://shop.bkash.com/general-store01817757355/pay/bdt300/89d238df';
+    } else if (amount === 500) {
+      paymentURL = 'https://shop.bkash.com/general-store01817757355/pay/bdt500/2taUT3';
+    } else if (amount === 800) {
+      paymentURL = 'https://shop.bkash.com/general-store01817757355/pay/bdt800/37Pk5h';
+    } else if (amount === 1000) {
+      paymentURL = 'https://shop.bkash.com/general-store01817757355/pay/bdt1000/b7a39122';
+    } else if (amount === 1500) {
+      paymentURL = 'https://shop.bkash.com/general-store01817757355/pay/bdt1500/BktX0l';
+    } else if (amount === 2000) {
+      paymentURL = 'https://shop.bkash.com/general-store01817757355/pay/bdt2000/DWE6A9';
+    } else {
+      paymentURL = `https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`;
     }
     
-    if (amount === 100) {
-      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt100/OO0xWr');
-    } else if (amount === 200) {
-      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt200/cAVSkv');
-    } else if (amount === 300) {
-      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt300/89d238df');
-    } else if (amount === 500) {
-      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt500/2taUT3');
-    } else if (amount === 800) {
-      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt800/37Pk5h');
-    } else if (amount === 1000) {
-      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt1000/b7a39122');
-    } else if (amount === 1500) {
-      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt1500/BktX0l');
-    } else if (amount === 2000) {
-      setPaymentURL('https://shop.bkash.com/general-store01817757355/pay/bdt2000/DWE6A9');
-    } else {
-      setPaymentURL(`https://shop.bkash.com/general-store01817757355/pay/bdt${amount}/7s9SP1`);
-    }
-    setPaymentDialogOpen(true);
-    setPopupTimer(240);
-  };
-  
-  const formatElapsedTime = () => {
-    const minutes = Math.floor(elapsedTime / 60);
-    const seconds = elapsedTime % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-  
-  const handleWalletNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (/^\d*$/.test(value)) {
-      setWalletNumber(value);
+    // Open payment URL and create deposit record
+    window.open(paymentURL, '_blank');
+    
+    try {
+      setIsProcessing(true);
+      const depositRef = await addDoc(collection(firestore, "deposits"), {
+        userId: user?.id || "anonymous",
+        amount,
+        paymentMethod: "bkash",
+        walletNumber: walletNumber || null,
+        status: "pending",
+        timestamp: serverTimestamp()
+      });
+      
+      setDepositId(depositRef.id);
+      setDepositStatus('pending');
+      setPaymentDialogOpen(false);
+      
+      toast({
+        title: "Deposit Request Submitted",
+        description: "We are processing your deposit request",
+        variant: "default",
+        className: "bg-blue-600 text-white",
+      });
+    } catch (error) {
+      console.error("Error submitting deposit:", error);
+      setIsProcessing(false);
+      toast({
+        title: "Error",
+        description: "Failed to submit deposit request. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -291,22 +379,62 @@ const Deposit = () => {
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-bold text-white mb-4">{t('paymentMethod')}</h2>
               
-              <div className="p-4 rounded-lg border border-gray-700 flex items-center justify-center">
-                <img src="/lovable-uploads/d4514625-d83d-4271-9e26-2bebbacbc646.png" alt="bKash" className="h-10 w-10 mr-3" />
-                <span className="font-medium text-white text-lg">bKash</span>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {PAYMENT_METHODS.map((method) => (
+                  <div
+                    key={method.id}
+                    className={`p-3 rounded-lg border cursor-pointer transition-all flex flex-col items-center ${
+                      paymentMethod === method.id
+                        ? 'border-green-500 bg-green-900/20'
+                        : 'border-gray-700 hover:border-gray-500'
+                    }`}
+                    onClick={() => setPaymentMethod(method.id)}
+                  >
+                    <img src={method.image} alt={method.name} className="h-10 w-10 mb-2" />
+                    <span className={`font-medium text-sm ${paymentMethod === method.id ? 'text-green-400' : 'text-gray-300'}`}>
+                      {method.name}
+                    </span>
+                  </div>
+                ))}
               </div>
               
-              <div className="mt-4">
-                <label className="text-sm text-gray-300 mb-1 block">{t('walletNumber')}</label>
-                <p className="text-xs text-yellow-400 mb-2">{t('walletNumberInstruction')}</p>
-                <Input
-                  type="text"
-                  value={walletNumber}
-                  onChange={handleWalletNumberChange}
-                  placeholder={t('walletNumberPlaceholder')}
-                  className="bg-gray-900 border-gray-700 text-white"
-                />
-              </div>
+              {paymentMethod === 'bkash' ? (
+                <div className="mt-4">
+                  <label className="text-sm text-gray-300 mb-1 block">{t('walletNumber')}</label>
+                  <p className="text-xs text-yellow-400 mb-2">{t('walletNumberInstruction')}</p>
+                  <Input
+                    type="text"
+                    value={walletNumber}
+                    onChange={handleWalletNumberChange}
+                    placeholder={t('walletNumberPlaceholder')}
+                    className="bg-gray-900 border-gray-700 text-white"
+                  />
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <label className="text-sm text-gray-300 mb-1 block">Transaction ID</label>
+                  <p className="text-xs text-yellow-400 mb-2">
+                    Please provide your transaction ID after sending the cryptocurrency
+                  </p>
+                  <Input
+                    type="text"
+                    value={transactionId}
+                    onChange={handleTransactionIdChange}
+                    placeholder="Enter transaction ID"
+                    className="bg-gray-900 border-gray-700 text-white"
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="border-blue-600 text-blue-400 hover:bg-blue-900/20"
+                      onClick={() => setQrDialogOpen(true)}
+                    >
+                      <QrCode className="h-4 w-4 mr-1" /> Show Address
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
             
             <Button
@@ -340,6 +468,7 @@ const Deposit = () => {
       </main>
       <Footer />
       
+      {/* bKash Payment Dialog */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="sm:max-w-md bg-gray-800 border-casino-accent">
           <DialogTitle className="text-white text-xl">
@@ -353,7 +482,7 @@ const Deposit = () => {
             
             <div className="bg-gray-900 px-4 py-2 rounded-full border border-gray-700">
               <p className="text-center text-white">
-                Window closes in: <span className="font-mono font-bold text-yellow-400">{formatRemainingTime()}</span>
+                Please complete your payment
               </p>
             </div>
             
@@ -369,22 +498,76 @@ const Deposit = () => {
               </Button>
               <Button 
                 className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => {
-                  window.open(paymentURL, "_blank");
-                  addDoc(collection(firestore, "deposits"), {
-                    userId: user?.id || "anonymous",
-                    amount,
-                    paymentMethod: "bkash",
-                    walletNumber: walletNumber || null,
-                    status: "pending",
-                    timestamp: serverTimestamp()
-                  }).then((docRef) => {
-                    setDepositId(docRef.id);
-                    setDepositStatus('pending');
-                    setPaymentDialogOpen(false);
-                  });
-                }}>
+                onClick={handleBkashPayment}>
                 {t('proceedToPayment')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Crypto Address Dialog */}
+      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-gray-800 border-casino-accent">
+          <DialogTitle className="text-white text-xl">
+            {getSelectedPaymentMethod().name} Deposit Address
+          </DialogTitle>
+          <DialogDescription className="text-gray-300">
+            Send exactly ৳{amount} worth of {getSelectedPaymentMethod().name} to this address
+          </DialogDescription>
+          <div className="flex flex-col items-center justify-center p-4 space-y-6">
+            <div className="bg-white p-6 rounded-lg">
+              {/* QR Code would typically be generated dynamically */}
+              <div className="w-48 h-48 bg-gray-100 flex items-center justify-center">
+                <QrCode className="h-32 w-32 text-gray-900" />
+              </div>
+            </div>
+            
+            <div className="w-full">
+              <p className="text-sm text-gray-400 mb-1">Deposit Address:</p>
+              <div className="flex items-center bg-gray-900 rounded-lg border border-gray-700 p-3">
+                <p className="text-gray-200 text-sm font-mono flex-1 break-all">
+                  {getSelectedPaymentMethod().address || 'Address not available'}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCopyAddress}
+                  className="ml-2 text-blue-400 hover:text-blue-300"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-3 w-full">
+              <p className="text-yellow-400 text-sm">
+                Important: Only send {getSelectedPaymentMethod().name} to this address. Sending any other cryptocurrency may result in permanent loss.
+              </p>
+            </div>
+            
+            <div className="flex space-x-4 w-full">
+              <Button 
+                variant="outline" 
+                className="border-gray-600 text-gray-300 hover:bg-gray-700/30 flex-1"
+                onClick={() => setQrDialogOpen(false)}>
+                Close
+              </Button>
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white flex-1"
+                onClick={() => {
+                  if (!transactionId) {
+                    toast({
+                      title: "Transaction ID Required",
+                      description: "Please enter your transaction ID after sending the payment",
+                      variant: "destructive",
+                    });
+                    setQrDialogOpen(false);
+                    return;
+                  }
+                  handleSubmit();
+                }}>
+                Confirm Payment
               </Button>
             </div>
           </div>
