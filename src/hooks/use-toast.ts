@@ -1,4 +1,3 @@
-
 import * as React from "react"
 
 import type {
@@ -150,8 +149,8 @@ function toast({ ...props }: Toast) {
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
-  // Set default duration to 1 second if not specified
-  const duration = props.duration !== undefined ? props.duration : 1000;
+  // Set default duration to 2 seconds if not specified
+  const duration = props.duration !== undefined ? props.duration : 2000;
 
   dispatch({
     type: "ADD_TOAST",
