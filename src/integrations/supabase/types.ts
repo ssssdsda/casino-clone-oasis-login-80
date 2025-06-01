@@ -9,7 +9,260 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      bets: {
+        Row: {
+          bet_amount: number
+          created_at: string | null
+          game_data: Json | null
+          game_type: string
+          id: string
+          multiplier: number | null
+          result: string | null
+          user_id: string
+          win_amount: number | null
+        }
+        Insert: {
+          bet_amount: number
+          created_at?: string | null
+          game_data?: Json | null
+          game_type: string
+          id?: string
+          multiplier?: number | null
+          result?: string | null
+          user_id: string
+          win_amount?: number | null
+        }
+        Update: {
+          bet_amount?: number
+          created_at?: string | null
+          game_data?: Json | null
+          game_type?: string
+          id?: string
+          multiplier?: number | null
+          result?: string | null
+          user_id?: string
+          win_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      betting_system_settings: {
+        Row: {
+          created_at: string | null
+          game_type: string
+          id: string
+          is_enabled: boolean | null
+          max_bet: number | null
+          max_win: number | null
+          min_bet: number | null
+          updated_at: string | null
+          win_pattern: number[] | null
+          win_ratio: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          game_type: string
+          id?: string
+          is_enabled?: boolean | null
+          max_bet?: number | null
+          max_win?: number | null
+          min_bet?: number | null
+          updated_at?: string | null
+          win_pattern?: number[] | null
+          win_ratio?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          game_type?: string
+          id?: string
+          is_enabled?: boolean | null
+          max_bet?: number | null
+          max_win?: number | null
+          min_bet?: number | null
+          updated_at?: string | null
+          win_pattern?: number[] | null
+          win_ratio?: number | null
+        }
+        Relationships: []
+      }
+      deposits: {
+        Row: {
+          amount: number
+          confirmed_at: string | null
+          created_at: string | null
+          id: string
+          payment_method: string
+          status: string | null
+          transaction_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          payment_method: string
+          status?: string | null
+          transaction_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          payment_method?: string
+          status?: string | null
+          transaction_hash?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deposits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          id: string
+          phone: string | null
+          referral_code: string | null
+          referred_by: string | null
+          role: string | null
+          updated_at: string | null
+          username: string
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string | null
+          id: string
+          phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
+          role?: string | null
+          updated_at?: string | null
+          username: string
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string | null
+          id?: string
+          phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
+          role?: string | null
+          updated_at?: string | null
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          bonus_amount: number | null
+          created_at: string | null
+          id: string
+          is_paid: boolean | null
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          bonus_amount?: number | null
+          created_at?: string | null
+          id?: string
+          is_paid?: boolean | null
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          bonus_amount?: number | null
+          created_at?: string | null
+          id?: string
+          is_paid?: boolean | null
+          referred_id?: string
+          referrer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawals: {
+        Row: {
+          account_number: string
+          amount: number
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          payment_method: string
+          status: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          account_number: string
+          amount: number
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          payment_method: string
+          status?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          account_number?: string
+          amount?: number
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          payment_method?: string
+          status?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

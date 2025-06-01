@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Bell, LogOut, User, Wallet, Headphones, Globe, Menu, Users } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/context/AuthContext';
-import { LoginButton } from './LoginButton';
-import { RegisterButton } from './RegisterButton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
@@ -29,6 +27,10 @@ const Header = () => {
   };
   
   const formattedBalance = formatBalance(user?.balance);
+
+  const handleAuthAction = () => {
+    navigate('/auth');
+  };
   
   return (
     <header className="w-full bg-casino py-3 px-4 flex flex-col">
@@ -96,8 +98,12 @@ const Header = () => {
                       </div>
                     ) : (
                       <div className="flex flex-col space-y-2">
-                        <LoginButton />
-                        <RegisterButton />
+                        <Button 
+                          onClick={handleAuthAction}
+                          className="bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
+                        >
+                          Login / Register
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -186,42 +192,49 @@ const Header = () => {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <LoginButton />
-                <RegisterButton />
+                <Button 
+                  onClick={handleAuthAction}
+                  className="bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
+                >
+                  Login / Register
+                </Button>
               </div>
             )}
           </div>
         )}
       </div>
       
-      {/* Mobile deposit/withdraw/login buttons */}
-      {isMobile && isHomePage && (
+      {/* Mobile deposit/withdraw buttons */}
+      {isMobile && isHomePage && isAuthenticated && (
         <div className="flex justify-center space-x-2 mt-2">
-          {isAuthenticated ? (
-            <>
-              <Button 
-                variant="outline" 
-                className="bg-green-800 hover:bg-green-700 border-green-600 text-white px-3 py-1 h-auto flex-1 text-xs"
-                onClick={() => navigate('/deposit')}
-              >
-                <Wallet className="mr-1 h-4 w-4" />
-                {t('deposit')}
-              </Button>
-              <Button 
-                variant="outline" 
-                className="bg-red-800 hover:bg-red-700 border-red-600 text-white px-3 py-1 h-auto flex-1 text-xs"
-                onClick={() => navigate('/withdrawal')}
-              >
-                <Wallet className="mr-1 h-4 w-4" />
-                {t('withdraw')}
-              </Button>
-            </>
-          ) : (
-            <>
-              <LoginButton />
-              <RegisterButton />
-            </>
-          )}
+          <Button 
+            variant="outline" 
+            className="bg-green-800 hover:bg-green-700 border-green-600 text-white px-3 py-1 h-auto flex-1 text-xs"
+            onClick={() => navigate('/deposit')}
+          >
+            <Wallet className="mr-1 h-4 w-4" />
+            {t('deposit')}
+          </Button>
+          <Button 
+            variant="outline" 
+            className="bg-red-800 hover:bg-red-700 border-red-600 text-white px-3 py-1 h-auto flex-1 text-xs"
+            onClick={() => navigate('/withdrawal')}
+          >
+            <Wallet className="mr-1 h-4 w-4" />
+            {t('withdraw')}
+          </Button>
+        </div>
+      )}
+      
+      {/* Mobile auth buttons when not authenticated */}
+      {isMobile && isHomePage && !isAuthenticated && (
+        <div className="flex justify-center mt-2">
+          <Button 
+            onClick={handleAuthAction}
+            className="bg-casino-accent hover:bg-casino-accent-hover text-black font-bold w-full"
+          >
+            Login / Register to Play
+          </Button>
         </div>
       )}
     </header>

@@ -8,6 +8,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { LanguageProvider } from "./context/LanguageContext";
 import { WelcomePopup } from "./components/WelcomePopup"; 
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import ImagesChanger from "./pages/ImagesChanger";
 import SpinGame from "./pages/SpinGame";
 import SpinControl from "./pages/SpinControl";
@@ -51,6 +52,7 @@ const App = () => (
             <WelcomePopup />
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
               <Route path="/admin/images" element={<ImagesChanger />} />
               <Route path="/game/spin" element={<SpinGame />} />
               <Route path="/admin/spin-control" element={<SpinControl />} />

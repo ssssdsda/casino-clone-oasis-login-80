@@ -1,341 +1,172 @@
-import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendEmailVerification
-} from 'firebase/auth';
-import { db, setupBalanceListener, updateUserBalance as firebaseUpdateBalance } from '@/lib/firebase';
-import { useToast } from "@/hooks/use-toast";
-import { toast as sonnerToast } from "sonner";
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 
-interface User {
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface AuthUser {
   id: string;
   username: string;
-  phone: string;
+  phone?: string;
   balance: number;
-  role?: string;
-  phoneVerified?: boolean;
+  role: string;
   referralCode?: string;
   referredBy?: string;
 }
 
 interface AuthContextType {
-  user: User | null;
-  loginWithPhone: (phoneNumber: string, password: string) => Promise<boolean>;
-  registerWithPhone: (phoneNumber: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
-  logout: () => void;
+  user: AuthUser | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  updateUserBalance: (newBalance: number) => Promise<boolean>;
-  processReferralBonus: (userId: string) => Promise<boolean>;
+  loginWithPhone: (phone: string, password: string) => Promise<boolean>;
+  registerWithPhone: (phone: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const SESSION_TIMEOUT_MINUTES = 60;
-const PHONE_SIGNUP_BONUS = 82;
-const REFERRAL_BONUS = 119;
-const DEPOSIT_BONUS_AMOUNT = 500;
-const DEPOSIT_BONUS_THRESHOLD = 500;
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const balanceListenerRef = useRef<any>(null);
-  
-  const extractReferralCode = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('ref');
-  };
 
-  const resetSessionTimeout = () => {
-    localStorage.setItem('sessionStart', Date.now().toString());
-  };
-
-  const isSessionValid = () => {
-    const sessionStart = localStorage.getItem('sessionStart');
-    if (!sessionStart) return false;
-    
-    const now = Date.now();
-    const timeElapsed = (now - parseInt(sessionStart)) / (1000 * 60);
-    
-    return timeElapsed < SESSION_TIMEOUT_MINUTES;
-  };
-
-  const processReferralBonus = async (userId: string): Promise<boolean> => {
+  const fetchUserProfile = async (userId: string) => {
     try {
-      console.log("Processing referral bonus for user:", userId);
-      
-      if (!db) {
-        console.error("Firestore database not initialized");
-        return false;
-      }
-      
-      const userDoc = await getDoc(doc(db, "users", userId));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log("User data:", userData);
-        
-        // Check if already processed to avoid double bonuses
-        if (userData.referralProcessed) {
-          console.log("Referral already processed for this user");
-          return false;
-        }
-        
-        if (userData.referredBy) {
-          console.log("User was referred by:", userData.referredBy);
-          
-          const referrerDoc = await getDoc(doc(db, "users", userData.referredBy));
-          
-          if (referrerDoc.exists()) {
-            const referrerData = referrerDoc.data();
-            const newBalance = (referrerData.balance || 0) + REFERRAL_BONUS;
-            
-            console.log("Updating referrer balance from", referrerData.balance, "to", newBalance);
-            
-            // Update the referrer's balance
-            await updateDoc(doc(db, "users", userData.referredBy), {
-              balance: newBalance,
-              lastUpdated: serverTimestamp()
-            });
-            
-            // Record the referral in a separate collection
-            await setDoc(doc(db, "referrals", `${userData.referredBy}_${userId}`), {
-              referrer: userData.referredBy,
-              referred: userId,
-              bonusPaid: REFERRAL_BONUS,
-              timestamp: serverTimestamp()
-            });
-            
-            // Mark as processed in the user document
-            await updateDoc(doc(db, "users", userId), {
-              referralProcessed: true,
-              lastUpdated: serverTimestamp()
-            });
-            
-            // Show toast notification for the referrer (if they're the current user)
-            if (user && user.id === userData.referredBy) {
-              sonnerToast.success("Referral Bonus Paid!", {
-                description: `A referral bonus of ৳${REFERRAL_BONUS} has been paid to your account.`,
-                duration: 5000
-              });
-            }
-            
-            // Also add bonus to the user who was referred (the new user)
-            const userBonus = userData.balance + REFERRAL_BONUS;
-            await updateDoc(doc(db, "users", userId), {
-              balance: userBonus,
-              lastUpdated: serverTimestamp()
-            });
-            
-            // Update the local user object if it matches the current user
-            if (user && user.id === userId) {
-              setUser({
-                ...user,
-                balance: userBonus
-              });
-              localStorage.setItem('casinoUser', JSON.stringify({
-                ...user,
-                balance: userBonus
-              }));
-              
-              sonnerToast.success("Referral Bonus Received!", {
-                description: `You've received a ৳${REFERRAL_BONUS} referral bonus!`,
-                duration: 5000
-              });
-            }
-            
-            return true;
-          } else {
-            console.log("Referrer document not found");
-          }
-        } else {
-          console.log("User was not referred by anyone");
-        }
-      } else {
-        console.log("User document not found");
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("Error processing referral bonus:", error);
-      return false;
-    }
-  };
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-  const setupUserBalanceListener = (userId: string) => {
-    // Clean up any existing listener
-    if (balanceListenerRef.current) {
-      console.log("Cleaning up existing balance listener");
-      balanceListenerRef.current();
-      balanceListenerRef.current = null;
-    }
-    
-    console.log("Setting up new balance listener for:", userId);
-    balanceListenerRef.current = setupBalanceListener(userId, (newBalance: number) => {
-      console.log("Balance listener callback triggered with:", newBalance);
-      if (user) {
-        if (user.balance !== newBalance) {
-          console.log("Updating user with new balance:", newBalance, "Old balance was:", user.balance);
-          setUser(prevUser => {
-            if (prevUser) {
-              const updatedUser = { ...prevUser, balance: newBalance };
-              localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
-              return updatedUser;
-            }
-            return prevUser;
-          });
-          
-          // Show toast notification for balance updates
-          if (user.balance < newBalance) {
-            sonnerToast.success("Balance Updated!", {
-              description: `Your balance is now ৳${newBalance}`,
-              duration: 3000
-            });
-          }
-        } else {
-          console.log("Balance unchanged:", newBalance);
-        }
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
       }
-    });
-    
-    console.log("Balance listener setup complete");
+
+      return {
+        id: data.id,
+        username: data.username,
+        phone: data.phone,
+        balance: parseFloat(data.balance || '0'),
+        role: data.role,
+        referralCode: data.referral_code,
+        referredBy: data.referred_by
+      };
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      return null;
+    }
   };
 
   useEffect(() => {
-    console.log("AuthContext effect running");
-    setIsLoading(true);
-    
-    try {
-      // Check for stored user session
-      const storedUser = localStorage.getItem('casinoUser');
-      const storedAuthTime = localStorage.getItem('sessionStart');
-      
-      if (storedUser && storedAuthTime && isSessionValid()) {
-        try {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          console.log("Restored user from local storage:", userData.username);
-          resetSessionTimeout();
-          
-          if (userData.id) {
-            setupUserBalanceListener(userData.id);
-          }
-        } catch (e) {
-          console.error("Error parsing stored user data:", e);
-          localStorage.removeItem('casinoUser');
-          localStorage.removeItem('sessionStart');
-          setUser(null);
-          
-          if (balanceListenerRef.current) {
-            balanceListenerRef.current();
-            balanceListenerRef.current = null;
-          }
-        }
-      } else {
-        setUser(null);
-        localStorage.removeItem('casinoUser');
-        localStorage.removeItem('sessionStart');
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        setSession(session);
         
-        if (balanceListenerRef.current) {
-          balanceListenerRef.current();
-          balanceListenerRef.current = null;
+        if (session?.user) {
+          // Defer profile fetching to avoid deadlocks
+          setTimeout(async () => {
+            const profile = await fetchUserProfile(session.user.id);
+            setUser(profile);
+            setIsLoading(false);
+          }, 0);
+        } else {
+          setUser(null);
+          setIsLoading(false);
         }
       }
-    } catch (error) {
-      console.error("Error in auth initialization:", error);
-    } finally {
-      setIsLoading(false);
-    }
-    
-    // Keep session alive based on user activity
-    const resetOnActivity = () => resetSessionTimeout();
-    window.addEventListener('click', resetOnActivity);
-    window.addEventListener('keypress', resetOnActivity);
-    window.addEventListener('scroll', resetOnActivity);
-    window.addEventListener('mousemove', resetOnActivity);
+    );
 
-    return () => {
-      window.removeEventListener('click', resetOnActivity);
-      window.removeEventListener('keypress', resetOnActivity);
-      window.removeEventListener('scroll', resetOnActivity);
-      window.removeEventListener('mousemove', resetOnActivity);
-      
-      if (balanceListenerRef.current) {
-        balanceListenerRef.current();
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        fetchUserProfile(session.user.id).then((profile) => {
+          setUser(profile);
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
       }
-    };
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const loginWithPhone = async (phoneNumber: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
+  const loginWithPhone = async (phone: string, password: string): Promise<boolean> => {
     try {
-      if (!db) {
-        throw new Error("Firebase not initialized");
-      }
+      setIsLoading(true);
       
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("phone", "==", phoneNumber));
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
+      // First check if profile exists with this phone
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', phone);
+
+      if (profileError) {
+        console.error('Error checking profile:', profileError);
         toast({
-          title: "Login Failed",
+          title: "Error",
+          description: "Failed to verify phone number",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      if (!profiles || profiles.length === 0) {
+        toast({
+          title: "Error",
           description: "No account found with this phone number",
           variant: "destructive"
         });
         return false;
       }
+
+      // Use phone as email for Supabase auth
+      const email = `${phone.replace('+', '')}@casino.local`;
       
-      const userDoc = querySnapshot.docs[0];
-      const userData = userDoc.data();
-      const userId = userDoc.id;
-      
-      if (userData.password !== password) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('Login error:', error);
         toast({
           title: "Login Failed",
-          description: "Incorrect password",
+          description: error.message,
           variant: "destructive"
         });
         return false;
       }
-      
-      const user = {
-        id: userId,
-        username: userData.username || 'User',
-        phone: phoneNumber,
-        balance: userData.balance || 0,
-        phoneVerified: true,
-        role: userData.role,
-        referralCode: userData.referralCode || userId,
-        referredBy: userData.referredBy
-      };
-      
-      setUser(user);
-      localStorage.setItem('casinoUser', JSON.stringify(user));
-      resetSessionTimeout();
-      
-      // Set up real-time balance updates
-      setupUserBalanceListener(userId);
-      
-      toast({
-        title: "Login Successful",
-        description: "Welcome back!",
-        variant: "default",
-        className: "bg-green-600 text-white"
-      });
-      
-      return true;
+
+      if (data.user) {
+        toast({
+          title: "Success",
+          description: "Login successful!",
+          variant: "default"
+        });
+        return true;
+      }
+
+      return false;
     } catch (error: any) {
-      console.error("Phone login error:", error);
+      console.error('Login error:', error);
       toast({
-        title: "Login Failed",
-        description: error.message || "An unknown error occurred",
+        title: "Error",
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
       return false;
@@ -344,93 +175,124 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const registerWithPhone = async (phoneNumber: string, username: string, password: string, referralCode?: string): Promise<boolean> => {
-    setIsLoading(true);
+  const registerWithPhone = async (
+    phone: string, 
+    username: string, 
+    password: string, 
+    referralCode?: string
+  ): Promise<boolean> => {
     try {
-      if (!db) {
-        throw new Error("Firebase not initialized");
+      setIsLoading(true);
+
+      // Check if phone already exists
+      const { data: existingProfiles } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('phone', phone);
+
+      if (existingProfiles && existingProfiles.length > 0) {
+        toast({
+          title: "Error",
+          description: "Phone number already registered",
+          variant: "destructive"
+        });
+        return false;
       }
+
+      // Check if username already exists
+      const { data: existingUsername } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username);
+
+      if (existingUsername && existingUsername.length > 0) {
+        toast({
+          title: "Error",
+          description: "Username already taken",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      // Find referrer if referral code provided
+      let referrerId = null;
+      if (referralCode) {
+        const { data: referrer } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('referral_code', referralCode)
+          .single();
+        
+        if (referrer) {
+          referrerId = referrer.id;
+        }
+      }
+
+      // Use phone as email for Supabase auth
+      const email = `${phone.replace('+', '')}@casino.local`;
       
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("phone", "==", phoneNumber));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        phone,
+        options: {
+          data: {
+            username,
+            phone,
+            referred_by: referrerId
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Registration error:', error);
         toast({
           title: "Registration Failed",
-          description: "This phone number is already registered",
+          description: error.message,
           variant: "destructive"
         });
         return false;
       }
-      
-      const refCode = referralCode || extractReferralCode();
-      console.log("Register with phone and referral code:", refCode);
-      
-      // Generate a unique ID for the phone user
-      const mockUserId = "phone-" + Date.now().toString();
-      
-      const userData: any = {
-        username: username,
-        phone: phoneNumber,
-        password: password, // In a production app, this should be hashed
-        balance: PHONE_SIGNUP_BONUS,
-        createdAt: serverTimestamp(),
-        phoneVerified: true,
-        referralCode: mockUserId
-      };
-      
-      if (refCode) {
-        console.log("Including referral code in user data:", refCode);
-        userData.referredBy = refCode;
-        userData.referralProcessed = false;
-        
-        const referrerDoc = await getDoc(doc(db, "users", refCode));
-        if (referrerDoc.exists()) {
-          console.log("Referrer found:", refCode);
-          await updateDoc(doc(db, "users", refCode), {
-            referralCount: (referrerDoc.data().referralCount || 0) + 1,
-            lastUpdated: serverTimestamp()
-          });
+
+      if (data.user) {
+        // Update the profile with additional data
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            username,
+            phone,
+            referred_by: referrerId
+          })
+          .eq('id', data.user.id);
+
+        if (updateError) {
+          console.error('Profile update error:', updateError);
         }
+
+        // Create referral relationship if applicable
+        if (referrerId && data.user.id !== referrerId) {
+          await supabase
+            .from('referrals')
+            .insert({
+              referrer_id: referrerId,
+              referred_id: data.user.id
+            });
+        }
+
+        toast({
+          title: "Success",
+          description: "Account created successfully!",
+          variant: "default"
+        });
+        return true;
       }
-      
-      await setDoc(doc(db, "users", mockUserId), userData);
-      
-      const newUserData = {
-        id: mockUserId,
-        username: username,
-        phone: phoneNumber,
-        balance: PHONE_SIGNUP_BONUS,
-        phoneVerified: true,
-        referralCode: mockUserId,
-        referredBy: refCode || undefined
-      };
-      
-      setUser(newUserData);
-      localStorage.setItem('casinoUser', JSON.stringify(newUserData));
-      resetSessionTimeout();
-      
-      // Set up real-time balance updates
-      setupUserBalanceListener(mockUserId);
-      
-      toast({
-        title: "Registration Successful!",
-        description: `You've received ৳${PHONE_SIGNUP_BONUS} bonus for registering!`,
-        variant: "default",
-        className: "bg-green-600 text-white font-bold"
-      });
-      
-      if (refCode) {
-        await processReferralBonus(mockUserId);
-      }
-      
-      return true;
+
+      return false;
     } catch (error: any) {
-      console.error("Phone registration error:", error);
+      console.error('Registration error:', error);
       toast({
-        title: "Registration Failed",
-        description: error.message || "An unknown error occurred",
+        title: "Error",
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
       return false;
@@ -439,109 +301,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const updateUserBalance = async (newBalance: number): Promise<boolean> => {
-    if (!user || !db) {
-      console.error("Cannot update balance: user or db is not available");
-      return false;
-    }
-    
+  const logout = async (): Promise<void> => {
     try {
-      let actualBalance = newBalance;
-      let bonusApplied = false;
-      
-      // Check if deposit bonus applies
-      if (newBalance === DEPOSIT_BONUS_THRESHOLD || 
-          (newBalance > user.balance && 
-           newBalance - user.balance === DEPOSIT_BONUS_THRESHOLD)) {
-        actualBalance = newBalance + DEPOSIT_BONUS_AMOUNT;
-        bonusApplied = true;
-      }
-      
-      console.log(`Updating user balance from ${user.balance} to ${actualBalance} (${bonusApplied ? 'with' : 'without'} bonus applied)`);
-      
-      // Update database
-      await updateDoc(doc(db, "users", user.id), {
-        balance: actualBalance,
-        lastUpdated: serverTimestamp()
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      toast({
+        title: "Success",
+        description: "Logged out successfully",
+        variant: "default"
       });
-      
-      // Check for unprocessed referral
-      const userDoc = await getDoc(doc(db, "users", user.id));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        if (userData.referredBy && !userData.referralProcessed) {
-          await updateDoc(doc(db, "users", user.id), {
-            referralProcessed: true,
-            lastUpdated: serverTimestamp()
-          });
-          
-          await processReferralBonus(user.id);
-        }
-      }
-      
-      // Update local user object
-      const updatedUser = {
-        ...user,
-        balance: actualBalance
-      };
-      
-      setUser(updatedUser);
-      localStorage.setItem('casinoUser', JSON.stringify(updatedUser));
-      
-      if (bonusApplied) {
-        sonnerToast.success("Bonus Applied!", {
-          description: `You've received ৳${DEPOSIT_BONUS_AMOUNT} bonus for depositing ৳${DEPOSIT_BONUS_THRESHOLD}!`,
-          duration: 5000
-        });
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Error updating balance:", error);
-      sonnerToast.error("Error", {
-        description: "Failed to update balance",
-        duration: 3000
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to logout",
+        variant: "destructive"
       });
-      return false;
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('casinoUser');
-    localStorage.removeItem('sessionStart');
-    
-    if (balanceListenerRef.current) {
-      balanceListenerRef.current();
-      balanceListenerRef.current = null;
-    }
-    
-    toast({
-      title: "Logged Out",
-      description: "You have been logged out successfully",
-    });
+  const value: AuthContextType = {
+    user,
+    session,
+    isAuthenticated: !!user,
+    isLoading,
+    loginWithPhone,
+    registerWithPhone,
+    logout
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loginWithPhone,
-      registerWithPhone,
-      logout, 
-      isAuthenticated: !!user,
-      isLoading,
-      updateUserBalance,
-      processReferralBonus
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };
