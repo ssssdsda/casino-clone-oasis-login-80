@@ -22,6 +22,7 @@ interface AuthContextType {
   loginWithPhone: (phone: string, password: string) => Promise<boolean>;
   registerWithPhone: (phone: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  updateUserBalance: (newBalance: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: data.id,
         username: data.username,
         phone: data.phone,
-        balance: parseFloat(data.balance || '0'),
+        balance: parseFloat(data.balance?.toString() || '0'),
         role: data.role,
         referralCode: data.referral_code,
         referredBy: data.referred_by
@@ -65,6 +66,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
       return null;
+    }
+  };
+
+  const updateUserBalance = async (newBalance: number): Promise<void> => {
+    try {
+      if (!user) return;
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance.toString() })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error updating balance:', error);
+        return;
+      }
+
+      // Update local user state
+      setUser(prev => prev ? { ...prev, balance: newBalance } : null);
+    } catch (error) {
+      console.error('Error in updateUserBalance:', error);
     }
   };
 
@@ -328,7 +350,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     loginWithPhone,
     registerWithPhone,
-    logout
+    logout,
+    updateUserBalance
   };
 
   return (

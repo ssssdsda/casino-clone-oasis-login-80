@@ -57,7 +57,7 @@ export const shouldBetWin = async (userId: string, gameType: string, betAmount: 
       .gte('created_at', today.toISOString())
       .eq('result', 'win');
 
-    const totalWinToday = todayBets?.reduce((sum, bet) => sum + parseFloat(bet.win_amount || '0'), 0) || 0;
+    const totalWinToday = todayBets?.reduce((sum, bet) => sum + parseFloat((bet.win_amount || 0).toString()), 0) || 0;
 
     if (totalWinToday >= settings.max_win) {
       return false;
@@ -94,7 +94,7 @@ export const placeBet = async (
       throw new Error('Failed to get user balance');
     }
 
-    const currentBalance = parseFloat(profile.balance || '0');
+    const currentBalance = parseFloat((profile.balance || 0).toString());
 
     // Check if user has enough balance
     if (currentBalance < betAmount) {
@@ -115,7 +115,7 @@ export const placeBet = async (
     const newBalance = currentBalance - betAmount;
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ balance: newBalance })
+      .update({ balance: newBalance.toString() })
       .eq('id', userId);
 
     if (updateError) {
@@ -131,9 +131,9 @@ export const placeBet = async (
       .insert({
         user_id: userId,
         game_type: gameType,
-        bet_amount: betAmount,
+        bet_amount: betAmount.toString(),
         result: 'pending',
-        win_amount: 0
+        win_amount: '0'
       })
       .select()
       .single();
@@ -142,7 +142,7 @@ export const placeBet = async (
       // Rollback balance update
       await supabase
         .from('profiles')
-        .update({ balance: currentBalance })
+        .update({ balance: currentBalance.toString() })
         .eq('id', userId);
       throw new Error('Failed to create bet record');
     }
@@ -172,8 +172,8 @@ export const completeBet = async (
       .from('bets')
       .update({
         result: won ? 'win' : 'loss',
-        win_amount: winAmount,
-        multiplier: multiplier
+        win_amount: winAmount.toString(),
+        multiplier: multiplier.toString()
       })
       .eq('id', betId);
 
@@ -193,12 +193,12 @@ export const completeBet = async (
         throw new Error('Failed to get user balance');
       }
 
-      const currentBalance = parseFloat(profile.balance || '0');
+      const currentBalance = parseFloat((profile.balance || 0).toString());
       const newBalance = currentBalance + winAmount;
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ balance: newBalance })
+        .update({ balance: newBalance.toString() })
         .eq('id', userId);
 
       if (updateError) {
@@ -215,7 +215,7 @@ export const completeBet = async (
       .eq('id', userId)
       .single();
 
-    return parseFloat(profile?.balance || '0');
+    return parseFloat((profile?.balance || 0).toString());
   } catch (error) {
     console.error('Error in completeBet:', error);
     throw error;
