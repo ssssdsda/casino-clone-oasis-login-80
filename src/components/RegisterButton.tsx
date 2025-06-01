@@ -13,23 +13,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Phone, User, Lock, Gift, Percent } from 'lucide-react';
+import { Mail, User, Lock, Gift, Percent } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { getUserByReferralCode } from '@/lib/firebase';
 
 export function RegisterButton(props: any) {
   const [open, setOpen] = useState(false);
   
-  // Phone register state
-  const [phoneNumber, setPhoneNumber] = useState('+880');
-  const [phonePassword, setPhonePassword] = useState('');
-  const [phoneUsername, setPhoneUsername] = useState('');
+  // Email register state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   
   // Referral code
   const [referralCode, setReferralCode] = useState('');
   const [referrerFound, setReferrerFound] = useState(false);
   
-  const { registerWithPhone, isLoading } = useAuth();
+  const { registerWithEmail, isLoading } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
 
@@ -73,10 +73,10 @@ export function RegisterButton(props: any) {
     loadReferralCode();
   }, []);
 
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!phoneNumber || !phonePassword || !phoneUsername) {
+    if (!email || !password || !username) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -84,15 +84,21 @@ export function RegisterButton(props: any) {
       });
       return;
     }
+
+    if (!email.includes('@')) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
-      // Format phone number to ensure it has Bangladesh code
-      const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+880${phoneNumber}`;
+      console.log("Registering with email and referral code:", email, referralCode);
       
-      console.log("Registering with phone and referral code:", formattedPhone, referralCode);
-      
-      // Register with phone
-      const success = await registerWithPhone(formattedPhone, phoneUsername, phonePassword, referralCode);
+      // Register with email
+      const success = await registerWithEmail(email, username, password, referralCode);
       if (success) {
         // Clear referral code from localStorage after successful use
         if (referralCode) {
@@ -101,15 +107,15 @@ export function RegisterButton(props: any) {
         setOpen(false);
       }
     } catch (error: any) {
-      console.error("Phone registration error:", error);
-      // Errors are handled in the registerWithPhone function
+      console.error("Email registration error:", error);
+      // Errors are handled in the registerWithEmail function
     }
   };
 
   const resetForm = () => {
-    setPhoneNumber('+880');
-    setPhonePassword('');
-    setPhoneUsername('');
+    setEmail('');
+    setPassword('');
+    setUsername('');
     // Don't clear referral code as it might be needed for the next attempt
   };
 
@@ -161,41 +167,41 @@ export function RegisterButton(props: any) {
             </div>
           )}
           
-          <form onSubmit={handlePhoneSubmit} className="space-y-4">
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="phone-username" className="text-white flex items-center gap-2">
+              <Label htmlFor="email-username" className="text-white flex items-center gap-2">
                 <User className="h-4 w-4" /> {t('username')}
               </Label>
               <Input 
-                id="phone-username"
-                value={phoneUsername}
-                onChange={(e) => setPhoneUsername(e.target.value)}
+                id="email-username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="bg-casino-dark border-gray-700 text-white"
                 placeholder="Enter your username"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="register-phone" className="text-white flex items-center gap-2">
-                <Phone className="h-4 w-4" /> {t('phone')}
+              <Label htmlFor="register-email" className="text-white flex items-center gap-2">
+                <Mail className="h-4 w-4" /> Email
               </Label>
               <Input 
-                id="register-phone"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                id="register-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="bg-casino-dark border-gray-700 text-white"
-                placeholder="+8801XXXXXXXXX"
+                placeholder="your@email.com"
               />
-              <p className="text-xs text-blue-400">Bangladesh number (+880)</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="register-phone-password" className="text-white flex items-center gap-2">
+              <Label htmlFor="register-email-password" className="text-white flex items-center gap-2">
                 <Lock className="h-4 w-4" /> {t('password')}
               </Label>
               <Input
-                id="register-phone-password"
+                id="register-email-password"
                 type="password"
-                value={phonePassword}
-                onChange={(e) => setPhonePassword(e.target.value)}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="bg-casino-dark border-gray-700 text-white"
                 placeholder="Your password"
               />

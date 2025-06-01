@@ -38,6 +38,7 @@ import ReferralProgram from "./pages/ReferralProgram";
 import PlinkoGame from "./pages/PlinkoGame";
 import FruityBonanzaGame from "./pages/FruityBonanzaGame";
 import Register from "./pages/Register";
+import CasinoControl from "./pages/CasinoControl";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="/game/fruity-bonanza" element={<FruityBonanzaGame />} />
               <Route path="/register" element={<Register />} />
               <Route path="/signup" element={<Register />} />
+              <Route path="/admin/casino-control" element={<CasinoControl />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>

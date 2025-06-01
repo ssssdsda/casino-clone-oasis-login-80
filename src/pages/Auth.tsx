@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
-import { Phone, User, Lock, Gift } from 'lucide-react';
+import { Mail, User, Lock, Gift } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 const Auth = () => {
-  const { isAuthenticated, loginWithPhone, registerWithPhone, isLoading } = useAuth();
+  const { isAuthenticated, loginWithEmail, registerWithEmail, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -21,11 +21,11 @@ const Auth = () => {
   const [activeTab, setActiveTab] = useState('login');
   
   // Login state
-  const [loginPhone, setLoginPhone] = useState('+880');
+  const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
   // Register state
-  const [registerPhone, setRegisterPhone] = useState('+880');
+  const [registerEmail, setRegisterEmail] = useState('');
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
@@ -54,10 +54,10 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!loginPhone || loginPhone === '+880' || loginPhone.length < 11) {
+    if (!loginEmail || !loginEmail.includes('@')) {
       toast({
         title: "Error",
-        description: "Please enter a valid phone number",
+        description: "Please enter a valid email address",
         variant: "destructive"
       });
       return;
@@ -72,7 +72,7 @@ const Auth = () => {
       return;
     }
     
-    const success = await loginWithPhone(loginPhone, loginPassword);
+    const success = await loginWithEmail(loginEmail, loginPassword);
     if (success) {
       navigate('/');
     }
@@ -81,7 +81,7 @@ const Auth = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!registerUsername || !registerPhone || !registerPassword) {
+    if (!registerUsername || !registerEmail || !registerPassword) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -90,10 +90,10 @@ const Auth = () => {
       return;
     }
     
-    if (registerPhone === '+880' || registerPhone.length < 11) {
+    if (!registerEmail.includes('@')) {
       toast({
         title: "Error",
-        description: "Please enter a valid phone number",
+        description: "Please enter a valid email address",
         variant: "destructive"
       });
       return;
@@ -108,8 +108,8 @@ const Auth = () => {
       return;
     }
     
-    const success = await registerWithPhone(
-      registerPhone, 
+    const success = await registerWithEmail(
+      registerEmail, 
       registerUsername, 
       registerPassword, 
       referralCode || undefined
@@ -149,18 +149,17 @@ const Auth = () => {
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-phone" className="text-white flex items-center gap-2">
-                      <Phone className="h-4 w-4" /> Phone Number
+                    <Label htmlFor="login-email" className="text-white flex items-center gap-2">
+                      <Mail className="h-4 w-4" /> Email Address
                     </Label>
                     <Input
-                      id="login-phone"
-                      type="tel"
-                      value={loginPhone}
-                      onChange={(e) => setLoginPhone(e.target.value)}
+                      id="login-email"
+                      type="email"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
                       className="bg-casino-dark border-gray-700 text-white"
-                      placeholder="+8801XXXXXXXXX"
+                      placeholder="your@email.com"
                     />
-                    <p className="text-xs text-blue-400">Bangladesh number (+880)</p>
                   </div>
                   
                   <div className="space-y-2">
@@ -217,18 +216,17 @@ const Auth = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="register-phone" className="text-white flex items-center gap-2">
-                      <Phone className="h-4 w-4" /> Phone Number
+                    <Label htmlFor="register-email" className="text-white flex items-center gap-2">
+                      <Mail className="h-4 w-4" /> Email Address
                     </Label>
                     <Input
-                      id="register-phone"
-                      type="tel"
-                      value={registerPhone}
-                      onChange={(e) => setRegisterPhone(e.target.value)}
+                      id="register-email"
+                      type="email"
+                      value={registerEmail}
+                      onChange={(e) => setRegisterEmail(e.target.value)}
                       className="bg-casino-dark border-gray-700 text-white"
-                      placeholder="+8801XXXXXXXXX"
+                      placeholder="your@email.com"
                     />
-                    <p className="text-xs text-blue-400">Bangladesh number (+880)</p>
                   </div>
                   
                   <div className="space-y-2">

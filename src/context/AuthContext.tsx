@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 interface AuthUser {
   id: string;
   username: string;
-  phone?: string;
+  email?: string;
   balance: number;
   role: string;
   referralCode?: string;
@@ -19,8 +19,8 @@ interface AuthContextType {
   session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  loginWithPhone: (phone: string, password: string) => Promise<boolean>;
-  registerWithPhone: (phone: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
+  loginWithEmail: (email: string, password: string) => Promise<boolean>;
+  registerWithEmail: (email: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUserBalance: (newBalance: number) => Promise<void>;
 }
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         id: data.id,
         username: data.username,
-        phone: data.phone,
+        email: data.email,
         balance: parseFloat((data.balance || 0).toString()),
         role: data.role,
         referralCode: data.referral_code,
@@ -89,6 +89,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error in updateUserBalance:', error);
     }
   };
+
+  // Set up real-time balance updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('balance-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          const newBalance = parseFloat((payload.new?.balance || 0).toString());
+          setUser(prev => prev ? { ...prev, balance: newBalance } : null);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     // Set up auth state listener
@@ -127,37 +153,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const loginWithPhone = async (phone: string, password: string): Promise<boolean> => {
+  const loginWithEmail = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      
-      // First check if profile exists with this phone
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('phone', phone);
-
-      if (profileError) {
-        console.error('Error checking profile:', profileError);
-        toast({
-          title: "Error",
-          description: "Failed to verify phone number",
-          variant: "destructive"
-        });
-        return false;
-      }
-
-      if (!profiles || profiles.length === 0) {
-        toast({
-          title: "Error",
-          description: "No account found with this phone number",
-          variant: "destructive"
-        });
-        return false;
-      }
-
-      // Use phone as email for Supabase auth
-      const email = `${phone.replace('+', '')}@casino.local`;
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -197,8 +195,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const registerWithPhone = async (
-    phone: string, 
+  const registerWithEmail = async (
+    email: string, 
     username: string, 
     password: string, 
     referralCode?: string
@@ -206,16 +204,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
 
-      // Check if phone already exists
-      const { data: existingProfiles } = await supabase
-        .from('profiles')
-        .select('phone')
-        .eq('phone', phone);
-
-      if (existingProfiles && existingProfiles.length > 0) {
+      // Check if email already exists
+      const { data: existingUsers } = await supabase.auth.admin.listUsers();
+      const emailExists = existingUsers.users?.some(user => user.email === email);
+      
+      if (emailExists) {
         toast({
           title: "Error",
-          description: "Phone number already registered",
+          description: "Email already registered",
           variant: "destructive"
         });
         return false;
@@ -250,17 +246,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Use phone as email for Supabase auth
-      const email = `${phone.replace('+', '')}@casino.local`;
-      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        phone,
         options: {
           data: {
             username,
-            phone,
+            email,
             referred_by: referrerId
           }
         }
@@ -282,7 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('profiles')
           .update({
             username,
-            phone,
+            email,
             referred_by: referrerId
           })
           .eq('id', data.user.id);
@@ -343,50 +335,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        setSession(session);
-        
-        if (session?.user) {
-          // Defer profile fetching to avoid deadlocks
-          setTimeout(async () => {
-            const profile = await fetchUserProfile(session.user.id);
-            setUser(profile);
-            setIsLoading(false);
-          }, 0);
-        } else {
-          setUser(null);
-          setIsLoading(false);
-        }
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        fetchUserProfile(session.user.id).then((profile) => {
-          setUser(profile);
-          setIsLoading(false);
-        });
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const value: AuthContextType = {
     user,
     session,
     isAuthenticated: !!user,
     isLoading,
-    loginWithPhone,
-    registerWithPhone,
+    loginWithEmail,
+    registerWithEmail,
     logout,
     updateUserBalance
   };

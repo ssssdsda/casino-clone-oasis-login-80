@@ -13,35 +13,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Phone, KeyRound } from 'lucide-react';
+import { Mail, KeyRound } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export function LoginButton(props: any) {
   const [open, setOpen] = useState(false);
   
-  // Phone login state
-  const [phoneNumber, setPhoneNumber] = useState('+880');
-  const [phonePassword, setPhonePassword] = useState('');
+  // Email login state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   
-  const { loginWithPhone, isLoading } = useAuth();
+  const { loginWithEmail, isLoading } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
   const isMobile = useIsMobile();
 
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!phoneNumber || phoneNumber === '+880' || phoneNumber.length < 11) {
+    if (!email || !email.includes('@')) {
       toast({
         title: "Error",
-        description: "Please enter a valid phone number",
+        description: "Please enter a valid email address",
         variant: "destructive"
       });
       return;
     }
     
-    if (!phonePassword) {
+    if (!password) {
       toast({
         title: "Error",
         description: "Please enter your password",
@@ -51,18 +51,18 @@ export function LoginButton(props: any) {
     }
     
     try {
-      const result = await loginWithPhone(phoneNumber, phonePassword);
+      const result = await loginWithEmail(email, password);
       if (result) {
         setOpen(false);
       }
     } catch (error) {
-      console.error("Phone login error in component:", error);
+      console.error("Email login error in component:", error);
     }
   };
 
   const resetForm = () => {
-    setPhoneNumber('+880');
-    setPhonePassword('');
+    setEmail('');
+    setPassword('');
   };
 
   return (
@@ -87,30 +87,30 @@ export function LoginButton(props: any) {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handlePhoneSubmit} className="space-y-4">
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="login-phone" className="text-white flex items-center gap-2">
-                <Phone className="h-4 w-4" /> {t('phone')}
+              <Label htmlFor="login-email" className="text-white flex items-center gap-2">
+                <Mail className="h-4 w-4" /> Email
               </Label>
               <Input 
-                id="login-phone"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="bg-casino-dark border-gray-700 text-white"
-                placeholder="+8801XXXXXXXXX"
+                placeholder="your@email.com"
               />
-              <p className="text-xs text-blue-400">Bangladesh number (+880)</p>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="phone-password" className="text-white flex items-center gap-2">
+              <Label htmlFor="email-password" className="text-white flex items-center gap-2">
                 <KeyRound className="h-4 w-4" /> {t('password')}
               </Label>
               <Input
-                id="phone-password"
+                id="email-password"
                 type="password"
-                value={phonePassword}
-                onChange={(e) => setPhonePassword(e.target.value)}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="bg-casino-dark border-gray-700 text-white"
                 placeholder="********"
               />
