@@ -137,6 +137,7 @@ export type Database = {
         Row: {
           balance: number | null
           created_at: string | null
+          email: string | null
           id: string
           phone: string | null
           referral_code: string | null
@@ -148,6 +149,7 @@ export type Database = {
         Insert: {
           balance?: number | null
           created_at?: string | null
+          email?: string | null
           id: string
           phone?: string | null
           referral_code?: string | null
@@ -159,6 +161,7 @@ export type Database = {
         Update: {
           balance?: number | null
           created_at?: string | null
+          email?: string | null
           id?: string
           phone?: string | null
           referral_code?: string | null

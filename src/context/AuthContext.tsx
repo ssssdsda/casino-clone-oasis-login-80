@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         id: data.id,
         username: data.username,
-        email: data.email,
+        email: data.email || undefined,
         balance: parseFloat((data.balance || 0).toString()),
         role: data.role,
         referralCode: data.referral_code,
