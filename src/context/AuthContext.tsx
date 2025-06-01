@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -203,19 +202,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<boolean> => {
     try {
       setIsLoading(true);
-
-      // Check if email already exists
-      const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      const emailExists = existingUsers.users?.some(user => user.email === email);
-      
-      if (emailExists) {
-        toast({
-          title: "Error",
-          description: "Email already registered",
-          variant: "destructive"
-        });
-        return false;
-      }
 
       // Check if username already exists
       const { data: existingUsername } = await supabase
