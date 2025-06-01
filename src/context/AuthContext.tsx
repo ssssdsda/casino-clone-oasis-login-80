@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: data.id,
         username: data.username,
         phone: data.phone,
-        balance: parseFloat(data.balance?.toString() || '0'),
+        balance: parseFloat((data.balance || 0).toString()),
         role: data.role,
         referralCode: data.referral_code,
         referredBy: data.referred_by
@@ -75,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const { error } = await supabase
         .from('profiles')
-        .update({ balance: newBalance.toString() })
+        .update({ balance: newBalance })
         .eq('id', user.id);
 
       if (error) {
@@ -342,6 +342,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     }
   };
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        setSession(session);
+        
+        if (session?.user) {
+          // Defer profile fetching to avoid deadlocks
+          setTimeout(async () => {
+            const profile = await fetchUserProfile(session.user.id);
+            setUser(profile);
+            setIsLoading(false);
+          }, 0);
+        } else {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        fetchUserProfile(session.user.id).then((profile) => {
+          setUser(profile);
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const value: AuthContextType = {
     user,

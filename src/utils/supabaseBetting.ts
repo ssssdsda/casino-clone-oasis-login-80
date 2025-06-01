@@ -115,7 +115,7 @@ export const placeBet = async (
     const newBalance = currentBalance - betAmount;
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ balance: newBalance.toString() })
+      .update({ balance: newBalance })
       .eq('id', userId);
 
     if (updateError) {
@@ -131,9 +131,9 @@ export const placeBet = async (
       .insert({
         user_id: userId,
         game_type: gameType,
-        bet_amount: betAmount.toString(),
+        bet_amount: betAmount,
         result: 'pending',
-        win_amount: '0'
+        win_amount: 0
       })
       .select()
       .single();
@@ -142,7 +142,7 @@ export const placeBet = async (
       // Rollback balance update
       await supabase
         .from('profiles')
-        .update({ balance: currentBalance.toString() })
+        .update({ balance: currentBalance })
         .eq('id', userId);
       throw new Error('Failed to create bet record');
     }
@@ -172,8 +172,8 @@ export const completeBet = async (
       .from('bets')
       .update({
         result: won ? 'win' : 'loss',
-        win_amount: winAmount.toString(),
-        multiplier: multiplier.toString()
+        win_amount: winAmount,
+        multiplier: multiplier
       })
       .eq('id', betId);
 
@@ -198,7 +198,7 @@ export const completeBet = async (
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ balance: newBalance.toString() })
+        .update({ balance: newBalance })
         .eq('id', userId);
 
       if (updateError) {
