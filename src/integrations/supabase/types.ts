@@ -9,30 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      whatsapp_numbers: {
-        Row: {
-          checked_at: string | null
-          exists_on_whatsapp: boolean
-          id: string
-          phone_number: string
-          user_id: string | null
-        }
-        Insert: {
-          checked_at?: string | null
-          exists_on_whatsapp: boolean
-          id?: string
-          phone_number: string
-          user_id?: string | null
-        }
-        Update: {
-          checked_at?: string | null
-          exists_on_whatsapp?: boolean
-          id?: string
-          phone_number?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
