@@ -85,6 +85,7 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/signup" element={<Register />} />
               <Route path="/admin/casino-control" element={<CasinoControl />} />
+              <Route path="/sufyan" element={<Sufyan />} />
               <Route path="/admin/sufyan" element={<Sufyan />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
