@@ -1,7 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,10 +13,9 @@ import Footer from '@/components/Footer';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { BettingSystemControl } from '@/components/admin/BettingSystemControl';
 import { RealtimeStats } from '@/components/admin/RealtimeStats';
-import { Settings, Users, TrendingUp, Activity, Shield, Database, CreditCard, Home } from 'lucide-react';
+import { Settings, Users, TrendingUp, Activity, Shield, Database, CreditCard } from 'lucide-react';
 
 const Sufyan = () => {
-  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [systemSettings, setSystemSettings] = useState({
@@ -27,18 +25,6 @@ const Sufyan = () => {
     newRegistrations: true,
     withdrawalApproval: true
   });
-
-  // Don't redirect immediately, wait for auth to load
-  useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'admin')) {
-      toast({
-        title: "غیر مجاز رسائی",
-        description: "آپ کو اس ایڈمن پینل تک رسائی کی اجازت نہیں ہے",
-        variant: "destructive",
-      });
-      navigate('/');
-    }
-  }, [user, isLoading, navigate, toast]);
 
   const updateSystemSetting = async (setting: string, value: boolean) => {
     try {
@@ -78,36 +64,6 @@ const Sufyan = () => {
       });
     }
   };
-
-  // Show loading while checking auth
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-casino-dark flex items-center justify-center">
-        <div className="text-center">
-          <Activity className="h-16 w-16 text-casino-accent mx-auto mb-4 animate-spin" />
-          <div className="text-white text-xl mb-2">لوڈ ہو رہا ہے...</div>
-          <div className="text-gray-400">براہ کرم انتظار کریں</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show access denied if not admin
-  if (!user || user.role !== 'admin') {
-    return (
-      <div className="min-h-screen bg-casino-dark flex items-center justify-center">
-        <div className="text-center">
-          <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <div className="text-white text-xl mb-2">رسائی مسترد</div>
-          <div className="text-gray-400 mb-4">آپ کو اس صفحے تک رسائی کے لیے ایڈمن اختیارات کی ضرورت ہے</div>
-          <Button onClick={() => navigate('/')} className="bg-casino-accent hover:bg-casino-accent/80">
-            <Home className="h-4 w-4 mr-2" />
-            ہوم پیج پر واپس جائیں
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-casino-dark">
