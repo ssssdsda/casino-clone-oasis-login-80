@@ -7,14 +7,15 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Plus, Edit, Trash2, DollarSign } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, DollarSign, User } from 'lucide-react';
 
 interface User {
   id: string;
   username: string;
-  email: string;
+  email: string | null;
   balance: number;
   role: string;
+  phone: string | null;
   created_at: string;
 }
 
@@ -24,6 +25,13 @@ export const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [balanceAmount, setBalanceAmount] = useState('');
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({
+    username: '',
+    email: '',
+    phone: '',
+    role: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,12 +47,13 @@ export const UserManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Loaded users:', data);
       setUsers(data || []);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
-        title: "Error",
-        description: "Failed to load users",
+        title: "خرابی",
+        description: "یوزرز لوڈ کرنے میں ناکامی",
         variant: "destructive"
       });
     } finally {
@@ -63,6 +72,7 @@ export const UserManagement = () => {
           table: 'profiles'
         },
         () => {
+          console.log('Real-time update received');
           loadUsers();
         }
       )
@@ -83,25 +93,61 @@ export const UserManagement = () => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "User balance updated successfully",
+        title: "کامیابی",
+        description: "یوزر بیلنس کامیابی سے اپڈیٹ ہو گیا",
         variant: "default"
       });
 
       setSelectedUser(null);
       setBalanceAmount('');
+      loadUsers();
     } catch (error) {
       console.error('Error updating balance:', error);
       toast({
-        title: "Error",
-        description: "Failed to update user balance",
+        title: "خرابی",
+        description: "یوزر بیلنس اپڈیٹ کرنے میں ناکامی",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateUserInfo = async () => {
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: editForm.username,
+          email: editForm.email || null,
+          phone: editForm.phone || null,
+          role: editForm.role
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "کامیابی",
+        description: "یوزر کی معلومات کامیابی سے اپڈیٹ ہو گئیں",
+        variant: "default"
+      });
+
+      setEditingUser(null);
+      setEditForm({ username: '', email: '', phone: '', role: '' });
+      loadUsers();
+    } catch (error) {
+      console.error('Error updating user info:', error);
+      toast({
+        title: "خرابی",
+        description: "یوزر کی معلومات اپڈیٹ کرنے میں ناکامی",
         variant: "destructive"
       });
     }
   };
 
   const deleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+    if (!confirm('کیا آپ واقعی اس یوزر کو ڈیلیٹ کرنا چاہتے ہیں؟')) return;
 
     try {
       const { error } = await supabase
@@ -112,23 +158,35 @@ export const UserManagement = () => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "User deleted successfully",
+        title: "کامیابی",
+        description: "یوزر کامیابی سے ڈیلیٹ ہو گیا",
         variant: "default"
       });
+
+      loadUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete user",
+        title: "خرابی",
+        description: "یوزر ڈیلیٹ کرنے میں ناکامی",
         variant: "destructive"
       });
     }
   };
 
+  const startEditing = (user: User) => {
+    setEditingUser(user);
+    setEditForm({
+      username: user.username,
+      email: user.email || '',
+      phone: user.phone || '',
+      role: user.role
+    });
+  };
+
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -136,108 +194,162 @@ export const UserManagement = () => {
       <Card className="bg-casino border-casino-accent">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            User Management
+            <User className="h-5 w-5" />
+            یوزر منیجمنٹ سسٹم
           </CardTitle>
           <CardDescription className="text-gray-300">
-            Manage user accounts, balances, and permissions in real-time
+            تمام یوزرز کی معلومات، بیلنس اور اکاؤنٹس کا انتظام
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
               <Input
-                placeholder="Search users by username or email..."
+                placeholder="یوزر نیم یا ای میل سے تلاش کریں..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="bg-casino-dark border-gray-700 text-white"
               />
             </div>
-            <Button className="bg-casino-accent hover:bg-casino-accent/80">
-              <Plus className="h-4 w-4 mr-2" />
-              Add User
+            <Button 
+              onClick={loadUsers}
+              className="bg-casino-accent hover:bg-casino-accent/80"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              ریفریش
             </Button>
+          </div>
+
+          <div className="mb-4 p-4 bg-casino-dark rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-casino-accent">{users.length}</div>
+                <div className="text-gray-300 text-sm">کل یوزرز</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-400">
+                  ৳{users.reduce((sum, user) => sum + (user.balance || 0), 0).toFixed(2)}
+                </div>
+                <div className="text-gray-300 text-sm">کل بیلنس</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-400">
+                  {users.filter(user => user.role === 'admin').length}
+                </div>
+                <div className="text-gray-300 text-sm">ایڈمن</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-yellow-400">
+                  {users.filter(user => new Date(user.created_at) > new Date(Date.now() - 24*60*60*1000)).length}
+                </div>
+                <div className="text-gray-300 text-sm">آج کے نئے</div>
+              </div>
+            </div>
           </div>
 
           {loading ? (
             <div className="text-center py-8">
-              <div className="text-white">Loading users...</div>
+              <div className="text-white">یوزرز لوڈ ہو رہے ہیں...</div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-white">Username</TableHead>
-                  <TableHead className="text-white">Email</TableHead>
-                  <TableHead className="text-white">Balance</TableHead>
-                  <TableHead className="text-white">Role</TableHead>
-                  <TableHead className="text-white">Created</TableHead>
-                  <TableHead className="text-white">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="text-white">{user.username}</TableCell>
-                    <TableCell className="text-gray-300">{user.email}</TableCell>
-                    <TableCell className="text-casino-accent font-bold">
-                      ৳{parseFloat((user.balance || 0).toString()).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-white">{user.role}</TableCell>
-                    <TableCell className="text-gray-300">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => setSelectedUser(user)}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          <DollarSign className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-gray-600 text-white hover:bg-gray-700"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteUser(user.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-white">یوزر نیم</TableHead>
+                    <TableHead className="text-white">ای میل</TableHead>
+                    <TableHead className="text-white">فون</TableHead>
+                    <TableHead className="text-white">بیلنس</TableHead>
+                    <TableHead className="text-white">کردار</TableHead>
+                    <TableHead className="text-white">تاریخ</TableHead>
+                    <TableHead className="text-white">اعمال</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="text-white font-medium">{user.username}</TableCell>
+                      <TableCell className="text-gray-300">
+                        {user.email || <span className="text-red-400">نہیں ملا</span>}
+                      </TableCell>
+                      <TableCell className="text-gray-300">
+                        {user.phone || <span className="text-gray-500">نہیں</span>}
+                      </TableCell>
+                      <TableCell className="text-casino-accent font-bold">
+                        ৳{parseFloat((user.balance || 0).toString()).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-white">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          user.role === 'admin' ? 'bg-red-600' : 'bg-blue-600'
+                        }`}>
+                          {user.role}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-gray-300">
+                        {new Date(user.created_at).toLocaleDateString('ur-PK')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedUser(user)}
+                            className="bg-green-600 hover:bg-green-700"
+                            title="بیلنس تبدیل کریں"
+                          >
+                            <DollarSign className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => startEditing(user)}
+                            className="bg-blue-600 hover:bg-blue-700"
+                            title="معلومات ایڈٹ کریں"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteUser(user.id)}
+                            title="یوزر ڈیلیٹ کریں"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {filteredUsers.length === 0 && !loading && (
+            <div className="text-center py-8">
+              <div className="text-gray-400">کوئی یوزر نہیں ملا</div>
+            </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Balance Update Modal */}
       {selectedUser && (
         <Card className="bg-casino border-casino-accent">
           <CardHeader>
-            <CardTitle className="text-white">Update Balance - {selectedUser.username}</CardTitle>
+            <CardTitle className="text-white">بیلنس اپڈیٹ - {selectedUser.username}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
-                <Label className="text-white">Current Balance: ৳{parseFloat((selectedUser.balance || 0).toString()).toFixed(2)}</Label>
+                <Label className="text-white">موجودہ بیلنس: ৳{parseFloat((selectedUser.balance || 0).toString()).toFixed(2)}</Label>
               </div>
               <div>
-                <Label htmlFor="balance" className="text-white">New Balance Amount</Label>
+                <Label htmlFor="balance" className="text-white">نیا بیلنس</Label>
                 <Input
                   id="balance"
                   type="number"
                   value={balanceAmount}
                   onChange={(e) => setBalanceAmount(e.target.value)}
-                  placeholder="Enter new balance"
+                  placeholder="نیا بیلنس داخل کریں"
                   className="bg-casino-dark border-gray-700 text-white"
                 />
               </div>
@@ -247,7 +359,7 @@ export const UserManagement = () => {
                   disabled={!balanceAmount}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  Update Balance
+                  بیلنس اپڈیٹ کریں
                 </Button>
                 <Button
                   variant="outline"
@@ -257,7 +369,78 @@ export const UserManagement = () => {
                   }}
                   className="border-gray-600 text-white hover:bg-gray-700"
                 >
-                  Cancel
+                  منسوخ
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* User Info Edit Modal */}
+      {editingUser && (
+        <Card className="bg-casino border-casino-accent">
+          <CardHeader>
+            <CardTitle className="text-white">یوزر کی معلومات ایڈٹ کریں - {editingUser.username}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-username" className="text-white">یوزر نیم</Label>
+                <Input
+                  id="edit-username"
+                  value={editForm.username}
+                  onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                  className="bg-casino-dark border-gray-700 text-white"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-email" className="text-white">ای میل</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                  className="bg-casino-dark border-gray-700 text-white"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-phone" className="text-white">فون نمبر</Label>
+                <Input
+                  id="edit-phone"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                  className="bg-casino-dark border-gray-700 text-white"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-role" className="text-white">کردار</Label>
+                <select
+                  id="edit-role"
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({...editForm, role: e.target.value})}
+                  className="w-full bg-casino-dark border border-gray-700 text-white rounded px-3 py-2"
+                >
+                  <option value="user">یوزر</option>
+                  <option value="admin">ایڈمن</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={updateUserInfo}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  محفوظ کریں
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditingUser(null);
+                    setEditForm({ username: '', email: '', phone: '', role: '' });
+                  }}
+                  className="border-gray-600 text-white hover:bg-gray-700"
+                >
+                  منسوخ
                 </Button>
               </div>
             </div>
