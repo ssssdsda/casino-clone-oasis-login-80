@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Plus, Edit, Trash2, DollarSign, User } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, DollarSign, User, Minus } from 'lucide-react';
 
 interface User {
   id: string;
@@ -25,6 +24,7 @@ export const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [balanceAmount, setBalanceAmount] = useState('');
+  const [balanceAction, setBalanceAction] = useState<'add' | 'subtract' | 'set'>('add');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({
     username: '',
@@ -83,8 +83,27 @@ export const UserManagement = () => {
     };
   };
 
-  const updateUserBalance = async (userId: string, newBalance: number) => {
+  const updateUserBalance = async (userId: string, action: 'add' | 'subtract' | 'set', amount: number) => {
     try {
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+
+      let newBalance: number;
+      
+      switch (action) {
+        case 'add':
+          newBalance = user.balance + amount;
+          break;
+        case 'subtract':
+          newBalance = Math.max(0, user.balance - amount);
+          break;
+        case 'set':
+          newBalance = amount;
+          break;
+        default:
+          newBalance = user.balance;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ balance: newBalance })
@@ -94,7 +113,7 @@ export const UserManagement = () => {
 
       toast({
         title: "کامیابی",
-        description: "یوزر بیلنس کامیابی سے اپڈیٹ ہو گیا",
+        description: `یوزر بیلنس کامیابی سے ${action === 'add' ? 'بڑھایا' : action === 'subtract' ? 'کم کیا' : 'سیٹ کیا'} گیا`,
         variant: "default"
       });
 
@@ -106,6 +125,53 @@ export const UserManagement = () => {
       toast({
         title: "خرابی",
         description: "یوزر بیلنس اپڈیٹ کرنے میں ناکامی",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addBonusToAllUsers = async () => {
+    try {
+      const bonusAmount = parseFloat(balanceAmount);
+      if (!bonusAmount || bonusAmount <= 0) {
+        toast({
+          title: "خرابی",
+          description: "براہ کرم صحیح رقم داخل کریں",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update all users' balance
+      const { error } = await supabase.rpc('add_bonus_to_all_users', {
+        bonus_amount: bonusAmount
+      });
+
+      if (error) {
+        // If RPC doesn't exist, update manually
+        const updatePromises = users.map(user => 
+          supabase
+            .from('profiles')
+            .update({ balance: user.balance + bonusAmount })
+            .eq('id', user.id)
+        );
+        
+        await Promise.all(updatePromises);
+      }
+
+      toast({
+        title: "کامیابی",
+        description: `تمام یوزرز کو ৳${bonusAmount} بونس ملا`,
+        variant: "default"
+      });
+
+      setBalanceAmount('');
+      loadUsers();
+    } catch (error) {
+      console.error('Error adding bonus to all users:', error);
+      toast({
+        title: "خرابی",
+        description: "تمام یوزرز کو بونس دینے میں ناکامی",
         variant: "destructive"
       });
     }
@@ -220,6 +286,35 @@ export const UserManagement = () => {
             </Button>
           </div>
 
+          {/* Bulk Balance Management */}
+          <Card className="bg-casino-dark border-gray-700 mb-6">
+            <CardHeader>
+              <CardTitle className="text-white text-lg">تمام یوزرز کو بونس دیں</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4 items-end">
+                <div className="flex-1">
+                  <Label className="text-white">بونس رقم (৳)</Label>
+                  <Input
+                    type="number"
+                    value={balanceAmount}
+                    onChange={(e) => setBalanceAmount(e.target.value)}
+                    placeholder="تمام یوزرز کو دینے والی رقم"
+                    className="bg-casino border-gray-700 text-white"
+                  />
+                </div>
+                <Button
+                  onClick={addBonusToAllUsers}
+                  disabled={!balanceAmount}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  تمام کو بونس دیں
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="mb-4 p-4 bg-casino-dark rounded-lg">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
@@ -331,41 +426,77 @@ export const UserManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Balance Update Modal */}
+      {/* Enhanced Balance Update Modal */}
       {selectedUser && (
         <Card className="bg-casino border-casino-accent">
           <CardHeader>
-            <CardTitle className="text-white">بیلنس اپڈیٹ - {selectedUser.username}</CardTitle>
+            <CardTitle className="text-white">بیلنس منیجمنٹ - {selectedUser.username}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
                 <Label className="text-white">موجودہ بیلنس: ৳{parseFloat((selectedUser.balance || 0).toString()).toFixed(2)}</Label>
               </div>
+              
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <Button
+                  variant={balanceAction === 'add' ? 'default' : 'outline'}
+                  onClick={() => setBalanceAction('add')}
+                  className={balanceAction === 'add' ? 'bg-green-600' : 'border-gray-600 text-white'}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  اضافہ
+                </Button>
+                <Button
+                  variant={balanceAction === 'subtract' ? 'default' : 'outline'}
+                  onClick={() => setBalanceAction('subtract')}
+                  className={balanceAction === 'subtract' ? 'bg-red-600' : 'border-gray-600 text-white'}
+                >
+                  <Minus className="h-4 w-4 mr-1" />
+                  کمی
+                </Button>
+                <Button
+                  variant={balanceAction === 'set' ? 'default' : 'outline'}
+                  onClick={() => setBalanceAction('set')}
+                  className={balanceAction === 'set' ? 'bg-blue-600' : 'border-gray-600 text-white'}
+                >
+                  سیٹ کریں
+                </Button>
+              </div>
+
               <div>
-                <Label htmlFor="balance" className="text-white">نیا بیلنس</Label>
+                <Label htmlFor="balance" className="text-white">
+                  {balanceAction === 'add' ? 'اضافہ کریں' : balanceAction === 'subtract' ? 'کم کریں' : 'نیا بیلنس سیٹ کریں'}
+                </Label>
                 <Input
                   id="balance"
                   type="number"
                   value={balanceAmount}
                   onChange={(e) => setBalanceAmount(e.target.value)}
-                  placeholder="نیا بیلنس داخل کریں"
+                  placeholder="رقم داخل کریں"
                   className="bg-casino-dark border-gray-700 text-white"
                 />
               </div>
               <div className="flex gap-2">
                 <Button
-                  onClick={() => updateUserBalance(selectedUser.id, parseFloat(balanceAmount))}
+                  onClick={() => updateUserBalance(selectedUser.id, balanceAction, parseFloat(balanceAmount))}
                   disabled={!balanceAmount}
-                  className="bg-green-600 hover:bg-green-700"
+                  className={`${
+                    balanceAction === 'add' ? 'bg-green-600 hover:bg-green-700' :
+                    balanceAction === 'subtract' ? 'bg-red-600 hover:bg-red-700' :
+                    'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
-                  بیلنس اپڈیٹ کریں
+                  {balanceAction === 'add' ? 'بیلنس میں اضافہ' : 
+                   balanceAction === 'subtract' ? 'بیلنس سے کمی' : 
+                   'بیلنس سیٹ کریں'}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => {
                     setSelectedUser(null);
                     setBalanceAmount('');
+                    setBalanceAction('add');
                   }}
                   className="border-gray-600 text-white hover:bg-gray-700"
                 >
