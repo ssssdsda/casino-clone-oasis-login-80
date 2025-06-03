@@ -13,7 +13,8 @@ import Footer from '@/components/Footer';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { BettingSystemControl } from '@/components/admin/BettingSystemControl';
 import { RealtimeStats } from '@/components/admin/RealtimeStats';
-import { Settings, Users, TrendingUp, Activity, Shield, Database, CreditCard } from 'lucide-react';
+import { GameControlPanel } from '@/components/admin/GameControlPanel';
+import { Settings, Users, TrendingUp, Activity, Shield, Database, CreditCard, GamepadIcon } from 'lucide-react';
 
 const Sufyan = () => {
   const navigate = useNavigate();
@@ -79,8 +80,12 @@ const Sufyan = () => {
           </div>
         </div>
         
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-6">
+        <Tabs defaultValue="gamecontrol" className="w-full">
+          <TabsList className="grid w-full grid-cols-7 mb-6">
+            <TabsTrigger value="gamecontrol" className="flex items-center gap-2">
+              <GamepadIcon className="h-4 w-4" />
+              Game Control
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               User Management
@@ -91,7 +96,7 @@ const Sufyan = () => {
             </TabsTrigger>
             <TabsTrigger value="betting" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Game Control
+              Betting System
             </TabsTrigger>
             <TabsTrigger value="finance" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
@@ -106,6 +111,10 @@ const Sufyan = () => {
               Settings
             </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="gamecontrol">
+            <GameControlPanel />
+          </TabsContent>
           
           <TabsContent value="users">
             <UserManagement />
