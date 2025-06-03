@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -142,22 +143,15 @@ export const UserManagement = () => {
         return;
       }
 
-      // Update all users' balance
-      const { error } = await supabase.rpc('add_bonus_to_all_users', {
-        bonus_amount: bonusAmount
-      });
-
-      if (error) {
-        // If RPC doesn't exist, update manually
-        const updatePromises = users.map(user => 
-          supabase
-            .from('profiles')
-            .update({ balance: user.balance + bonusAmount })
-            .eq('id', user.id)
-        );
-        
-        await Promise.all(updatePromises);
-      }
+      // Update all users' balance manually
+      const updatePromises = users.map(user => 
+        supabase
+          .from('profiles')
+          .update({ balance: user.balance + bonusAmount })
+          .eq('id', user.id)
+      );
+      
+      await Promise.all(updatePromises);
 
       toast({
         title: "کامیابی",
