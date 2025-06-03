@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Plus, Edit, Trash2, DollarSign, User, Minus } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, DollarSign, User, Minus, Save, X } from 'lucide-react';
 
 interface User {
   id: string;
@@ -27,6 +27,8 @@ export const UserManagement = () => {
   const [balanceAmount, setBalanceAmount] = useState('');
   const [balanceAction, setBalanceAction] = useState<'add' | 'subtract' | 'set'>('add');
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingBalance, setEditingBalance] = useState<string | null>(null);
+  const [tempBalance, setTempBalance] = useState('');
   const [editForm, setEditForm] = useState({
     username: '',
     email: '',
@@ -53,8 +55,8 @@ export const UserManagement = () => {
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
-        title: "خرابی",
-        description: "یوزرز لوڈ کرنے میں ناکامی",
+        title: "Error",
+        description: "Failed to load users",
         variant: "destructive"
       });
     } finally {
@@ -113,8 +115,8 @@ export const UserManagement = () => {
       if (error) throw error;
 
       toast({
-        title: "کامیابی",
-        description: `یوزر بیلنس کامیابی سے ${action === 'add' ? 'بڑھایا' : action === 'subtract' ? 'کم کیا' : 'سیٹ کیا'} گیا`,
+        title: "Success",
+        description: `User balance ${action === 'add' ? 'increased' : action === 'subtract' ? 'decreased' : 'updated'} successfully`,
         variant: "default"
       });
 
@@ -124,11 +126,54 @@ export const UserManagement = () => {
     } catch (error) {
       console.error('Error updating balance:', error);
       toast({
-        title: "خرابی",
-        description: "یوزر بیلنس اپڈیٹ کرنے میں ناکامی",
+        title: "Error",
+        description: "Failed to update user balance",
         variant: "destructive"
       });
     }
+  };
+
+  const saveDirectBalance = async (userId: string, newBalance: string) => {
+    try {
+      const balanceValue = parseFloat(newBalance);
+      if (isNaN(balanceValue) || balanceValue < 0) {
+        toast({
+          title: "Error",
+          description: "Please enter a valid balance amount",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ balance: balanceValue })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Balance updated successfully",
+        variant: "default"
+      });
+
+      setEditingBalance(null);
+      setTempBalance('');
+      loadUsers();
+    } catch (error) {
+      console.error('Error updating balance:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update balance",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const cancelBalanceEdit = () => {
+    setEditingBalance(null);
+    setTempBalance('');
   };
 
   const addBonusToAllUsers = async () => {
@@ -136,8 +181,8 @@ export const UserManagement = () => {
       const bonusAmount = parseFloat(balanceAmount);
       if (!bonusAmount || bonusAmount <= 0) {
         toast({
-          title: "خرابی",
-          description: "براہ کرم صحیح رقم داخل کریں",
+          title: "Error",
+          description: "Please enter a valid amount",
           variant: "destructive"
         });
         return;
@@ -154,8 +199,8 @@ export const UserManagement = () => {
       await Promise.all(updatePromises);
 
       toast({
-        title: "کامیابی",
-        description: `تمام یوزرز کو ৳${bonusAmount} بونس ملا`,
+        title: "Success",
+        description: `₹${bonusAmount} bonus added to all users`,
         variant: "default"
       });
 
@@ -164,8 +209,8 @@ export const UserManagement = () => {
     } catch (error) {
       console.error('Error adding bonus to all users:', error);
       toast({
-        title: "خرابی",
-        description: "تمام یوزرز کو بونس دینے میں ناکامی",
+        title: "Error",
+        description: "Failed to add bonus to all users",
         variant: "destructive"
       });
     }
@@ -188,8 +233,8 @@ export const UserManagement = () => {
       if (error) throw error;
 
       toast({
-        title: "کامیابی",
-        description: "یوزر کی معلومات کامیابی سے اپڈیٹ ہو گئیں",
+        title: "Success",
+        description: "User information updated successfully",
         variant: "default"
       });
 
@@ -199,15 +244,15 @@ export const UserManagement = () => {
     } catch (error) {
       console.error('Error updating user info:', error);
       toast({
-        title: "خرابی",
-        description: "یوزر کی معلومات اپڈیٹ کرنے میں ناکامی",
+        title: "Error",
+        description: "Failed to update user information",
         variant: "destructive"
       });
     }
   };
 
   const deleteUser = async (userId: string) => {
-    if (!confirm('کیا آپ واقعی اس یوزر کو ڈیلیٹ کرنا چاہتے ہیں؟')) return;
+    if (!confirm('Are you sure you want to delete this user?')) return;
 
     try {
       const { error } = await supabase
@@ -218,8 +263,8 @@ export const UserManagement = () => {
       if (error) throw error;
 
       toast({
-        title: "کامیابی",
-        description: "یوزر کامیابی سے ڈیلیٹ ہو گیا",
+        title: "Success",
+        description: "User deleted successfully",
         variant: "default"
       });
 
@@ -227,8 +272,8 @@ export const UserManagement = () => {
     } catch (error) {
       console.error('Error deleting user:', error);
       toast({
-        title: "خرابی",
-        description: "یوزر ڈیلیٹ کرنے میں ناکامی",
+        title: "Error",
+        description: "Failed to delete user",
         variant: "destructive"
       });
     }
@@ -244,6 +289,11 @@ export const UserManagement = () => {
     });
   };
 
+  const startBalanceEdit = (userId: string, currentBalance: number) => {
+    setEditingBalance(userId);
+    setTempBalance(currentBalance.toString());
+  };
+
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -255,17 +305,17 @@ export const UserManagement = () => {
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <User className="h-5 w-5" />
-            یوزر منیجمنٹ سسٹم
+            User Management System
           </CardTitle>
           <CardDescription className="text-gray-300">
-            تمام یوزرز کی معلومات، بیلنس اور اکاؤنٹس کا انتظام
+            Manage all user information, balances and accounts
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
               <Input
-                placeholder="یوزر نیم یا ای میل سے تلاش کریں..."
+                placeholder="Search by username or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="bg-casino-dark border-gray-700 text-white"
@@ -276,24 +326,24 @@ export const UserManagement = () => {
               className="bg-casino-accent hover:bg-casino-accent/80"
             >
               <Search className="h-4 w-4 mr-2" />
-              ریفریش
+              Refresh
             </Button>
           </div>
 
           {/* Bulk Balance Management */}
           <Card className="bg-casino-dark border-gray-700 mb-6">
             <CardHeader>
-              <CardTitle className="text-white text-lg">تمام یوزرز کو بونس دیں</CardTitle>
+              <CardTitle className="text-white text-lg">Add Bonus to All Users</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4 items-end">
                 <div className="flex-1">
-                  <Label className="text-white">بونس رقم (৳)</Label>
+                  <Label className="text-white">Bonus Amount (₹)</Label>
                   <Input
                     type="number"
                     value={balanceAmount}
                     onChange={(e) => setBalanceAmount(e.target.value)}
-                    placeholder="تمام یوزرز کو دینے والی رقم"
+                    placeholder="Amount to give to all users"
                     className="bg-casino border-gray-700 text-white"
                   />
                 </div>
@@ -303,7 +353,7 @@ export const UserManagement = () => {
                   className="bg-green-600 hover:bg-green-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  تمام کو بونس دیں
+                  Add Bonus to All
                 </Button>
               </div>
             </CardContent>
@@ -313,45 +363,45 @@ export const UserManagement = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-casino-accent">{users.length}</div>
-                <div className="text-gray-300 text-sm">کل یوزرز</div>
+                <div className="text-gray-300 text-sm">Total Users</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-green-400">
-                  ৳{users.reduce((sum, user) => sum + (user.balance || 0), 0).toFixed(2)}
+                  ₹{users.reduce((sum, user) => sum + (user.balance || 0), 0).toFixed(2)}
                 </div>
-                <div className="text-gray-300 text-sm">کل بیلنس</div>
+                <div className="text-gray-300 text-sm">Total Balance</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-blue-400">
                   {users.filter(user => user.role === 'admin').length}
                 </div>
-                <div className="text-gray-300 text-sm">ایڈمن</div>
+                <div className="text-gray-300 text-sm">Admins</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-yellow-400">
                   {users.filter(user => new Date(user.created_at) > new Date(Date.now() - 24*60*60*1000)).length}
                 </div>
-                <div className="text-gray-300 text-sm">آج کے نئے</div>
+                <div className="text-gray-300 text-sm">New Today</div>
               </div>
             </div>
           </div>
 
           {loading ? (
             <div className="text-center py-8">
-              <div className="text-white">یوزرز لوڈ ہو رہے ہیں...</div>
+              <div className="text-white">Loading users...</div>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-white">یوزر نیم</TableHead>
-                    <TableHead className="text-white">ای میل</TableHead>
-                    <TableHead className="text-white">فون</TableHead>
-                    <TableHead className="text-white">بیلنس</TableHead>
-                    <TableHead className="text-white">کردار</TableHead>
-                    <TableHead className="text-white">تاریخ</TableHead>
-                    <TableHead className="text-white">اعمال</TableHead>
+                    <TableHead className="text-white">Username</TableHead>
+                    <TableHead className="text-white">Email</TableHead>
+                    <TableHead className="text-white">Phone</TableHead>
+                    <TableHead className="text-white">Balance</TableHead>
+                    <TableHead className="text-white">Role</TableHead>
+                    <TableHead className="text-white">Created Date</TableHead>
+                    <TableHead className="text-white">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -359,13 +409,51 @@ export const UserManagement = () => {
                     <TableRow key={user.id}>
                       <TableCell className="text-white font-medium">{user.username}</TableCell>
                       <TableCell className="text-gray-300">
-                        {user.email || <span className="text-red-400">نہیں ملا</span>}
+                        {user.email || <span className="text-red-400">Not provided</span>}
                       </TableCell>
                       <TableCell className="text-gray-300">
-                        {user.phone || <span className="text-gray-500">نہیں</span>}
+                        {user.phone || <span className="text-gray-500">None</span>}
                       </TableCell>
                       <TableCell className="text-casino-accent font-bold">
-                        ৳{parseFloat((user.balance || 0).toString()).toFixed(2)}
+                        {editingBalance === user.id ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              value={tempBalance}
+                              onChange={(e) => setTempBalance(e.target.value)}
+                              className="w-24 h-8 text-sm bg-casino-dark border-gray-600 text-white"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  saveDirectBalance(user.id, tempBalance);
+                                } else if (e.key === 'Escape') {
+                                  cancelBalanceEdit();
+                                }
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => saveDirectBalance(user.id, tempBalance)}
+                              className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700"
+                            >
+                              <Save className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={cancelBalanceEdit}
+                              className="h-8 w-8 p-0 bg-red-600 hover:bg-red-700"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div 
+                            className="cursor-pointer hover:bg-casino-dark/50 px-2 py-1 rounded flex items-center gap-2"
+                            onClick={() => startBalanceEdit(user.id, user.balance)}
+                          >
+                            ₹{parseFloat((user.balance || 0).toString()).toFixed(2)}
+                            <Edit className="h-3 w-3 opacity-50" />
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-white">
                         <span className={`px-2 py-1 rounded text-xs ${
@@ -375,7 +463,7 @@ export const UserManagement = () => {
                         </span>
                       </TableCell>
                       <TableCell className="text-gray-300">
-                        {new Date(user.created_at).toLocaleDateString('ur-PK')}
+                        {new Date(user.created_at).toLocaleDateString('en-US')}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
@@ -383,7 +471,7 @@ export const UserManagement = () => {
                             size="sm"
                             onClick={() => setSelectedUser(user)}
                             className="bg-green-600 hover:bg-green-700"
-                            title="بیلنس تبدیل کریں"
+                            title="Manage Balance"
                           >
                             <DollarSign className="h-3 w-3" />
                           </Button>
@@ -391,7 +479,7 @@ export const UserManagement = () => {
                             size="sm"
                             onClick={() => startEditing(user)}
                             className="bg-blue-600 hover:bg-blue-700"
-                            title="معلومات ایڈٹ کریں"
+                            title="Edit Information"
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
@@ -399,7 +487,7 @@ export const UserManagement = () => {
                             size="sm"
                             variant="destructive"
                             onClick={() => deleteUser(user.id)}
-                            title="یوزر ڈیلیٹ کریں"
+                            title="Delete User"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -414,7 +502,7 @@ export const UserManagement = () => {
 
           {filteredUsers.length === 0 && !loading && (
             <div className="text-center py-8">
-              <div className="text-gray-400">کوئی یوزر نہیں ملا</div>
+              <div className="text-gray-400">No users found</div>
             </div>
           )}
         </CardContent>
@@ -424,12 +512,12 @@ export const UserManagement = () => {
       {selectedUser && (
         <Card className="bg-casino border-casino-accent">
           <CardHeader>
-            <CardTitle className="text-white">بیلنس منیجمنٹ - {selectedUser.username}</CardTitle>
+            <CardTitle className="text-white">Balance Management - {selectedUser.username}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
-                <Label className="text-white">موجودہ بیلنس: ৳{parseFloat((selectedUser.balance || 0).toString()).toFixed(2)}</Label>
+                <Label className="text-white">Current Balance: ₹{parseFloat((selectedUser.balance || 0).toString()).toFixed(2)}</Label>
               </div>
               
               <div className="grid grid-cols-3 gap-2 mb-4">
@@ -439,7 +527,7 @@ export const UserManagement = () => {
                   className={balanceAction === 'add' ? 'bg-green-600' : 'border-gray-600 text-white'}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  اضافہ
+                  Add
                 </Button>
                 <Button
                   variant={balanceAction === 'subtract' ? 'default' : 'outline'}
@@ -447,27 +535,27 @@ export const UserManagement = () => {
                   className={balanceAction === 'subtract' ? 'bg-red-600' : 'border-gray-600 text-white'}
                 >
                   <Minus className="h-4 w-4 mr-1" />
-                  کمی
+                  Subtract
                 </Button>
                 <Button
                   variant={balanceAction === 'set' ? 'default' : 'outline'}
                   onClick={() => setBalanceAction('set')}
                   className={balanceAction === 'set' ? 'bg-blue-600' : 'border-gray-600 text-white'}
                 >
-                  سیٹ کریں
+                  Set
                 </Button>
               </div>
 
               <div>
                 <Label htmlFor="balance" className="text-white">
-                  {balanceAction === 'add' ? 'اضافہ کریں' : balanceAction === 'subtract' ? 'کم کریں' : 'نیا بیلنس سیٹ کریں'}
+                  {balanceAction === 'add' ? 'Amount to Add' : balanceAction === 'subtract' ? 'Amount to Subtract' : 'Set New Balance'}
                 </Label>
                 <Input
                   id="balance"
                   type="number"
                   value={balanceAmount}
                   onChange={(e) => setBalanceAmount(e.target.value)}
-                  placeholder="رقم داخل کریں"
+                  placeholder="Enter amount"
                   className="bg-casino-dark border-gray-700 text-white"
                 />
               </div>
@@ -481,9 +569,9 @@ export const UserManagement = () => {
                     'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {balanceAction === 'add' ? 'بیلنس میں اضافہ' : 
-                   balanceAction === 'subtract' ? 'بیلنس سے کمی' : 
-                   'بیلنس سیٹ کریں'}
+                  {balanceAction === 'add' ? 'Add to Balance' : 
+                   balanceAction === 'subtract' ? 'Subtract from Balance' : 
+                   'Set Balance'}
                 </Button>
                 <Button
                   variant="outline"
@@ -494,7 +582,7 @@ export const UserManagement = () => {
                   }}
                   className="border-gray-600 text-white hover:bg-gray-700"
                 >
-                  منسوخ
+                  Cancel
                 </Button>
               </div>
             </div>
@@ -506,12 +594,12 @@ export const UserManagement = () => {
       {editingUser && (
         <Card className="bg-casino border-casino-accent">
           <CardHeader>
-            <CardTitle className="text-white">یوزر کی معلومات ایڈٹ کریں - {editingUser.username}</CardTitle>
+            <CardTitle className="text-white">Edit User Information - {editingUser.username}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="edit-username" className="text-white">یوزر نیم</Label>
+                <Label htmlFor="edit-username" className="text-white">Username</Label>
                 <Input
                   id="edit-username"
                   value={editForm.username}
@@ -520,7 +608,7 @@ export const UserManagement = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-email" className="text-white">ای میل</Label>
+                <Label htmlFor="edit-email" className="text-white">Email</Label>
                 <Input
                   id="edit-email"
                   type="email"
@@ -530,7 +618,7 @@ export const UserManagement = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-phone" className="text-white">فون نمبر</Label>
+                <Label htmlFor="edit-phone" className="text-white">Phone Number</Label>
                 <Input
                   id="edit-phone"
                   value={editForm.phone}
@@ -539,15 +627,15 @@ export const UserManagement = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-role" className="text-white">کردار</Label>
+                <Label htmlFor="edit-role" className="text-white">Role</Label>
                 <select
                   id="edit-role"
                   value={editForm.role}
                   onChange={(e) => setEditForm({...editForm, role: e.target.value})}
                   className="w-full bg-casino-dark border border-gray-700 text-white rounded px-3 py-2"
                 >
-                  <option value="user">یوزر</option>
-                  <option value="admin">ایڈمن</option>
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
                 </select>
               </div>
               <div className="flex gap-2">
@@ -555,7 +643,7 @@ export const UserManagement = () => {
                   onClick={updateUserInfo}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  محفوظ کریں
+                  Save Changes
                 </Button>
                 <Button
                   variant="outline"
@@ -565,7 +653,7 @@ export const UserManagement = () => {
                   }}
                   className="border-gray-600 text-white hover:bg-gray-700"
                 >
-                  منسوخ
+                  Cancel
                 </Button>
               </div>
             </div>
