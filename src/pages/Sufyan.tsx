@@ -79,19 +79,19 @@ const Sufyan = () => {
           </div>
         </div>
         
-        <Tabs defaultValue="dashboard" className="w-full">
+        <Tabs defaultValue="users" className="w-full">
           <TabsList className="grid w-full grid-cols-6 mb-6">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              یوزرز منیجمنٹ
+            </TabsTrigger>
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
               ڈیش بورڈ
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              یوزرز
-            </TabsTrigger>
             <TabsTrigger value="betting" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              گیمز
+              گیمز کنٹرول
             </TabsTrigger>
             <TabsTrigger value="finance" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
@@ -107,12 +107,12 @@ const Sufyan = () => {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="dashboard">
-            <RealtimeStats />
-          </TabsContent>
-          
           <TabsContent value="users">
             <UserManagement />
+          </TabsContent>
+          
+          <TabsContent value="dashboard">
+            <RealtimeStats />
           </TabsContent>
           
           <TabsContent value="betting">
