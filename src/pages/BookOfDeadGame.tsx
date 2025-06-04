@@ -114,7 +114,7 @@ const BookOfDeadGame = () => {
   };
 
   const animateReelSpin = (reelIndex, duration) => {
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       setSpinningReels(prev => {
         const newState = [...prev];
         newState[reelIndex] = true;
@@ -183,9 +183,9 @@ const BookOfDeadGame = () => {
 
       // Wait for all reels to finish spinning
       await Promise.all([
-        new Promise(resolve => setTimeout(resolve, 1500)),
-        new Promise(resolve => setTimeout(resolve, 1800)),
-        new Promise(resolve => setTimeout(resolve, 2100))
+        new Promise<void>(resolve => setTimeout(resolve, 1500)),
+        new Promise<void>(resolve => setTimeout(resolve, 1800)),
+        new Promise<void>(resolve => setTimeout(resolve, 2100))
       ]);
       
       // Determine final result
@@ -394,13 +394,15 @@ const BookOfDeadGame = () => {
       
       <Footer />
       
-      <style jsx>{`
-        @keyframes reelSpin {
-          0% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-          100% { transform: translateY(0); }
-        }
-      `}</style>
+      <style>
+        {`
+          @keyframes reelSpin {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0); }
+          }
+        `}
+      </style>
     </div>
   );
 };
