@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import PromoBanner from '@/components/PromoBanner';
@@ -39,6 +38,13 @@ const Index = () => {
   }
 
   const featuredGames = [
+    {
+      id: 'book-of-dead',
+      title: 'Book of Dead',
+      image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
+      path: '/game/book-of-dead',
+      isNew: true
+    },
     {
       id: 'fruity-bonanza',
       title: 'Fruity Bonanza',
@@ -104,6 +110,13 @@ const Index = () => {
   ];
   
   const newGames = [
+    {
+      id: 'book-of-dead',
+      title: 'Book of Dead',
+      image: '/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png',
+      path: '/game/book-of-dead',
+      isNew: true
+    },
     {
       id: 'fruity-bonanza',
       title: 'Fruity Bonanza',

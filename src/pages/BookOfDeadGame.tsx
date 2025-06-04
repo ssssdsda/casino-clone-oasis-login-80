@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +33,7 @@ const BookOfDeadGame = () => {
   ]);
   const [isMuted, setIsMuted] = useState(false);
   const [lastWin, setLastWin] = useState(0);
+  const [spinningReels, setSpinningReels] = useState([false, false, false]);
 
   const symbols = ['📜', '👑', '🐍', '⚱️', '🔯', 'A', 'K', 'Q', 'J'];
   const symbolValues = {
@@ -111,6 +113,38 @@ const BookOfDeadGame = () => {
     return { totalWin, winningLines };
   };
 
+  const animateReelSpin = (reelIndex, duration) => {
+    return new Promise((resolve) => {
+      setSpinningReels(prev => {
+        const newState = [...prev];
+        newState[reelIndex] = true;
+        return newState;
+      });
+
+      const interval = setInterval(() => {
+        setDisplayReels(prev => {
+          const newDisplay = [...prev];
+          newDisplay[reelIndex] = [
+            getRandomSymbol(),
+            getRandomSymbol(),
+            getRandomSymbol()
+          ];
+          return newDisplay;
+        });
+      }, 50);
+
+      setTimeout(() => {
+        clearInterval(interval);
+        setSpinningReels(prev => {
+          const newState = [...prev];
+          newState[reelIndex] = false;
+          return newState;
+        });
+        resolve();
+      }, duration);
+    });
+  };
+
   const handleSpin = async () => {
     if (!user) {
       toast({
@@ -139,75 +173,74 @@ const BookOfDeadGame = () => {
       setBalance(betResult.newBalance);
       updateUserBalance(betResult.newBalance);
 
-      // Animate spinning
-      const spinDuration = 2000;
-      const spinInterval = 100;
-      let elapsed = 0;
+      // Animate each reel with staggered timing
+      const reelPromises = [];
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          reelPromises.push(animateReelSpin(i, 1500 + (i * 300)));
+        }, i * 200);
+      }
 
-      const spinAnimation = setInterval(() => {
-        const newReels = spinReels();
-        setReels(newReels);
-        setDisplayReels(getDisplayFromReels(newReels));
-        elapsed += spinInterval;
+      // Wait for all reels to finish spinning
+      await Promise.all([
+        new Promise(resolve => setTimeout(resolve, 1500)),
+        new Promise(resolve => setTimeout(resolve, 1800)),
+        new Promise(resolve => setTimeout(resolve, 2100))
+      ]);
+      
+      // Determine final result
+      const finalReels = spinReels();
+      const finalDisplay = getDisplayFromReels(finalReels);
+      setReels(finalReels);
+      setDisplayReels(finalDisplay);
 
-        if (elapsed >= spinDuration) {
-          clearInterval(spinAnimation);
-          
-          // Determine final result
-          const finalReels = spinReels();
-          const finalDisplay = getDisplayFromReels(finalReels);
-          setReels(finalReels);
-          setDisplayReels(finalDisplay);
+      // Check for wins
+      const { totalWin, winningLines } = checkWinningLines(finalDisplay);
 
-          // Check for wins
-          const { totalWin, winningLines } = checkWinningLines(finalDisplay);
+      if (betResult.shouldWin && totalWin === 0) {
+        // Force a win by creating a winning combination
+        const forcedDisplay = [
+          ['👑', '👑', '👑'],
+          [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()],
+          [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()]
+        ];
+        setDisplayReels(forcedDisplay);
+        const forcedWin = betAmount * 2;
+        setLastWin(forcedWin);
+        
+        setTimeout(async () => {
+          const newBalance = await completeBet(user.id, 'bookOfDead', betAmount, forcedWin, betResult.newBalance);
+          setBalance(newBalance);
+          updateUserBalance(newBalance);
+          setIsSpinning(false);
+        }, 1000);
 
-          if (betResult.shouldWin && totalWin === 0) {
-            // Force a win by creating a winning combination
-            const forcedDisplay = [
-              ['👑', '👑', '👑'],
-              [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()],
-              [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()]
-            ];
-            setDisplayReels(forcedDisplay);
-            const forcedWin = betAmount * 2;
-            setLastWin(forcedWin);
-            
-            setTimeout(async () => {
-              const newBalance = await completeBet(user.id, 'bookOfDead', betAmount, forcedWin, betResult.newBalance);
-              setBalance(newBalance);
-              updateUserBalance(newBalance);
-              setIsSpinning(false);
-            }, 1000);
+        toast({
+          title: "🎉 Winner!",
+          description: `You won ৳${forcedWin.toFixed(2)}!`,
+          variant: "default"
+        });
+      } else if (totalWin > 0) {
+        setLastWin(totalWin);
+        
+        setTimeout(async () => {
+          const newBalance = await completeBet(user.id, 'bookOfDead', betAmount, totalWin, betResult.newBalance);
+          setBalance(newBalance);
+          updateUserBalance(newBalance);
+          setIsSpinning(false);
+        }, 1000);
 
-            toast({
-              title: "🎉 Winner!",
-              description: `You won ৳${forcedWin.toFixed(2)}!`,
-              variant: "default"
-            });
-          } else if (totalWin > 0) {
-            setLastWin(totalWin);
-            
-            setTimeout(async () => {
-              const newBalance = await completeBet(user.id, 'bookOfDead', betAmount, totalWin, betResult.newBalance);
-              setBalance(newBalance);
-              updateUserBalance(newBalance);
-              setIsSpinning(false);
-            }, 1000);
-
-            toast({
-              title: "🎉 Winner!",
-              description: `You won ৳${totalWin.toFixed(2)}!`,
-              variant: "default"
-            });
-          } else {
-            setTimeout(async () => {
-              await completeBet(user.id, 'bookOfDead', betAmount, 0, betResult.newBalance);
-              setIsSpinning(false);
-            }, 1000);
-          }
-        }
-      }, spinInterval);
+        toast({
+          title: "🎉 Winner!",
+          description: `You won ৳${totalWin.toFixed(2)}!`,
+          variant: "default"
+        });
+      } else {
+        setTimeout(async () => {
+          await completeBet(user.id, 'bookOfDead', betAmount, 0, betResult.newBalance);
+          setIsSpinning(false);
+        }, 1000);
+      }
 
     } catch (error) {
       console.error('Error spinning:', error);
@@ -272,29 +305,37 @@ const BookOfDeadGame = () => {
 
                 {/* Slot Machine */}
                 <div className="bg-gradient-to-b from-amber-800 to-amber-900 p-4 rounded-lg border-4 border-yellow-600 mb-6">
-                  <div className="grid grid-cols-3 gap-2 bg-black p-4 rounded">
-                    {displayReels.map((row, rowIndex) => (
-                      row.map((symbol, colIndex) => (
-                        <div
-                          key={`${rowIndex}-${colIndex}`}
-                          className={`
-                            bg-gradient-to-b from-amber-700 to-amber-800 
-                            border-2 border-yellow-500 rounded-lg 
-                            flex items-center justify-center 
-                            h-20 text-4xl
-                            ${isSpinning ? 'animate-pulse' : ''}
-                            transition-all duration-200
-                            hover:scale-105
-                          `}
-                        >
-                          <span className="drop-shadow-lg">
-                            {typeof symbol === 'string' && ['📜', '👑', '🐍', '⚱️', '🔯'].includes(symbol) 
-                              ? symbol 
-                              : <span className="text-yellow-100 font-bold text-2xl">{symbol}</span>
-                            }
-                          </span>
-                        </div>
-                      ))
+                  <div className="grid grid-cols-3 gap-2 bg-black p-4 rounded overflow-hidden">
+                    {displayReels.map((column, colIndex) => (
+                      <div key={colIndex} className="flex flex-col gap-2">
+                        {column.map((symbol, rowIndex) => (
+                          <div
+                            key={`${colIndex}-${rowIndex}`}
+                            className={`
+                              bg-gradient-to-b from-amber-700 to-amber-800 
+                              border-2 border-yellow-500 rounded-lg 
+                              flex items-center justify-center 
+                              h-20 text-4xl
+                              transform transition-all duration-200
+                              ${spinningReels[colIndex] ? 'animate-bounce scale-105' : 'scale-100'}
+                              ${isSpinning ? 'blur-sm' : 'blur-0'}
+                              hover:scale-105
+                            `}
+                            style={{
+                              animation: spinningReels[colIndex] 
+                                ? `reelSpin 0.1s linear infinite` 
+                                : 'none'
+                            }}
+                          >
+                            <span className="drop-shadow-lg">
+                              {typeof symbol === 'string' && ['📜', '👑', '🐍', '⚱️', '🔯'].includes(symbol) 
+                                ? symbol 
+                                : <span className="text-yellow-100 font-bold text-2xl">{symbol}</span>
+                              }
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -352,6 +393,14 @@ const BookOfDeadGame = () => {
       </main>
       
       <Footer />
+      
+      <style jsx>{`
+        @keyframes reelSpin {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+          100% { transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
