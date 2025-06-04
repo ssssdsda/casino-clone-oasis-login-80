@@ -40,6 +40,7 @@ import FruityBonanzaGame from "./pages/FruityBonanzaGame";
 import Register from "./pages/Register";
 import CasinoControl from "./pages/CasinoControl";
 import Sufyan from "./pages/Sufyan";
+import BookOfDeadGame from "./pages/BookOfDeadGame";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/game/coin-up" element={<CoinUpGame />} />
               <Route path="/game/golden-basin" element={<GoldenBasinGame />} />
               <Route path="/game/super-element" element={<SuperElementGame />} />
+              <Route path="/game/book-of-dead" element={<BookOfDeadGame />} />
               <Route path="/withdrawal" element={<Withdrawal />} />
               <Route path="/deposit" element={<Deposit />} />
               <Route path="/bonus" element={<Bonus />} />

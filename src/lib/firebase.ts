@@ -1,4 +1,3 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
@@ -125,6 +124,7 @@ const getBettingSystemSettings = async () => {
           fortuneGems: [1, 0, 0, 0, 0, 1, 0, 0, 0],
           coins: [1, 0, 0, 0, 0, 0, 1, 0, 0],
           superElement: [1, 0, 0, 0, 1, 0, 0, 1, 0], // Added win pattern for Super Element
+          bookOfDead: [1, 0, 0, 0, 1, 0, 0, 1, 0], // Added win pattern for Book of Dead
         },
         winRatios: {
           aviator: 0.25, // 25% win rate
@@ -136,6 +136,7 @@ const getBettingSystemSettings = async () => {
           fortuneGems: 0.2, // 20% win rate
           coins: 0.2, // 20% win rate
           superElement: 0.25, // Added win ratio for Super Element
+          bookOfDead: 0.25, // Added win ratio for Book of Dead
         },
         referralBonus: 119,
         depositBonusThreshold: 500,

@@ -60,6 +60,7 @@ const getSettings = async () => {
       fortuneGems: [1, 0, 0, 0, 0, 1, 0, 0, 0],
       coins: [1, 0, 0, 0, 0, 0, 1, 0, 0],
       superElement: [1, 0, 0, 0, 1, 0, 0, 1, 0],
+      bookOfDead: [1, 0, 0, 0, 1, 0, 0, 1, 0],
     },
     winRatios: {
       aviator: 0.25,
@@ -70,7 +71,8 @@ const getSettings = async () => {
       megaSpin: 0.3,
       fortuneGems: 0.2,
       coins: 0.2,
-      superElement: 0.25
+      superElement: 0.25,
+      bookOfDead: 0.25
     },
     referralBonus: 119
   };
