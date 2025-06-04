@@ -131,7 +131,7 @@ const BookOfDeadGame = () => {
           ];
           return newDisplay;
         });
-      }, 50);
+      }, 80); // Increased interval for smoother animation
 
       setTimeout(() => {
         clearInterval(interval);
@@ -173,19 +173,19 @@ const BookOfDeadGame = () => {
       setBalance(betResult.newBalance);
       updateUserBalance(betResult.newBalance);
 
-      // Animate each reel with staggered timing
+      // Animate each reel with reduced timing for better performance
       const reelPromises = [];
       for (let i = 0; i < 3; i++) {
         setTimeout(() => {
-          reelPromises.push(animateReelSpin(i, 1500 + (i * 300)));
-        }, i * 200);
+          reelPromises.push(animateReelSpin(i, 800 + (i * 150))); // Reduced duration
+        }, i * 100); // Reduced delay
       }
 
-      // Wait for all reels to finish spinning
+      // Wait for all reels to finish spinning with reduced timing
       await Promise.all([
-        new Promise<void>(resolve => setTimeout(resolve, 1500)),
-        new Promise<void>(resolve => setTimeout(resolve, 1800)),
-        new Promise<void>(resolve => setTimeout(resolve, 2100))
+        new Promise<void>(resolve => setTimeout(resolve, 800)),
+        new Promise<void>(resolve => setTimeout(resolve, 950)),
+        new Promise<void>(resolve => setTimeout(resolve, 1100))
       ]);
       
       // Determine final result
@@ -213,7 +213,7 @@ const BookOfDeadGame = () => {
           setBalance(newBalance);
           updateUserBalance(newBalance);
           setIsSpinning(false);
-        }, 1000);
+        }, 500); // Reduced timeout
 
         toast({
           title: "🎉 Winner!",
@@ -228,7 +228,7 @@ const BookOfDeadGame = () => {
           setBalance(newBalance);
           updateUserBalance(newBalance);
           setIsSpinning(false);
-        }, 1000);
+        }, 500); // Reduced timeout
 
         toast({
           title: "🎉 Winner!",
@@ -239,7 +239,7 @@ const BookOfDeadGame = () => {
         setTimeout(async () => {
           await completeBet(user.id, 'bookOfDead', betAmount, 0, betResult.newBalance);
           setIsSpinning(false);
-        }, 1000);
+        }, 500); // Reduced timeout
       }
 
     } catch (error) {
@@ -316,14 +316,13 @@ const BookOfDeadGame = () => {
                               border-2 border-yellow-500 rounded-lg 
                               flex items-center justify-center 
                               h-20 text-4xl
-                              transform transition-all duration-200
-                              ${spinningReels[colIndex] ? 'animate-bounce scale-105' : 'scale-100'}
-                              ${isSpinning ? 'blur-sm' : 'blur-0'}
+                              transform transition-transform duration-100
+                              ${spinningReels[colIndex] ? 'scale-105' : 'scale-100'}
                               hover:scale-105
                             `}
                             style={{
                               animation: spinningReels[colIndex] 
-                                ? `reelSpin 0.1s linear infinite` 
+                                ? `fastReelSpin 0.08s linear infinite` 
                                 : 'none'
                             }}
                           >
@@ -355,7 +354,7 @@ const BookOfDeadGame = () => {
                   <Button
                     onClick={handleSpin}
                     disabled={isSpinning || balance < betAmount}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl py-6 rounded-lg border-2 border-blue-400 disabled:opacity-50"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl py-6 rounded-lg border-2 border-blue-400 disabled:opacity-50 transition-colors duration-200"
                   >
                     {isSpinning ? "SPINNING..." : "SPIN"}
                   </Button>
@@ -396,10 +395,10 @@ const BookOfDeadGame = () => {
       
       <style>
         {`
-          @keyframes reelSpin {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0); }
+          @keyframes fastReelSpin {
+            0% { transform: translateY(0) scale(1.02); }
+            50% { transform: translateY(-5px) scale(1.05); }
+            100% { transform: translateY(0) scale(1.02); }
           }
         `}
       </style>
