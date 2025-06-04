@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +12,7 @@ import BetControls from '@/components/BetControls';
 
 const BookOfDeadGame = () => {
   const navigate = useNavigate();
-  const { user, updateBalance } = useAuth();
+  const { user, updateUserBalance } = useAuth();
   const { toast } = useToast();
   
   const [betAmount, setBetAmount] = useState(10);
@@ -138,7 +137,7 @@ const BookOfDeadGame = () => {
       // Place the bet
       const betResult = await placeBet(user.id, 'bookOfDead', betAmount, balance);
       setBalance(betResult.newBalance);
-      updateBalance(betResult.newBalance);
+      updateUserBalance(betResult.newBalance);
 
       // Animate spinning
       const spinDuration = 2000;
@@ -177,7 +176,7 @@ const BookOfDeadGame = () => {
             setTimeout(async () => {
               const newBalance = await completeBet(user.id, 'bookOfDead', betAmount, forcedWin, betResult.newBalance);
               setBalance(newBalance);
-              updateBalance(newBalance);
+              updateUserBalance(newBalance);
               setIsSpinning(false);
             }, 1000);
 
@@ -192,7 +191,7 @@ const BookOfDeadGame = () => {
             setTimeout(async () => {
               const newBalance = await completeBet(user.id, 'bookOfDead', betAmount, totalWin, betResult.newBalance);
               setBalance(newBalance);
-              updateBalance(newBalance);
+              updateUserBalance(newBalance);
               setIsSpinning(false);
             }, 1000);
 
