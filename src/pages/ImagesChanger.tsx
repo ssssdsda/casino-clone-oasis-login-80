@@ -95,6 +95,7 @@ const ImagesChanger = () => {
         configs[config.image_key] = config.image_url;
       });
       setImageConfigs(configs);
+      console.log('Loaded image configs:', configs);
     } catch (error) {
       console.error('Error in fetchImageConfigs:', error);
     }
@@ -131,7 +132,9 @@ const ImagesChanger = () => {
       const imageType = selectedBanner !== null ? 'banner' : 'category';
       const itemId = selectedBanner !== null ? selectedBanner.toString() : selectedCategory!;
 
-      const { error } = await supabase
+      console.log('Updating image:', { imageKey, imageType, itemId, newImageUrl });
+
+      const { data, error } = await supabase
         .from('image_configs')
         .upsert({
           image_key: imageKey,
@@ -139,11 +142,17 @@ const ImagesChanger = () => {
           image_type: imageType,
           item_id: itemId,
           updated_at: new Date().toISOString()
-        });
+        }, {
+          onConflict: 'image_key'
+        })
+        .select();
 
       if (error) {
+        console.error('Supabase error:', error);
         throw error;
       }
+
+      console.log('Update result:', data);
 
       // Update local state
       setImageConfigs(prev => ({
@@ -160,6 +169,9 @@ const ImagesChanger = () => {
       setNewImageUrl("");
       setSelectedBanner(null);
       setSelectedCategory(null);
+
+      // Refresh the configs from database
+      await fetchImageConfigs();
     } catch (error: any) {
       console.error('Error updating image:', error);
       toast({
@@ -179,12 +191,15 @@ const ImagesChanger = () => {
         ? `banner_${selectedBanner}` 
         : `category_${selectedCategory}`;
 
+      console.log('Removing image with key:', imageKey);
+
       const { error } = await supabase
         .from('image_configs')
         .delete()
         .eq('image_key', imageKey);
 
       if (error) {
+        console.error('Supabase delete error:', error);
         throw error;
       }
 
@@ -204,6 +219,9 @@ const ImagesChanger = () => {
       setNewImageUrl("");
       setSelectedBanner(null);
       setSelectedCategory(null);
+
+      // Refresh the configs from database
+      await fetchImageConfigs();
     } catch (error: any) {
       console.error('Error removing image:', error);
       toast({
@@ -218,7 +236,19 @@ const ImagesChanger = () => {
 
   const getImageSrc = (type: 'banner' | 'category', id: number | string, defaultSrc: string) => {
     const key = `${type}_${id}`;
-    return imageConfigs[key] || defaultSrc;
+    const configuredImage = imageConfigs[key];
+    console.log(`Getting image for ${key}:`, configuredImage || defaultSrc);
+    return configuredImage || defaultSrc;
+  };
+
+  const getCurrentImagePreview = () => {
+    if (selectedBanner !== null) {
+      return getImageSrc('banner', selectedBanner, banners.find(b => b.id === selectedBanner)?.image || '');
+    }
+    if (selectedCategory !== null) {
+      return getImageSrc('category', selectedCategory, gameCategories.find(c => c.id === selectedCategory)?.image || '');
+    }
+    return '';
   };
 
   return (
@@ -239,7 +269,10 @@ const ImagesChanger = () => {
                 <Card 
                   key={banner.id} 
                   className={`cursor-pointer transition-all ${selectedBanner === banner.id ? 'border-casino-accent ring-2 ring-casino-accent' : 'border-gray-700'}`}
-                  onClick={() => setSelectedBanner(banner.id)}
+                  onClick={() => {
+                    setSelectedBanner(banner.id);
+                    setSelectedCategory(null);
+                  }}
                 >
                   <CardHeader>
                     <CardTitle className="text-white">{banner.title}</CardTitle>
@@ -250,6 +283,10 @@ const ImagesChanger = () => {
                       src={getImageSrc('banner', banner.id, banner.image)} 
                       alt={banner.title} 
                       className="w-full h-32 object-cover rounded-md"
+                      onError={(e) => {
+                        console.log('Image failed to load:', getImageSrc('banner', banner.id, banner.image));
+                        e.currentTarget.src = banner.image;
+                      }}
                     />
                   </CardContent>
                 </Card>
@@ -263,7 +300,10 @@ const ImagesChanger = () => {
                 <Card 
                   key={category.id} 
                   className={`cursor-pointer transition-all ${selectedCategory === category.id ? 'border-casino-accent ring-2 ring-casino-accent' : 'border-gray-700'}`}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={() => {
+                    setSelectedCategory(category.id);
+                    setSelectedBanner(null);
+                  }}
                 >
                   <CardHeader>
                     <CardTitle className="text-white">{category.title}</CardTitle>
@@ -274,6 +314,10 @@ const ImagesChanger = () => {
                         src={getImageSrc('category', category.id, category.image)} 
                         alt={category.title} 
                         className="w-16 h-16 object-contain"
+                        onError={(e) => {
+                          console.log('Category image failed to load:', getImageSrc('category', category.id, category.image));
+                          e.currentTarget.src = category.image;
+                        }}
                       />
                     </div>
                   </CardContent>
@@ -298,6 +342,19 @@ const ImagesChanger = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
+                {/* Current Image Preview */}
+                <div>
+                  <label className="text-sm font-medium text-white mb-2 block">Current Image</label>
+                  <img 
+                    src={getCurrentImagePreview()} 
+                    alt="Current" 
+                    className="w-full max-w-xs h-32 object-cover rounded-md border border-gray-600"
+                    onError={(e) => {
+                      console.log('Current image preview failed');
+                    }}
+                  />
+                </div>
+
                 <div>
                   <label className="text-sm font-medium text-white mb-2 block">Upload New Image</label>
                   <div className="flex items-center gap-4">
@@ -326,11 +383,14 @@ const ImagesChanger = () => {
 
                 {newImageUrl && (
                   <div>
-                    <label className="text-sm font-medium text-white mb-2 block">Preview</label>
+                    <label className="text-sm font-medium text-white mb-2 block">New Image Preview</label>
                     <img 
                       src={newImageUrl} 
                       alt="Preview" 
                       className="w-full max-w-xs h-32 object-cover rounded-md border border-gray-600"
+                      onError={(e) => {
+                        console.log('New image preview failed to load');
+                      }}
                     />
                   </div>
                 )}

@@ -19,6 +19,7 @@ const Deposit = () => {
   const [customAmount, setCustomAmount] = useState('');
   const [selectedPayment, setSelectedPayment] = useState('jazzcash');
   const [walletNumber, setWalletNumber] = useState('');
+  const [transactionId, setTransactionId] = useState('');
   const [orderId, setOrderId] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -31,13 +32,15 @@ const Deposit = () => {
       id: 'easypaisa',
       name: 'EasyPaisa',
       logo: '🟢',
-      color: 'bg-green-600'
+      color: 'bg-green-600',
+      paymentNumber: '03001234567'
     },
     {
       id: 'jazzcash',
       name: 'JazzCash',
       logo: '🔵',
-      color: 'bg-blue-600'
+      color: 'bg-blue-600',
+      paymentNumber: '03007654321'
     }
   ];
 
@@ -94,7 +97,7 @@ const Deposit = () => {
       await navigator.clipboard.writeText(text);
       toast({
         title: "کاپی ہو گیا!",
-        description: "Order ID copied to clipboard",
+        description: "Copied to clipboard",
         variant: "default"
       });
     } catch (error) {
@@ -164,6 +167,15 @@ const Deposit = () => {
       return;
     }
 
+    if (!transactionId.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter transaction ID",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!user) return;
 
     setIsProcessing(true);
@@ -175,7 +187,7 @@ const Deposit = () => {
           user_id: user.id,
           username: user.username || 'Unknown',
           amount: getDepositAmount(),
-          transaction_id: orderId,
+          transaction_id: transactionId,
           payment_method: selectedPayment,
           wallet_number: walletNumber,
           status: 'completed'
@@ -205,11 +217,17 @@ const Deposit = () => {
     }
   };
 
+  const getSelectedPaymentMethod = () => {
+    return paymentMethods.find(method => method.id === selectedPayment);
+  };
+
   if (!isAuthenticated) {
     return null;
   }
 
   if (showPayment) {
+    const selectedMethod = getSelectedPaymentMethod();
+    
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
         <Header />
@@ -235,19 +253,21 @@ const Deposit = () => {
               </div>
             </div>
 
-            {/* Transaction ID Section */}
-            <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Transaction ID: {orderId}</h3>
+            {/* Payment Number Section */}
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Payment Number: {selectedMethod?.paymentNumber}
+              </h3>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => copyToClipboard(orderId)}
+                onClick={() => copyToClipboard(selectedMethod?.paymentNumber || '')}
                 className="text-blue-600 p-0 h-auto"
               >
                 <Copy className="h-4 w-4 mr-1" />
-                Copy Transaction ID
+                Copy Payment Number
               </Button>
-              <p className="text-sm text-gray-600 mt-2">لین دین کی شناخت</p>
+              <p className="text-sm text-gray-600 mt-2">اس نمبر پر پیسے بھیجیں</p>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4">
@@ -303,13 +323,27 @@ const Deposit = () => {
                 placeholder="03XXXXXXXXX"
                 value={walletNumber}
                 onChange={(e) => setWalletNumber(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg mb-4"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                * Transaction ID
+              </label>
+              <p className="text-sm text-gray-500 mb-2">ٹرانزیکشن آئی ڈی</p>
+              <Input
+                type="text"
+                placeholder="Enter transaction ID"
+                value={transactionId}
+                onChange={(e) => setTransactionId(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg"
               />
             </div>
 
             <Button
               onClick={handlePayNow}
-              disabled={!walletNumber.trim() || isProcessing}
+              disabled={!walletNumber.trim() || !transactionId.trim() || isProcessing}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg"
             >
               {isProcessing ? 'Processing...' : (
