@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { Upload, Trash2, RefreshCw } from "lucide-react";
 
 const banners = [
   {
@@ -68,17 +69,39 @@ const ImagesChanger = () => {
   const [selectedBanner, setSelectedBanner] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploadedImages, setUploadedImages] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setNewImageUrl(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleImageUpdate = () => {
     if (!newImageUrl) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please enter an image URL",
+        description: "Please enter an image URL or upload an image",
       });
       return;
     }
+
+    const key = selectedBanner !== null 
+      ? `banner_${selectedBanner}` 
+      : `category_${selectedCategory}`;
+    
+    setUploadedImages(prev => ({
+      ...prev,
+      [key]: newImageUrl
+    }));
 
     toast({
       title: "Image Updated",
@@ -89,6 +112,33 @@ const ImagesChanger = () => {
     setNewImageUrl("");
     setSelectedBanner(null);
     setSelectedCategory(null);
+  };
+
+  const handleImageRemove = () => {
+    const key = selectedBanner !== null 
+      ? `banner_${selectedBanner}` 
+      : `category_${selectedCategory}`;
+    
+    setUploadedImages(prev => {
+      const newImages = { ...prev };
+      delete newImages[key];
+      return newImages;
+    });
+
+    toast({
+      title: "Image Removed",
+      description: "The image has been successfully removed.",
+    });
+
+    // Reset form
+    setNewImageUrl("");
+    setSelectedBanner(null);
+    setSelectedCategory(null);
+  };
+
+  const getImageSrc = (type: 'banner' | 'category', id: number | string, defaultSrc: string) => {
+    const key = `${type}_${id}`;
+    return uploadedImages[key] || defaultSrc;
   };
 
   return (
@@ -108,16 +158,16 @@ const ImagesChanger = () => {
               {banners.map(banner => (
                 <Card 
                   key={banner.id} 
-                  className={`cursor-pointer transition-all ${selectedBanner === banner.id ? 'border-casino-accent' : 'border-gray-700'}`}
+                  className={`cursor-pointer transition-all ${selectedBanner === banner.id ? 'border-casino-accent ring-2 ring-casino-accent' : 'border-gray-700'}`}
                   onClick={() => setSelectedBanner(banner.id)}
                 >
                   <CardHeader>
-                    <CardTitle>{banner.title}</CardTitle>
+                    <CardTitle className="text-white">{banner.title}</CardTitle>
                     <CardDescription>Click to select this banner</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <img 
-                      src={banner.image} 
+                      src={getImageSrc('banner', banner.id, banner.image)} 
                       alt={banner.title} 
                       className="w-full h-32 object-cover rounded-md"
                     />
@@ -132,16 +182,16 @@ const ImagesChanger = () => {
               {gameCategories.map(category => (
                 <Card 
                   key={category.id} 
-                  className={`cursor-pointer transition-all ${selectedCategory === category.id ? 'border-casino-accent' : 'border-gray-700'}`}
+                  className={`cursor-pointer transition-all ${selectedCategory === category.id ? 'border-casino-accent ring-2 ring-casino-accent' : 'border-gray-700'}`}
                   onClick={() => setSelectedCategory(category.id)}
                 >
                   <CardHeader>
-                    <CardTitle>{category.title}</CardTitle>
+                    <CardTitle className="text-white">{category.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex justify-center">
                       <img 
-                        src={category.image} 
+                        src={getImageSrc('category', category.id, category.image)} 
                         alt={category.title} 
                         className="w-16 h-16 object-contain"
                       />
@@ -154,40 +204,87 @@ const ImagesChanger = () => {
         </Tabs>
 
         {(selectedBanner !== null || selectedCategory !== null) && (
-          <Card>
+          <Card className="bg-casino border-casino-accent">
             <CardHeader>
-              <CardTitle>Update Image</CardTitle>
+              <CardTitle className="text-white flex items-center gap-2">
+                <RefreshCw className="h-5 w-5" />
+                Manage Image
+              </CardTitle>
               <CardDescription>
                 {selectedBanner !== null 
-                  ? `Updating Promo Banner ${selectedBanner}` 
-                  : `Updating ${gameCategories.find(c => c.id === selectedCategory)?.title} Icon`}
+                  ? `Managing Promo Banner ${selectedBanner}` 
+                  : `Managing ${gameCategories.find(c => c.id === selectedCategory)?.title} Icon`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <label className="text-sm font-medium">New Image URL</label>
+                  <label className="text-sm font-medium text-white mb-2 block">Upload New Image</label>
+                  <div className="flex items-center gap-4">
+                    <Input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="bg-casino-dark border-gray-600 text-white"
+                    />
+                    <Upload className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+                
+                <div className="text-center text-gray-400">OR</div>
+                
+                <div>
+                  <label className="text-sm font-medium text-white mb-2 block">Image URL</label>
                   <Input 
                     type="text" 
                     placeholder="Enter image URL"
                     value={newImageUrl}
                     onChange={(e) => setNewImageUrl(e.target.value)}
+                    className="bg-casino-dark border-gray-600 text-white"
                   />
                 </div>
+
+                {newImageUrl && (
+                  <div>
+                    <label className="text-sm font-medium text-white mb-2 block">Preview</label>
+                    <img 
+                      src={newImageUrl} 
+                      alt="Preview" 
+                      className="w-full max-w-xs h-32 object-cover rounded-md border border-gray-600"
+                    />
+                  </div>
+                )}
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end space-x-2">
+            <CardFooter className="flex justify-between">
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSelectedBanner(null);
+                    setSelectedCategory(null);
+                    setNewImageUrl("");
+                  }}
+                  className="border-gray-600 text-white hover:bg-gray-700"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={handleImageRemove}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove Image
+                </Button>
+              </div>
               <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSelectedBanner(null);
-                  setSelectedCategory(null);
-                  setNewImageUrl("");
-                }}
+                onClick={handleImageUpdate}
+                disabled={!newImageUrl}
+                className="bg-casino-accent text-black hover:bg-yellow-400"
               >
-                Cancel
+                Update Image
               </Button>
-              <Button onClick={handleImageUpdate}>Update Image</Button>
             </CardFooter>
           </Card>
         )}

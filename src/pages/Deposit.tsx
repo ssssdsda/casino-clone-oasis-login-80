@@ -2,12 +2,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { Copy, QrCode, ArrowLeft, Bitcoin, DollarSign } from 'lucide-react';
+import { ArrowLeft, Check, Copy } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,28 +15,40 @@ const Deposit = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [selectedAmount, setSelectedAmount] = useState<number>(300);
   const [customAmount, setCustomAmount] = useState('');
-  const [selectedCrypto, setSelectedCrypto] = useState('BTC');
+  const [selectedPayment, setSelectedPayment] = useState('jazzcash');
+  const [walletNumber, setWalletNumber] = useState('');
+  const [orderId] = useState(`dsddlb04c2366efec45699b86b460f1`);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [depositCreated, setDepositCreated] = useState(false);
-  const [transactionHash, setTransactionHash] = useState('');
+  const [showPayment, setShowPayment] = useState(false);
 
-  // Predefined amounts
-  const amounts = [500, 1000, 2000, 5000, 10000, 20000];
-
-  // Crypto addresses (in real app, these would be dynamic)
-  const cryptoAddresses = {
-    BTC: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
-    USDT: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5onjwwh',
-    ETH: '0x742d35cc6634c0532925a3b8d598c5454f2d9dd1'
-  };
+  const predefinedAmounts = [100, 300, 500, 1000, 2000, 5000];
+  
+  const paymentMethods = [
+    {
+      id: 'easypaisa',
+      name: 'EasyPaisa',
+      logo: '🟢', // You can replace with actual logo
+      color: 'bg-green-600'
+    },
+    {
+      id: 'jazzcash',
+      name: 'JazzCash',
+      logo: '🔵',
+      color: 'bg-blue-600'
+    }
+  ];
 
   React.useEffect(() => {
     if (!isAuthenticated) {
       navigate('/');
     }
   }, [isAuthenticated, navigate]);
+
+  const getDepositAmount = () => {
+    return customAmount ? parseFloat(customAmount) : selectedAmount;
+  };
 
   const handleAmountSelect = (amount: number) => {
     setSelectedAmount(amount);
@@ -46,19 +57,15 @@ const Deposit = () => {
 
   const handleCustomAmountChange = (value: string) => {
     setCustomAmount(value);
-    setSelectedAmount(null);
+    setSelectedAmount(0);
   };
 
-  const getDepositAmount = () => {
-    return selectedAmount || parseFloat(customAmount) || 0;
-  };
-
-  const copyToClipboard = async (text: string, type: string) => {
+  const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       toast({
-        title: "Copied!",
-        description: `${type} copied to clipboard`,
+        title: "کاپی ہو گیا!",
+        description: "Order ID copied to clipboard",
         variant: "default"
       });
     } catch (error) {
@@ -70,12 +77,12 @@ const Deposit = () => {
     }
   };
 
-  const handleCreateDeposit = async () => {
+  const handleContinue = async () => {
     const amount = getDepositAmount();
     if (amount < 100) {
       toast({
         title: "Error",
-        description: "Minimum deposit amount is ৳100",
+        description: "Minimum deposit amount is Rs. 100",
         variant: "destructive"
       });
       return;
@@ -90,7 +97,7 @@ const Deposit = () => {
         .insert({
           user_id: user.id,
           amount,
-          payment_method: selectedCrypto,
+          payment_method: selectedPayment,
           status: 'pending'
         })
         .select()
@@ -100,10 +107,10 @@ const Deposit = () => {
         throw error;
       }
 
-      setDepositCreated(true);
+      setShowPayment(true);
       toast({
-        title: "Deposit Created",
-        description: "Send the exact amount to the address below",
+        title: "Order Created",
+        description: "Please complete the payment below",
         variant: "default"
       });
     } catch (error: any) {
@@ -118,38 +125,22 @@ const Deposit = () => {
     }
   };
 
-  const handleConfirmPayment = async () => {
-    if (!transactionHash.trim()) {
+  const handlePayNow = async () => {
+    if (!walletNumber.trim()) {
       toast({
         title: "Error",
-        description: "Please enter transaction hash",
+        description: "Please enter your wallet account number",
         variant: "destructive"
       });
       return;
     }
 
-    if (!user) return;
-
     setIsProcessing(true);
     try {
-      const { error } = await supabase
-        .from('deposits')
-        .update({
-          transaction_hash: transactionHash,
-          status: 'pending'
-        })
-        .eq('user_id', user.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error) {
-        throw error;
-      }
-
+      // Here you would typically integrate with actual payment gateway
       toast({
-        title: "Success",
-        description: "Payment confirmation submitted. Your deposit will be processed within 10-30 minutes.",
+        title: "Payment Successful!",
+        description: "Your deposit will be processed within 5-10 minutes",
         variant: "default"
       });
 
@@ -157,10 +148,9 @@ const Deposit = () => {
         navigate('/');
       }, 2000);
     } catch (error: any) {
-      console.error('Payment confirmation error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to confirm payment",
+        description: "Payment failed. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -168,14 +158,118 @@ const Deposit = () => {
     }
   };
 
-  const cryptoOptions = [
-    { value: 'BTC', label: 'Bitcoin (BTC)', icon: Bitcoin },
-    { value: 'USDT', label: 'Tether (USDT)', icon: DollarSign },
-    { value: 'ETH', label: 'Ethereum (ETH)', icon: DollarSign }
-  ];
-
   if (!isAuthenticated) {
     return null;
+  }
+
+  if (showPayment) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col">
+        <Header />
+        <div className="flex-1 container mx-auto px-4 py-8 max-w-md">
+          <Button
+            variant="ghost"
+            onClick={() => setShowPayment(false)}
+            className="mb-6 text-gray-600 hover:bg-gray-200"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <span className="text-gray-500 font-bold">L</span>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">Order ID: {orderId}</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => copyToClipboard(orderId)}
+                className="text-gray-500 p-0 h-auto"
+              >
+                <Copy className="h-4 w-4 mr-1" />
+                Copy
+              </Button>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold text-gray-800">Amount Payable</h3>
+                  <p className="text-sm text-gray-600">قابل ادائیگی رقم</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-800">Rs. {getDepositAmount()}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-gray-800 mb-4">Select Payment Type</h3>
+              <p className="text-sm text-gray-600 mb-4">ادائیگی کا انتخاب کریں</p>
+              
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {paymentMethods.map((method) => (
+                  <div
+                    key={method.id}
+                    onClick={() => setSelectedPayment(method.id)}
+                    className={`relative border-2 rounded-lg p-4 cursor-pointer transition-colors ${
+                      selectedPayment === method.id 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {selectedPayment === method.id && (
+                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                        <Check className="h-4 w-4 text-white" />
+                      </div>
+                    )}
+                    <div className="text-center">
+                      <div className={`w-12 h-8 ${method.color} rounded mx-auto mb-2 flex items-center justify-center`}>
+                        <span className="text-white font-bold text-xs">{method.name.slice(0,2)}</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-700">{method.name}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                * Wallet account number
+              </label>
+              <p className="text-sm text-gray-500 mb-2">والیٹ اکاؤنٹ نمبر</p>
+              <Input
+                type="text"
+                placeholder="03XXXXXXXXX"
+                value={walletNumber}
+                onChange={(e) => setWalletNumber(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+              />
+            </div>
+
+            <Button
+              onClick={handlePayNow}
+              disabled={!walletNumber.trim() || isProcessing}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg"
+            >
+              {isProcessing ? 'Processing...' : (
+                <div className="flex items-center justify-center">
+                  <span className="mr-2">💳</span>
+                  Pay Now
+                </div>
+              )}
+            </Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   return (
@@ -194,160 +288,62 @@ const Deposit = () => {
 
           <Card className="bg-casino border-casino-accent">
             <CardHeader className="bg-gradient-to-r from-green-700 to-green-600">
-              <CardTitle className="text-white text-2xl">Crypto Deposit</CardTitle>
-              <CardDescription className="text-gray-100">
-                Deposit using cryptocurrency for instant processing
-              </CardDescription>
+              <CardTitle className="text-white text-2xl">Quick Deposit</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              {!depositCreated ? (
-                <>
-                  <div>
-                    <Label className="text-white text-lg mb-4 block">Select Cryptocurrency</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      {cryptoOptions.map((crypto) => {
-                        const Icon = crypto.icon;
-                        return (
-                          <Button
-                            key={crypto.value}
-                            variant={selectedCrypto === crypto.value ? "default" : "outline"}
-                            className={`p-4 h-auto flex flex-col items-center space-y-2 ${
-                              selectedCrypto === crypto.value 
-                                ? "bg-casino-accent text-black border-casino-accent" 
-                                : "bg-casino-dark border-gray-600 text-white hover:bg-casino-accent hover:text-black"
-                            }`}
-                            onClick={() => setSelectedCrypto(crypto.value)}
-                          >
-                            <Icon className="h-6 w-6" />
-                            <span className="text-sm font-medium">{crypto.label}</span>
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-white text-lg mb-4 block">Select Amount (৳)</Label>
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                      {amounts.map((amount) => (
-                        <Button
-                          key={amount}
-                          variant={selectedAmount === amount ? "default" : "outline"}
-                          className={`${
-                            selectedAmount === amount 
-                              ? "bg-casino-accent text-black border-casino-accent" 
-                              : "bg-casino-dark border-gray-600 text-white hover:bg-casino-accent hover:text-black"
-                          }`}
-                          onClick={() => handleAmountSelect(amount)}
-                        >
-                          ৳{amount.toLocaleString()}
-                        </Button>
-                      ))}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="custom-amount" className="text-white">Custom Amount</Label>
-                      <Input
-                        id="custom-amount"
-                        type="number"
-                        placeholder="Enter amount"
-                        value={customAmount}
-                        onChange={(e) => handleCustomAmountChange(e.target.value)}
-                        className="bg-casino-dark border-gray-600 text-white"
-                        min="100"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="bg-casino-dark rounded-lg p-4 border border-gray-600">
-                    <h3 className="text-white font-semibold mb-2">Deposit Summary</h3>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between text-gray-300">
-                        <span>Amount:</span>
-                        <span>৳{getDepositAmount().toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-gray-300">
-                        <span>Cryptocurrency:</span>
-                        <span>{selectedCrypto}</span>
-                      </div>
-                      <div className="flex justify-between text-gray-300">
-                        <span>Processing Time:</span>
-                        <span>10-30 minutes</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleCreateDeposit}
-                    disabled={getDepositAmount() < 100 || isProcessing}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3"
-                  >
-                    {isProcessing ? 'Creating...' : `Deposit ৳${getDepositAmount().toLocaleString()}`}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="text-center space-y-4">
-                    <div className="bg-green-600/20 border border-green-500/30 rounded-lg p-4">
-                      <h3 className="text-green-400 font-semibold text-lg mb-2">Send Payment</h3>
-                      <p className="text-white text-sm">
-                        Send exactly ৳{getDepositAmount().toLocaleString()} worth of {selectedCrypto} to the address below
-                      </p>
-                    </div>
-
-                    <div className="bg-casino-dark rounded-lg p-4 border border-gray-600">
-                      <Label className="text-white font-semibold">Wallet Address</Label>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <Input
-                          value={cryptoAddresses[selectedCrypto as keyof typeof cryptoAddresses]}
-                          readOnly
-                          className="bg-gray-800 border-gray-600 text-white text-xs"
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => copyToClipboard(
-                            cryptoAddresses[selectedCrypto as keyof typeof cryptoAddresses],
-                            'Address'
-                          )}
-                          className="border-gray-600 text-white hover:bg-casino-accent hover:text-black"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="bg-casino-dark rounded-lg p-4 border border-gray-600 text-center">
-                      <QrCode className="h-24 w-24 mx-auto text-white mb-2" />
-                      <p className="text-gray-400 text-sm">QR Code for wallet address</p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-white font-semibold">Transaction Hash (After Payment)</Label>
-                      <Input
-                        placeholder="Enter transaction hash"
-                        value={transactionHash}
-                        onChange={(e) => setTransactionHash(e.target.value)}
-                        className="bg-casino-dark border-gray-600 text-white"
-                      />
-                    </div>
-
+              <div>
+                <h3 className="text-white text-lg mb-4">Select Amount (Rs.)</h3>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {predefinedAmounts.map((amount) => (
                     <Button
-                      onClick={handleConfirmPayment}
-                      disabled={!transactionHash.trim() || isProcessing}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3"
+                      key={amount}
+                      variant={selectedAmount === amount && !customAmount ? "default" : "outline"}
+                      className={`${
+                        selectedAmount === amount && !customAmount
+                          ? "bg-casino-accent text-black border-casino-accent" 
+                          : "bg-casino-dark border-gray-600 text-white hover:bg-casino-accent hover:text-black"
+                      }`}
+                      onClick={() => handleAmountSelect(amount)}
                     >
-                      {isProcessing ? 'Confirming...' : 'Confirm Payment'}
+                      Rs. {amount}
                     </Button>
+                  ))}
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-white text-sm">Custom Amount</label>
+                  <Input
+                    type="number"
+                    placeholder="Enter amount"
+                    value={customAmount}
+                    onChange={(e) => handleCustomAmountChange(e.target.value)}
+                    className="bg-casino-dark border-gray-600 text-white"
+                    min="100"
+                  />
+                </div>
+              </div>
 
-                    <div className="bg-yellow-600/20 border border-yellow-500/30 rounded-lg p-4">
-                      <p className="text-yellow-300 text-sm">
-                        ⚠️ Important: Send the exact amount to avoid delays. Your deposit will be credited within 10-30 minutes after payment confirmation.
-                      </p>
-                    </div>
+              <div className="bg-casino-dark rounded-lg p-4 border border-gray-600">
+                <h3 className="text-white font-semibold mb-2">Deposit Summary</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between text-gray-300">
+                    <span>Amount:</span>
+                    <span>Rs. {getDepositAmount()}</span>
                   </div>
-                </>
-              )}
+                  <div className="flex justify-between text-gray-300">
+                    <span>Processing Time:</span>
+                    <span>5-10 minutes</span>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleContinue}
+                disabled={getDepositAmount() < 100 || isProcessing}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3"
+              >
+                {isProcessing ? 'Creating Order...' : `Continue with Rs. ${getDepositAmount()}`}
+              </Button>
             </CardContent>
           </Card>
         </div>
