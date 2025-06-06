@@ -14,7 +14,8 @@ import { UserManagement } from '@/components/admin/UserManagement';
 import { BettingSystemControl } from '@/components/admin/BettingSystemControl';
 import { RealtimeStats } from '@/components/admin/RealtimeStats';
 import { GameControlPanel } from '@/components/admin/GameControlPanel';
-import { Settings, Users, TrendingUp, Activity, Shield, Database, CreditCard, GamepadIcon } from 'lucide-react';
+import { Settings, Users, TrendingUp, Activity, Shield, Database, CreditCard, GamepadIcon, Receipt } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Sufyan = () => {
   const navigate = useNavigate();
@@ -81,7 +82,7 @@ const Sufyan = () => {
         </div>
         
         <Tabs defaultValue="gamecontrol" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-6">
+          <TabsList className="grid w-full grid-cols-8 mb-6">
             <TabsTrigger value="gamecontrol" className="flex items-center gap-2">
               <GamepadIcon className="h-4 w-4" />
               Game Control
@@ -97,6 +98,10 @@ const Sufyan = () => {
             <TabsTrigger value="betting" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Betting System
+            </TabsTrigger>
+            <TabsTrigger value="deposits" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Deposits
             </TabsTrigger>
             <TabsTrigger value="finance" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
@@ -126,6 +131,10 @@ const Sufyan = () => {
           
           <TabsContent value="betting">
             <BettingSystemControl />
+          </TabsContent>
+
+          <TabsContent value="deposits">
+            <DepositsManagement />
           </TabsContent>
           
           <TabsContent value="finance">
@@ -236,7 +245,7 @@ const Sufyan = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <div className="text-gray-400">Tables</div>
-                      <div className="text-white font-bold">6</div>
+                      <div className="text-white font-bold">9</div>
                     </div>
                     <div>
                       <div className="text-gray-400">Records</div>
@@ -244,7 +253,7 @@ const Sufyan = () => {
                     </div>
                     <div>
                       <div className="text-gray-400">Size</div>
-                      <div className="text-white font-bold">2.1 MB</div>
+                      <div className="text-white font-bold">2.5 MB</div>
                     </div>
                     <div>
                       <div className="text-gray-400">Status</div>
@@ -257,96 +266,312 @@ const Sufyan = () => {
           </TabsContent>
           
           <TabsContent value="settings">
-            <Card className="bg-casino border-casino-accent">
-              <CardHeader>
-                <CardTitle className="text-white">System Settings</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Global system settings and controls
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
-                    <div>
-                      <h3 className="text-white font-medium">Maintenance Mode</h3>
-                      <p className="text-gray-400 text-sm">Take the entire system offline for maintenance</p>
+            <div className="space-y-6">
+              <Card className="bg-casino border-casino-accent">
+                <CardHeader>
+                  <CardTitle className="text-white">System Settings</CardTitle>
+                  <CardDescription className="text-gray-300">
+                    Global system settings and controls
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
+                      <div>
+                        <h3 className="text-white font-medium">Maintenance Mode</h3>
+                        <p className="text-gray-400 text-sm">Take the entire system offline for maintenance</p>
+                      </div>
+                      <Switch 
+                        checked={systemSettings.maintenanceMode}
+                        onCheckedChange={(checked) => updateSystemSetting('maintenanceMode', checked)}
+                      />
                     </div>
-                    <Switch 
-                      checked={systemSettings.maintenanceMode}
-                      onCheckedChange={(checked) => updateSystemSetting('maintenanceMode', checked)}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
-                    <div>
-                      <h3 className="text-white font-medium">New User Registration</h3>
-                      <p className="text-gray-400 text-sm">Allow new users to create accounts</p>
+                    
+                    <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
+                      <div>
+                        <h3 className="text-white font-medium">New User Registration</h3>
+                        <p className="text-gray-400 text-sm">Allow new users to create accounts</p>
+                      </div>
+                      <Switch 
+                        checked={systemSettings.newRegistrations}
+                        onCheckedChange={(checked) => updateSystemSetting('newRegistrations', checked)}
+                      />
                     </div>
-                    <Switch 
-                      checked={systemSettings.newRegistrations}
-                      onCheckedChange={(checked) => updateSystemSetting('newRegistrations', checked)}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
-                    <div>
-                      <h3 className="text-white font-medium">Auto Backup</h3>
-                      <p className="text-gray-400 text-sm">Automatically backup database daily</p>
+                    
+                    <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
+                      <div>
+                        <h3 className="text-white font-medium">Auto Backup</h3>
+                        <p className="text-gray-400 text-sm">Automatically backup database daily</p>
+                      </div>
+                      <Switch 
+                        checked={systemSettings.autoBackup}
+                        onCheckedChange={(checked) => updateSystemSetting('autoBackup', checked)}
+                      />
                     </div>
-                    <Switch 
-                      checked={systemSettings.autoBackup}
-                      onCheckedChange={(checked) => updateSystemSetting('autoBackup', checked)}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
-                    <div>
-                      <h3 className="text-white font-medium">Real-time Updates</h3>
-                      <p className="text-gray-400 text-sm">Enable real-time balance and game updates</p>
+                    
+                    <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
+                      <div>
+                        <h3 className="text-white font-medium">Real-time Updates</h3>
+                        <p className="text-gray-400 text-sm">Enable real-time balance and game updates</p>
+                      </div>
+                      <Switch 
+                        checked={systemSettings.realtimeUpdates}
+                        onCheckedChange={(checked) => updateSystemSetting('realtimeUpdates', checked)}
+                      />
                     </div>
-                    <Switch 
-                      checked={systemSettings.realtimeUpdates}
-                      onCheckedChange={(checked) => updateSystemSetting('realtimeUpdates', checked)}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
-                    <div>
-                      <h3 className="text-white font-medium">Withdrawal Approval Required</h3>
-                      <p className="text-gray-400 text-sm">Require manual approval for all withdrawals</p>
+                    
+                    <div className="flex items-center justify-between p-4 bg-casino-dark rounded-lg">
+                      <div>
+                        <h3 className="text-white font-medium">Withdrawal Approval Required</h3>
+                        <p className="text-gray-400 text-sm">Require manual approval for all withdrawals</p>
+                      </div>
+                      <Switch 
+                        checked={systemSettings.withdrawalApproval}
+                        onCheckedChange={(checked) => updateSystemSetting('withdrawalApproval', checked)}
+                      />
                     </div>
-                    <Switch 
-                      checked={systemSettings.withdrawalApproval}
-                      onCheckedChange={(checked) => updateSystemSetting('withdrawalApproval', checked)}
-                    />
-                  </div>
-                  
-                  <div className="pt-4 border-t border-gray-700">
-                    <h3 className="text-white font-medium mb-4">Quick Actions</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Button 
-                        onClick={() => navigate('/admin/casino-control')}
-                        className="bg-purple-600 hover:bg-purple-700"
-                      >
-                        Casino Control Panel
-                      </Button>
-                      <Button 
-                        onClick={() => navigate('/admin/popup-customizer')}
-                        className="bg-indigo-600 hover:bg-indigo-700"
-                      >
-                        Popup Customizer
-                      </Button>
+                    
+                    <div className="pt-4 border-t border-gray-700">
+                      <h3 className="text-white font-medium mb-4">Quick Actions</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Button 
+                          onClick={() => navigate('/admin/casino-control')}
+                          className="bg-purple-600 hover:bg-purple-700"
+                        >
+                          Casino Control Panel
+                        </Button>
+                        <Button 
+                          onClick={() => navigate('/admin/popup-customizer')}
+                          className="bg-indigo-600 hover:bg-indigo-700"
+                        >
+                          Popup Customizer
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              <DepositConfigManager />
+            </div>
           </TabsContent>
         </Tabs>
       </main>
       
       <Footer />
     </div>
+  );
+};
+
+// New component for managing deposits
+const DepositsManagement = () => {
+  const [deposits, setDeposits] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const fetchDeposits = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('deposit_tracking')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setDeposits(data || []);
+    } catch (error: any) {
+      console.error('Error fetching deposits:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch deposits",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchDeposits();
+  }, []);
+
+  return (
+    <Card className="bg-casino border-casino-accent">
+      <CardHeader>
+        <CardTitle className="text-white flex items-center gap-2">
+          <Receipt className="h-5 w-5" />
+          Deposits Management
+        </CardTitle>
+        <CardDescription className="text-gray-300">
+          Track and manage all user deposits
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-white font-medium">Recent Deposits</h3>
+            <Button onClick={fetchDeposits} disabled={isLoading}>
+              {isLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-white">
+              <thead>
+                <tr className="border-b border-gray-600">
+                  <th className="text-left p-2">Username</th>
+                  <th className="text-left p-2">Amount</th>
+                  <th className="text-left p-2">Transaction ID</th>
+                  <th className="text-left p-2">Payment Method</th>
+                  <th className="text-left p-2">Wallet Number</th>
+                  <th className="text-left p-2">Status</th>
+                  <th className="text-left p-2">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deposits.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center p-4 text-gray-400">
+                      No deposits found
+                    </td>
+                  </tr>
+                ) : (
+                  deposits.map((deposit) => (
+                    <tr key={deposit.id} className="border-b border-gray-700">
+                      <td className="p-2">{deposit.username}</td>
+                      <td className="p-2">Rs. {deposit.amount}</td>
+                      <td className="p-2 font-mono text-sm">{deposit.transaction_id}</td>
+                      <td className="p-2">{deposit.payment_method}</td>
+                      <td className="p-2">{deposit.wallet_number || 'N/A'}</td>
+                      <td className="p-2">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          deposit.status === 'completed' 
+                            ? 'bg-green-600 text-white' 
+                            : 'bg-yellow-600 text-black'
+                        }`}>
+                          {deposit.status}
+                        </span>
+                      </td>
+                      <td className="p-2 text-sm">
+                        {new Date(deposit.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// New component for managing deposit configuration
+const DepositConfigManager = () => {
+  const [config, setConfig] = useState({ top_number: '', transaction_id_prefix: '' });
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const fetchConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('deposit_config')
+        .select('*')
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        setConfig(data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching config:', error);
+    }
+  };
+
+  const updateConfig = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('deposit_config')
+        .update({
+          top_number: config.top_number,
+          transaction_id_prefix: config.transaction_id_prefix,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', 'id');
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Configuration Updated",
+        description: "Deposit page configuration has been updated successfully",
+        variant: "default",
+      });
+    } catch (error: any) {
+      console.error('Error updating config:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update configuration",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  return (
+    <Card className="bg-casino border-casino-accent">
+      <CardHeader>
+        <CardTitle className="text-white">Deposit Page Configuration</CardTitle>
+        <CardDescription className="text-gray-300">
+          Customize the deposit page settings
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="top_number" className="text-white">Top Number/Message</Label>
+          <Input
+            id="top_number"
+            value={config.top_number}
+            onChange={(e) => setConfig({ ...config, top_number: e.target.value })}
+            className="bg-casino-dark border-gray-600 text-white mt-2"
+            placeholder="24/7 Support Available"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="transaction_prefix" className="text-white">Transaction ID Prefix</Label>
+          <Input
+            id="transaction_prefix"
+            value={config.transaction_id_prefix}
+            onChange={(e) => setConfig({ ...config, transaction_id_prefix: e.target.value })}
+            className="bg-casino-dark border-gray-600 text-white mt-2"
+            placeholder="TXN"
+          />
+        </div>
+        
+        <Button 
+          onClick={updateConfig} 
+          disabled={isLoading}
+          className="bg-casino-accent text-black hover:bg-yellow-400"
+        >
+          {isLoading ? 'Updating...' : 'Update Configuration'}
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 

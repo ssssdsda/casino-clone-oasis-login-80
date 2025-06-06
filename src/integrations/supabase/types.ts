@@ -92,6 +92,66 @@ export type Database = {
         }
         Relationships: []
       }
+      deposit_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          top_number: string
+          transaction_id_prefix: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          top_number?: string
+          transaction_id_prefix?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          top_number?: string
+          transaction_id_prefix?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      deposit_tracking: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          payment_method: string
+          status: string | null
+          transaction_id: string
+          user_id: string | null
+          username: string
+          wallet_number: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          payment_method: string
+          status?: string | null
+          transaction_id: string
+          user_id?: string | null
+          username: string
+          wallet_number?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          payment_method?: string
+          status?: string | null
+          transaction_id?: string
+          user_id?: string | null
+          username?: string
+          wallet_number?: string | null
+        }
+        Relationships: []
+      }
       deposits: {
         Row: {
           amount: number
@@ -132,6 +192,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      image_configs: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_key: string
+          image_type: string
+          image_url: string
+          item_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_key: string
+          image_type: string
+          image_url: string
+          item_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_key?: string
+          image_type?: string
+          image_url?: string
+          item_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

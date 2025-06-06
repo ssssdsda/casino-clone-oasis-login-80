@@ -1,13 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Upload, Trash2, RefreshCw } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
 
 const banners = [
   {
@@ -69,8 +70,35 @@ const ImagesChanger = () => {
   const [selectedBanner, setSelectedBanner] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [newImageUrl, setNewImageUrl] = useState("");
-  const [uploadedImages, setUploadedImages] = useState<{[key: string]: string}>({});
+  const [imageConfigs, setImageConfigs] = useState<{[key: string]: string}>({});
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Load image configurations from database
+  useEffect(() => {
+    fetchImageConfigs();
+  }, []);
+
+  const fetchImageConfigs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('image_configs')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching image configs:', error);
+        return;
+      }
+
+      const configs: {[key: string]: string} = {};
+      data?.forEach(config => {
+        configs[config.image_key] = config.image_url;
+      });
+      setImageConfigs(configs);
+    } catch (error) {
+      console.error('Error in fetchImageConfigs:', error);
+    }
+  };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -84,7 +112,7 @@ const ImagesChanger = () => {
     }
   };
 
-  const handleImageUpdate = () => {
+  const handleImageUpdate = async () => {
     if (!newImageUrl) {
       toast({
         variant: "destructive",
@@ -94,51 +122,103 @@ const ImagesChanger = () => {
       return;
     }
 
-    const key = selectedBanner !== null 
-      ? `banner_${selectedBanner}` 
-      : `category_${selectedCategory}`;
-    
-    setUploadedImages(prev => ({
-      ...prev,
-      [key]: newImageUrl
-    }));
+    setIsLoading(true);
+    try {
+      const imageKey = selectedBanner !== null 
+        ? `banner_${selectedBanner}` 
+        : `category_${selectedCategory}`;
+      
+      const imageType = selectedBanner !== null ? 'banner' : 'category';
+      const itemId = selectedBanner !== null ? selectedBanner.toString() : selectedCategory!;
 
-    toast({
-      title: "Image Updated",
-      description: "The image has been successfully updated.",
-    });
+      const { error } = await supabase
+        .from('image_configs')
+        .upsert({
+          image_key: imageKey,
+          image_url: newImageUrl,
+          image_type: imageType,
+          item_id: itemId,
+          updated_at: new Date().toISOString()
+        });
 
-    // Reset form
-    setNewImageUrl("");
-    setSelectedBanner(null);
-    setSelectedCategory(null);
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setImageConfigs(prev => ({
+        ...prev,
+        [imageKey]: newImageUrl
+      }));
+
+      toast({
+        title: "Image Updated",
+        description: "The image has been successfully updated in the database.",
+      });
+
+      // Reset form
+      setNewImageUrl("");
+      setSelectedBanner(null);
+      setSelectedCategory(null);
+    } catch (error: any) {
+      console.error('Error updating image:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update image",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleImageRemove = () => {
-    const key = selectedBanner !== null 
-      ? `banner_${selectedBanner}` 
-      : `category_${selectedCategory}`;
-    
-    setUploadedImages(prev => {
-      const newImages = { ...prev };
-      delete newImages[key];
-      return newImages;
-    });
+  const handleImageRemove = async () => {
+    setIsLoading(true);
+    try {
+      const imageKey = selectedBanner !== null 
+        ? `banner_${selectedBanner}` 
+        : `category_${selectedCategory}`;
 
-    toast({
-      title: "Image Removed",
-      description: "The image has been successfully removed.",
-    });
+      const { error } = await supabase
+        .from('image_configs')
+        .delete()
+        .eq('image_key', imageKey);
 
-    // Reset form
-    setNewImageUrl("");
-    setSelectedBanner(null);
-    setSelectedCategory(null);
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setImageConfigs(prev => {
+        const newConfigs = { ...prev };
+        delete newConfigs[imageKey];
+        return newConfigs;
+      });
+
+      toast({
+        title: "Image Removed",
+        description: "The image has been successfully removed from the database.",
+      });
+
+      // Reset form
+      setNewImageUrl("");
+      setSelectedBanner(null);
+      setSelectedCategory(null);
+    } catch (error: any) {
+      console.error('Error removing image:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to remove image",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getImageSrc = (type: 'banner' | 'category', id: number | string, defaultSrc: string) => {
     const key = `${type}_${id}`;
-    return uploadedImages[key] || defaultSrc;
+    return imageConfigs[key] || defaultSrc;
   };
 
   return (
@@ -266,6 +346,7 @@ const ImagesChanger = () => {
                     setNewImageUrl("");
                   }}
                   className="border-gray-600 text-white hover:bg-gray-700"
+                  disabled={isLoading}
                 >
                   Cancel
                 </Button>
@@ -273,6 +354,7 @@ const ImagesChanger = () => {
                   variant="destructive"
                   onClick={handleImageRemove}
                   className="bg-red-600 hover:bg-red-700"
+                  disabled={isLoading}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Remove Image
@@ -280,10 +362,10 @@ const ImagesChanger = () => {
               </div>
               <Button 
                 onClick={handleImageUpdate}
-                disabled={!newImageUrl}
+                disabled={!newImageUrl || isLoading}
                 className="bg-casino-accent text-black hover:bg-yellow-400"
               >
-                Update Image
+                {isLoading ? 'Updating...' : 'Update Image'}
               </Button>
             </CardFooter>
           </Card>

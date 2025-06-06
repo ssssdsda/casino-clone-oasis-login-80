@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +19,10 @@ const Deposit = () => {
   const [customAmount, setCustomAmount] = useState('');
   const [selectedPayment, setSelectedPayment] = useState('jazzcash');
   const [walletNumber, setWalletNumber] = useState('');
-  const [orderId] = useState(`dsddlb04c2366efec45699b86b460f1`);
+  const [orderId, setOrderId] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [depositConfig, setDepositConfig] = useState({ top_number: '24/7 Support Available', transaction_id_prefix: 'TXN' });
 
   const predefinedAmounts = [100, 300, 500, 1000, 2000, 5000];
   
@@ -29,7 +30,7 @@ const Deposit = () => {
     {
       id: 'easypaisa',
       name: 'EasyPaisa',
-      logo: '🟢', // You can replace with actual logo
+      logo: '🟢',
       color: 'bg-green-600'
     },
     {
@@ -40,11 +41,39 @@ const Deposit = () => {
     }
   ];
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isAuthenticated) {
       navigate('/');
+    } else {
+      fetchDepositConfig();
+      generateOrderId();
     }
   }, [isAuthenticated, navigate]);
+
+  const fetchDepositConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('deposit_config')
+        .select('*')
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching deposit config:', error);
+        return;
+      }
+
+      if (data) {
+        setDepositConfig(data);
+      }
+    } catch (error) {
+      console.error('Error in fetchDepositConfig:', error);
+    }
+  };
+
+  const generateOrderId = () => {
+    const randomString = Math.random().toString(36).substring(2, 15);
+    setOrderId(`${depositConfig.transaction_id_prefix}${randomString}`);
+  };
 
   const getDepositAmount = () => {
     return customAmount ? parseFloat(customAmount) : selectedAmount;
@@ -135,9 +164,27 @@ const Deposit = () => {
       return;
     }
 
+    if (!user) return;
+
     setIsProcessing(true);
     try {
-      // Here you would typically integrate with actual payment gateway
+      // Track the deposit in deposit_tracking table
+      const { error: trackingError } = await supabase
+        .from('deposit_tracking')
+        .insert({
+          user_id: user.id,
+          username: user.username || 'Unknown',
+          amount: getDepositAmount(),
+          transaction_id: orderId,
+          payment_method: selectedPayment,
+          wallet_number: walletNumber,
+          status: 'completed'
+        });
+
+      if (trackingError) {
+        console.error('Error tracking deposit:', trackingError);
+      }
+
       toast({
         title: "Payment Successful!",
         description: "Your deposit will be processed within 5-10 minutes",
@@ -176,6 +223,11 @@ const Deposit = () => {
             Back
           </Button>
 
+          {/* Top Configurable Number */}
+          <div className="bg-blue-50 rounded-lg p-3 mb-4 text-center">
+            <p className="text-blue-600 font-medium">{depositConfig.top_number}</p>
+          </div>
+
           <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
             <div className="text-center">
               <div className="w-12 h-12 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
@@ -183,17 +235,19 @@ const Deposit = () => {
               </div>
             </div>
 
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">Order ID: {orderId}</h2>
+            {/* Transaction ID Section */}
+            <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Transaction ID: {orderId}</h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => copyToClipboard(orderId)}
-                className="text-gray-500 p-0 h-auto"
+                className="text-blue-600 p-0 h-auto"
               >
                 <Copy className="h-4 w-4 mr-1" />
-                Copy
+                Copy Transaction ID
               </Button>
+              <p className="text-sm text-gray-600 mt-2">لین دین کی شناخت</p>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4">
@@ -286,6 +340,11 @@ const Deposit = () => {
             Back to Home
           </Button>
 
+          {/* Top Configurable Number */}
+          <div className="bg-casino-accent text-black rounded-lg p-4 mb-6 text-center">
+            <h2 className="text-lg font-bold">{depositConfig.top_number}</h2>
+          </div>
+
           <Card className="bg-casino border-casino-accent">
             <CardHeader className="bg-gradient-to-r from-green-700 to-green-600">
               <CardTitle className="text-white text-2xl">Quick Deposit</CardTitle>
@@ -323,9 +382,14 @@ const Deposit = () => {
                 </div>
               </div>
 
+              {/* Transaction ID Preview */}
               <div className="bg-casino-dark rounded-lg p-4 border border-gray-600">
-                <h3 className="text-white font-semibold mb-2">Deposit Summary</h3>
+                <h3 className="text-white font-semibold mb-2">Transaction Details</h3>
                 <div className="space-y-1 text-sm">
+                  <div className="flex justify-between text-gray-300">
+                    <span>Transaction ID:</span>
+                    <span className="font-mono">{orderId}</span>
+                  </div>
                   <div className="flex justify-between text-gray-300">
                     <span>Amount:</span>
                     <span>Rs. {getDepositAmount()}</span>
