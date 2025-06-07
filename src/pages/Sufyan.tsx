@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -352,6 +351,7 @@ const Sufyan = () => {
                 </CardContent>
               </Card>
 
+              <PaymentNumberManager />
               <DepositConfigManager />
             </div>
           </TabsContent>
@@ -570,6 +570,112 @@ const DepositConfigManager = () => {
         >
           {isLoading ? 'Updating...' : 'Update Configuration'}
         </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+// New component for managing payment numbers
+const PaymentNumberManager = () => {
+  const [paymentNumbers, setPaymentNumbers] = useState([
+    { id: 'easypaisa', name: 'EasyPaisa', number: '03001234567' },
+    { id: 'jazzcash', name: 'JazzCash', number: '03007654321' }
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const updatePaymentNumber = async (id: string, name: string, number: string) => {
+    setIsLoading(true);
+    try {
+      // Update the payment number in the state
+      setPaymentNumbers(prev => 
+        prev.map(payment => 
+          payment.id === id 
+            ? { ...payment, name, number }
+            : payment
+        )
+      );
+
+      // Store in Supabase for persistence
+      const { error } = await supabase
+        .from('deposit_config')
+        .upsert({
+          id: `payment_${id}`,
+          top_number: `${name}: ${number}`,
+          transaction_id_prefix: id,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Payment Number Updated",
+        description: `${name} payment number has been updated successfully`,
+        variant: "default",
+      });
+    } catch (error: any) {
+      console.error('Error updating payment number:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update payment number",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card className="bg-casino border-casino-accent">
+      <CardHeader>
+        <CardTitle className="text-white">Payment Numbers Configuration</CardTitle>
+        <CardDescription className="text-gray-300">
+          Configure payment numbers for deposit methods
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {paymentNumbers.map((payment) => (
+          <div key={payment.id} className="p-4 bg-casino-dark rounded-lg border border-gray-600">
+            <h3 className="text-white font-medium mb-4">{payment.id.toUpperCase()} Configuration</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor={`${payment.id}_name`} className="text-white">Payment Method Name</Label>
+                <Input
+                  id={`${payment.id}_name`}
+                  value={payment.name}
+                  onChange={(e) => setPaymentNumbers(prev => 
+                    prev.map(p => p.id === payment.id ? { ...p, name: e.target.value } : p)
+                  )}
+                  className="bg-casino-dark border-gray-600 text-white mt-2"
+                  placeholder="EasyPaisa"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor={`${payment.id}_number`} className="text-white">Payment Number</Label>
+                <Input
+                  id={`${payment.id}_number`}
+                  value={payment.number}
+                  onChange={(e) => setPaymentNumbers(prev => 
+                    prev.map(p => p.id === payment.id ? { ...p, number: e.target.value } : p)
+                  )}
+                  className="bg-casino-dark border-gray-600 text-white mt-2"
+                  placeholder="03XXXXXXXXX"
+                />
+              </div>
+            </div>
+            
+            <Button 
+              onClick={() => updatePaymentNumber(payment.id, payment.name, payment.number)} 
+              disabled={isLoading}
+              className="bg-casino-accent text-black hover:bg-yellow-400 mt-4"
+            >
+              {isLoading ? 'Updating...' : `Update ${payment.name}`}
+            </Button>
+          </div>
+        ))}
       </CardContent>
     </Card>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -18,7 +17,6 @@ const Deposit = () => {
   const [selectedAmount, setSelectedAmount] = useState<number>(300);
   const [customAmount, setCustomAmount] = useState('');
   const [selectedPayment, setSelectedPayment] = useState('jazzcash');
-  const [walletNumber, setWalletNumber] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [orderId, setOrderId] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -158,15 +156,6 @@ const Deposit = () => {
   };
 
   const handlePayNow = async () => {
-    if (!walletNumber.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter your wallet account number",
-        variant: "destructive"
-      });
-      return;
-    }
-
     if (!transactionId.trim()) {
       toast({
         title: "Error",
@@ -189,7 +178,7 @@ const Deposit = () => {
           amount: getDepositAmount(),
           transaction_id: transactionId,
           payment_method: selectedPayment,
-          wallet_number: walletNumber,
+          wallet_number: null, // Removed wallet number
           status: 'completed'
         });
 
@@ -256,7 +245,7 @@ const Deposit = () => {
             {/* Payment Number Section */}
             <div className="bg-green-50 rounded-lg p-4 border border-green-200">
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Payment Number: {selectedMethod?.paymentNumber}
+                {selectedMethod?.name}: {selectedMethod?.paymentNumber}
               </h3>
               <Button
                 variant="ghost"
@@ -315,20 +304,6 @@ const Deposit = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                * Wallet account number
-              </label>
-              <p className="text-sm text-gray-500 mb-2">والیٹ اکاؤنٹ نمبر</p>
-              <Input
-                type="text"
-                placeholder="03XXXXXXXXX"
-                value={walletNumber}
-                onChange={(e) => setWalletNumber(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
                 * Transaction ID
               </label>
               <p className="text-sm text-gray-500 mb-2">ٹرانزیکشن آئی ڈی</p>
@@ -343,7 +318,7 @@ const Deposit = () => {
 
             <Button
               onClick={handlePayNow}
-              disabled={!walletNumber.trim() || !transactionId.trim() || isProcessing}
+              disabled={!transactionId.trim() || isProcessing}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg"
             >
               {isProcessing ? 'Processing...' : (
