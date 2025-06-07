@@ -1,55 +1,52 @@
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, Copy } from 'lucide-react';
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Copy, CheckCircle2, AlertCircle, Phone } from "lucide-react";
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 
 const Deposit = () => {
-  const { user, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const [selectedMethod, setSelectedMethod] = useState<string>('');
+  const [amount, setAmount] = useState<string>('');
+  const [transactionId, setTransactionId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [paymentNumbers, setPaymentNumbers] = useState<any[]>([]);
+  const [depositConfig, setDepositConfig] = useState<any>({
+    top_number: '24/7 Support Available',
+    transaction_id_prefix: 'TXN'
+  });
   const { toast } = useToast();
-  const [selectedAmount, setSelectedAmount] = useState<number>(300);
-  const [customAmount, setCustomAmount] = useState('');
-  const [selectedPayment, setSelectedPayment] = useState('jazzcash');
-  const [transactionId, setTransactionId] = useState('');
-  const [orderId, setOrderId] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
-  const [depositConfig, setDepositConfig] = useState({ top_number: '24/7 Support Available', transaction_id_prefix: 'TXN' });
 
-  const predefinedAmounts = [100, 300, 500, 1000, 2000, 5000];
-  
-  const paymentMethods = [
-    {
-      id: 'easypaisa',
-      name: 'EasyPaisa',
-      logo: '🟢',
-      color: 'bg-green-600',
-      paymentNumber: '03001234567'
-    },
-    {
-      id: 'jazzcash',
-      name: 'JazzCash',
-      logo: '🔵',
-      color: 'bg-blue-600',
-      paymentNumber: '03007654321'
-    }
-  ];
-
+  // Fetch payment numbers and config from database
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/');
-    } else {
-      fetchDepositConfig();
-      generateOrderId();
+    fetchPaymentNumbers();
+    fetchDepositConfig();
+  }, []);
+
+  const fetchPaymentNumbers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_numbers')
+        .select('*')
+        .order('payment_method');
+
+      if (error) {
+        console.error('Error fetching payment numbers:', error);
+        return;
+      }
+
+      console.log('Fetched payment numbers for deposit page:', data);
+      setPaymentNumbers(data || []);
+    } catch (error) {
+      console.error('Error in fetchPaymentNumbers:', error);
     }
-  }, [isAuthenticated, navigate]);
+  };
 
   const fetchDepositConfig = async () => {
     try {
@@ -71,356 +68,268 @@ const Deposit = () => {
     }
   };
 
-  const generateOrderId = () => {
-    const randomString = Math.random().toString(36).substring(2, 15);
-    setOrderId(`${depositConfig.transaction_id_prefix}${randomString}`);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: "Number copied to clipboard",
+      variant: "default",
+    });
   };
 
-  const getDepositAmount = () => {
-    return customAmount ? parseFloat(customAmount) : selectedAmount;
+  const generateTransactionId = () => {
+    const prefix = depositConfig.transaction_id_prefix || 'TXN';
+    const randomId = Math.random().toString(36).substr(2, 9).toUpperCase();
+    return `${prefix}${randomId}`;
   };
 
-  const handleAmountSelect = (amount: number) => {
-    setSelectedAmount(amount);
-    setCustomAmount('');
-  };
-
-  const handleCustomAmountChange = (value: string) => {
-    setCustomAmount(value);
-    setSelectedAmount(0);
-  };
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: "کاپی ہو گیا!",
-        description: "Copied to clipboard",
-        variant: "default"
-      });
-    } catch (error) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedMethod || !amount || !transactionId) {
       toast({
         title: "Error",
-        description: "Failed to copy to clipboard",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleContinue = async () => {
-    const amount = getDepositAmount();
-    if (amount < 100) {
-      toast({
-        title: "Error",
-        description: "Minimum deposit amount is Rs. 100",
-        variant: "destructive"
+        description: "Please fill in all required fields",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!user) return;
+    if (parseFloat(amount) < 100) {
+      toast({
+        title: "Error",
+        description: "Minimum deposit amount is PKR 100",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setIsProcessing(true);
+    setIsSubmitting(true);
+
     try {
+      // Store deposit tracking in database
       const { data, error } = await supabase
-        .from('deposits')
+        .from('deposit_tracking')
         .insert({
-          user_id: user.id,
-          amount,
-          payment_method: selectedPayment,
+          username: 'current_user', // Replace with actual username from auth
+          amount: parseFloat(amount),
+          transaction_id: transactionId,
+          payment_method: selectedMethod,
+          wallet_number: paymentNumbers.find(p => p.payment_method === selectedMethod)?.number,
           status: 'pending'
-        })
-        .select()
-        .single();
+        });
 
       if (error) {
         throw error;
       }
 
-      setShowPayment(true);
       toast({
-        title: "Order Created",
-        description: "Please complete the payment below",
-        variant: "default"
+        title: "Deposit Submitted",
+        description: `Your deposit of PKR ${amount} has been submitted for verification. You will receive confirmation once it's processed.`,
+        variant: "default",
       });
+
+      // Reset form
+      setAmount('');
+      setTransactionId('');
+      setSelectedMethod('');
     } catch (error: any) {
-      console.error('Deposit creation error:', error);
+      console.error('Error submitting deposit:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create deposit",
-        variant: "destructive"
+        description: error.message || "Failed to submit deposit. Please try again.",
+        variant: "destructive",
       });
     } finally {
-      setIsProcessing(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handlePayNow = async () => {
-    if (!transactionId.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter transaction ID",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!user) return;
-
-    setIsProcessing(true);
-    try {
-      // Track the deposit in deposit_tracking table
-      const { error: trackingError } = await supabase
-        .from('deposit_tracking')
-        .insert({
-          user_id: user.id,
-          username: user.username || 'Unknown',
-          amount: getDepositAmount(),
-          transaction_id: transactionId,
-          payment_method: selectedPayment,
-          wallet_number: null, // Removed wallet number
-          status: 'completed'
-        });
-
-      if (trackingError) {
-        console.error('Error tracking deposit:', trackingError);
-      }
-
-      toast({
-        title: "Payment Successful!",
-        description: "Your deposit will be processed within 5-10 minutes",
-        variant: "default"
-      });
-
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Payment failed. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const getSelectedPaymentMethod = () => {
-    return paymentMethods.find(method => method.id === selectedPayment);
-  };
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  if (showPayment) {
-    const selectedMethod = getSelectedPaymentMethod();
-    
-    return (
-      <div className="min-h-screen bg-gray-100 flex flex-col">
-        <Header />
-        <div className="flex-1 container mx-auto px-4 py-8 max-w-md">
-          <Button
-            variant="ghost"
-            onClick={() => setShowPayment(false)}
-            className="mb-6 text-gray-600 hover:bg-gray-200"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-
-          {/* Top Configurable Number */}
-          <div className="bg-blue-50 rounded-lg p-3 mb-4 text-center">
-            <p className="text-blue-600 font-medium">{depositConfig.top_number}</p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <span className="text-gray-500 font-bold">L</span>
-              </div>
-            </div>
-
-            {/* Payment Number Section */}
-            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                {selectedMethod?.name}: {selectedMethod?.paymentNumber}
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => copyToClipboard(selectedMethod?.paymentNumber || '')}
-                className="text-blue-600 p-0 h-auto"
-              >
-                <Copy className="h-4 w-4 mr-1" />
-                Copy Payment Number
-              </Button>
-              <p className="text-sm text-gray-600 mt-2">اس نمبر پر پیسے بھیجیں</p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold text-gray-800">Amount Payable</h3>
-                  <p className="text-sm text-gray-600">قابل ادائیگی رقم</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-gray-800">Rs. {getDepositAmount()}</p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-4">Select Payment Type</h3>
-              <p className="text-sm text-gray-600 mb-4">ادائیگی کا انتخاب کریں</p>
-              
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {paymentMethods.map((method) => (
-                  <div
-                    key={method.id}
-                    onClick={() => setSelectedPayment(method.id)}
-                    className={`relative border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                      selectedPayment === method.id 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {selectedPayment === method.id && (
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                        <Check className="h-4 w-4 text-white" />
-                      </div>
-                    )}
-                    <div className="text-center">
-                      <div className={`w-12 h-8 ${method.color} rounded mx-auto mb-2 flex items-center justify-center`}>
-                        <span className="text-white font-bold text-xs">{method.name.slice(0,2)}</span>
-                      </div>
-                      <p className="text-sm font-medium text-gray-700">{method.name}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                * Transaction ID
-              </label>
-              <p className="text-sm text-gray-500 mb-2">ٹرانزیکشن آئی ڈی</p>
-              <Input
-                type="text"
-                placeholder="Enter transaction ID"
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg"
-              />
-            </div>
-
-            <Button
-              onClick={handlePayNow}
-              disabled={!transactionId.trim() || isProcessing}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg"
-            >
-              {isProcessing ? 'Processing...' : (
-                <div className="flex items-center justify-center">
-                  <span className="mr-2">💳</span>
-                  Pay Now
-                </div>
-              )}
-            </Button>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  const selectedPaymentNumber = paymentNumbers.find(p => p.payment_method === selectedMethod);
 
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
       <Header />
-      <div className="flex-1 container mx-auto px-4 py-8">
+      
+      <main className="flex-1 container mx-auto py-8 px-4">
         <div className="max-w-2xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="mb-6 text-white hover:bg-casino-accent hover:text-black"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
-          </Button>
-
-          {/* Top Configurable Number */}
-          <div className="bg-casino-accent text-black rounded-lg p-4 mb-6 text-center">
-            <h2 className="text-lg font-bold">{depositConfig.top_number}</h2>
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-white mb-2">Add Funds</h1>
+            <p className="text-gray-300">Choose your preferred payment method to deposit funds</p>
+            {depositConfig.top_number && (
+              <div className="mt-4 p-3 bg-casino rounded-lg border border-casino-accent">
+                <div className="flex items-center justify-center gap-2 text-casino-accent">
+                  <Phone className="h-4 w-4" />
+                  <span className="font-medium">{depositConfig.top_number}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <Card className="bg-casino border-casino-accent">
-            <CardHeader className="bg-gradient-to-r from-green-700 to-green-600">
-              <CardTitle className="text-white text-2xl">Quick Deposit</CardTitle>
+            <CardHeader>
+              <CardTitle className="text-white">Select Payment Method</CardTitle>
+              <CardDescription className="text-gray-300">
+                Choose your preferred payment method and follow the instructions
+              </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              <div>
-                <h3 className="text-white text-lg mb-4">Select Amount (Rs.)</h3>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  {predefinedAmounts.map((amount) => (
-                    <Button
-                      key={amount}
-                      variant={selectedAmount === amount && !customAmount ? "default" : "outline"}
-                      className={`${
-                        selectedAmount === amount && !customAmount
-                          ? "bg-casino-accent text-black border-casino-accent" 
-                          : "bg-casino-dark border-gray-600 text-white hover:bg-casino-accent hover:text-black"
+            
+            <CardContent className="space-y-6">
+              {/* Payment Methods */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {paymentNumbers.length === 0 ? (
+                  <p className="text-gray-400 col-span-2 text-center py-4">Loading payment methods...</p>
+                ) : (
+                  paymentNumbers.map((method) => (
+                    <div
+                      key={method.id}
+                      onClick={() => setSelectedMethod(method.payment_method)}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedMethod === method.payment_method
+                          ? 'border-casino-accent bg-casino-accent/10'
+                          : 'border-gray-600 hover:border-gray-500'
                       }`}
-                      onClick={() => handleAmountSelect(amount)}
                     >
-                      Rs. {amount}
-                    </Button>
-                  ))}
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-white text-sm">Custom Amount</label>
-                  <Input
-                    type="number"
-                    placeholder="Enter amount"
-                    value={customAmount}
-                    onChange={(e) => handleCustomAmountChange(e.target.value)}
-                    className="bg-casino-dark border-gray-600 text-white"
-                    min="100"
-                  />
-                </div>
+                      <div className="text-center">
+                        <h3 className="text-white font-semibold text-lg">{method.name}</h3>
+                        <p className="text-gray-300 text-sm mt-1">Instant Transfer</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
-              {/* Transaction ID Preview */}
-              <div className="bg-casino-dark rounded-lg p-4 border border-gray-600">
-                <h3 className="text-white font-semibold mb-2">Transaction Details</h3>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between text-gray-300">
-                    <span>Transaction ID:</span>
-                    <span className="font-mono">{orderId}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-300">
-                    <span>Amount:</span>
-                    <span>Rs. {getDepositAmount()}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-300">
-                    <span>Processing Time:</span>
-                    <span>5-10 minutes</span>
+              {/* Payment Details */}
+              {selectedMethod && selectedPaymentNumber && (
+                <div className="p-4 bg-casino-dark rounded-lg border border-gray-600">
+                  <h3 className="text-white font-medium mb-3">Payment Details</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-casino rounded border border-gray-600">
+                      <span className="text-gray-300">Account Number:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-mono">{selectedPaymentNumber.number}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyToClipboard(selectedPaymentNumber.number)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-3 bg-casino rounded border border-gray-600">
+                      <span className="text-gray-300">Account Name:</span>
+                      <span className="text-white">{selectedPaymentNumber.name}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <Button
-                onClick={handleContinue}
-                disabled={getDepositAmount() < 100 || isProcessing}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3"
-              >
-                {isProcessing ? 'Creating Order...' : `Continue with Rs. ${getDepositAmount()}`}
-              </Button>
+              {/* Deposit Form */}
+              {selectedMethod && (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="amount" className="text-white">Amount (PKR)</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      placeholder="Enter amount (minimum PKR 100)"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="bg-casino-dark border-gray-600 text-white mt-2"
+                      min="100"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="transactionId" className="text-white">Transaction ID</Label>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        id="transactionId"
+                        type="text"
+                        placeholder="Enter transaction ID from your payment app"
+                        value={transactionId}
+                        onChange={(e) => setTransactionId(e.target.value)}
+                        className="bg-casino-dark border-gray-600 text-white"
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setTransactionId(generateTransactionId())}
+                        className="px-3"
+                      >
+                        Generate
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-blue-900/20 rounded-lg border border-blue-600">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-blue-200">
+                        <p className="font-medium mb-1">Instructions:</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                          <li>Send PKR {amount || 'XX'} to the above account number</li>
+                          <li>Copy the transaction ID from your payment app</li>
+                          <li>Enter the transaction ID above and submit</li>
+                          <li>Your deposit will be processed within 5-10 minutes</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-casino-accent text-black hover:bg-yellow-400 font-semibold"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Submitting...' : `Submit Deposit Request`}
+                  </Button>
+                </form>
+              )}
+
+              {/* Quick Amount Buttons */}
+              {selectedMethod && (
+                <div className="border-t border-gray-600 pt-4">
+                  <Label className="text-white text-sm font-medium">Quick amounts:</Label>
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    {[500, 1000, 2000, 5000].map((quickAmount) => (
+                      <Button
+                        key={quickAmount}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAmount(quickAmount.toString())}
+                        className="text-xs"
+                      >
+                        PKR {quickAmount}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          {/* Support Info */}
+          <div className="mt-6 p-4 bg-casino rounded-lg border border-gray-600">
+            <div className="flex items-center gap-2 text-casino-accent mb-2">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="font-medium">Need Help?</span>
+            </div>
+            <p className="text-gray-300 text-sm">
+              If you face any issues with your deposit, please contact our support team with your transaction ID.
+              Processing time: 5-10 minutes during business hours.
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
+      
       <Footer />
     </div>
   );

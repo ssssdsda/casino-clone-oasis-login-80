@@ -81,36 +81,36 @@ const Sufyan = () => {
         </div>
         
         <Tabs defaultValue="gamecontrol" className="w-full">
-          <TabsList className="grid w-full grid-cols-8 mb-6">
-            <TabsTrigger value="gamecontrol" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-8 mb-6 bg-casino border-casino-accent">
+            <TabsTrigger value="gamecontrol" className="flex items-center gap-2 text-white data-[state=active]:text-black data-[state=active]:bg-casino-accent">
               <GamepadIcon className="h-4 w-4" />
               Game Control
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
+            <TabsTrigger value="users" className="flex items-center gap-2 text-white data-[state=active]:text-black data-[state=active]:bg-casino-accent">
               <Users className="h-4 w-4" />
               User Management
             </TabsTrigger>
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2 text-white data-[state=active]:text-black data-[state=active]:bg-casino-accent">
               <Activity className="h-4 w-4" />
               Dashboard
             </TabsTrigger>
-            <TabsTrigger value="betting" className="flex items-center gap-2">
+            <TabsTrigger value="betting" className="flex items-center gap-2 text-white data-[state=active]:text-black data-[state=active]:bg-casino-accent">
               <TrendingUp className="h-4 w-4" />
               Betting System
             </TabsTrigger>
-            <TabsTrigger value="deposits" className="flex items-center gap-2">
+            <TabsTrigger value="deposits" className="flex items-center gap-2 text-white data-[state=active]:text-black data-[state=active]:bg-casino-accent">
               <Receipt className="h-4 w-4" />
               Deposits
             </TabsTrigger>
-            <TabsTrigger value="finance" className="flex items-center gap-2">
+            <TabsTrigger value="finance" className="flex items-center gap-2 text-white data-[state=active]:text-black data-[state=active]:bg-casino-accent">
               <CreditCard className="h-4 w-4" />
               Finance
             </TabsTrigger>
-            <TabsTrigger value="database" className="flex items-center gap-2">
+            <TabsTrigger value="database" className="flex items-center gap-2 text-white data-[state=active]:text-black data-[state=active]:bg-casino-accent">
               <Database className="h-4 w-4" />
               Database
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
+            <TabsTrigger value="settings" className="flex items-center gap-2 text-white data-[state=active]:text-black data-[state=active]:bg-casino-accent">
               <Settings className="h-4 w-4" />
               Settings
             </TabsTrigger>
@@ -153,7 +153,7 @@ const Sufyan = () => {
                     <Card className="bg-casino-dark border-gray-700">
                       <CardContent className="p-4">
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-green-400">₹0.00</div>
+                          <div className="text-2xl font-bold text-green-400">PKR 0.00</div>
                           <div className="text-gray-300 text-sm">Total Deposits Today</div>
                         </div>
                       </CardContent>
@@ -161,7 +161,7 @@ const Sufyan = () => {
                     <Card className="bg-casino-dark border-gray-700">
                       <CardContent className="p-4">
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-red-400">₹0.00</div>
+                          <div className="text-2xl font-bold text-red-400">PKR 0.00</div>
                           <div className="text-gray-300 text-sm">Total Withdrawals Today</div>
                         </div>
                       </CardContent>
@@ -169,7 +169,7 @@ const Sufyan = () => {
                     <Card className="bg-casino-dark border-gray-700">
                       <CardContent className="p-4">
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-400">₹0.00</div>
+                          <div className="text-2xl font-bold text-blue-400">PKR 0.00</div>
                           <div className="text-gray-300 text-sm">Net Profit Today</div>
                         </div>
                       </CardContent>
@@ -345,6 +345,12 @@ const Sufyan = () => {
                         >
                           Popup Customizer
                         </Button>
+                        <Button 
+                          onClick={() => navigate('/admin/images-changer')}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Image Changer
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -442,7 +448,7 @@ const DepositsManagement = () => {
                   deposits.map((deposit) => (
                     <tr key={deposit.id} className="border-b border-gray-700">
                       <td className="p-2">{deposit.username}</td>
-                      <td className="p-2">Rs. {deposit.amount}</td>
+                      <td className="p-2">PKR {deposit.amount}</td>
                       <td className="p-2 font-mono text-sm">{deposit.transaction_id}</td>
                       <td className="p-2">{deposit.payment_method}</td>
                       <td className="p-2">{deposit.wallet_number || 'N/A'}</td>
@@ -500,12 +506,11 @@ const DepositConfigManager = () => {
     try {
       const { error } = await supabase
         .from('deposit_config')
-        .update({
+        .upsert({
           top_number: config.top_number,
           transaction_id_prefix: config.transaction_id_prefix,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', 'id');
+        });
 
       if (error) {
         throw error;
@@ -577,38 +582,53 @@ const DepositConfigManager = () => {
 
 // New component for managing payment numbers
 const PaymentNumberManager = () => {
-  const [paymentNumbers, setPaymentNumbers] = useState([
-    { id: 'easypaisa', name: 'EasyPaisa', number: '03001234567' },
-    { id: 'jazzcash', name: 'JazzCash', number: '03007654321' }
-  ]);
+  const [paymentNumbers, setPaymentNumbers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const updatePaymentNumber = async (id: string, name: string, number: string) => {
-    setIsLoading(true);
+  // Fetch payment numbers from database
+  const fetchPaymentNumbers = async () => {
     try {
-      // Update the payment number in the state
-      setPaymentNumbers(prev => 
-        prev.map(payment => 
-          payment.id === id 
-            ? { ...payment, name, number }
-            : payment
-        )
-      );
-
-      // Store in Supabase for persistence
-      const { error } = await supabase
-        .from('deposit_config')
-        .upsert({
-          id: `payment_${id}`,
-          top_number: `${name}: ${number}`,
-          transaction_id_prefix: id,
-          updated_at: new Date().toISOString()
-        });
+      const { data, error } = await supabase
+        .from('payment_numbers')
+        .select('*')
+        .order('payment_method');
 
       if (error) {
         throw error;
       }
+
+      console.log('Fetched payment numbers:', data);
+      setPaymentNumbers(data || []);
+    } catch (error: any) {
+      console.error('Error fetching payment numbers:', error);
+    }
+  };
+
+  // Update payment number in database
+  const updatePaymentNumber = async (id: string, name: string, number: string) => {
+    setIsLoading(true);
+    try {
+      console.log('Updating payment number:', { id, name, number });
+      
+      const { data, error } = await supabase
+        .from('payment_numbers')
+        .update({
+          name: name,
+          number: number,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('Update result:', data);
+
+      // Refresh the list
+      await fetchPaymentNumbers();
 
       toast({
         title: "Payment Number Updated",
@@ -627,6 +647,72 @@ const PaymentNumberManager = () => {
     }
   };
 
+  // Add new payment method
+  const addPaymentMethod = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_numbers')
+        .insert({
+          payment_method: 'new_method',
+          name: 'New Payment Method',
+          number: '03XXXXXXXXX'
+        })
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      await fetchPaymentNumbers();
+      
+      toast({
+        title: "Payment Method Added",
+        description: "New payment method has been added successfully",
+        variant: "default",
+      });
+    } catch (error: any) {
+      console.error('Error adding payment method:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add payment method",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Delete payment method
+  const deletePaymentMethod = async (id: string, name: string) => {
+    try {
+      const { error } = await supabase
+        .from('payment_numbers')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      await fetchPaymentNumbers();
+      
+      toast({
+        title: "Payment Method Deleted",
+        description: `${name} has been deleted successfully`,
+        variant: "default",
+      });
+    } catch (error: any) {
+      console.error('Error deleting payment method:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete payment method",
+        variant: "destructive",
+      });
+    }
+  };
+
+  React.useEffect(() => {
+    fetchPaymentNumbers();
+  }, []);
+
   return (
     <Card className="bg-casino border-casino-accent">
       <CardHeader>
@@ -636,46 +722,70 @@ const PaymentNumberManager = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {paymentNumbers.map((payment) => (
-          <div key={payment.id} className="p-4 bg-casino-dark rounded-lg border border-gray-600">
-            <h3 className="text-white font-medium mb-4">{payment.id.toUpperCase()} Configuration</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor={`${payment.id}_name`} className="text-white">Payment Method Name</Label>
-                <Input
-                  id={`${payment.id}_name`}
-                  value={payment.name}
-                  onChange={(e) => setPaymentNumbers(prev => 
-                    prev.map(p => p.id === payment.id ? { ...p, name: e.target.value } : p)
-                  )}
-                  className="bg-casino-dark border-gray-600 text-white mt-2"
-                  placeholder="EasyPaisa"
-                />
+        <div className="flex justify-between items-center">
+          <h3 className="text-white font-medium">Payment Methods</h3>
+          <Button 
+            onClick={addPaymentMethod}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            Add New Method
+          </Button>
+        </div>
+
+        {paymentNumbers.length === 0 ? (
+          <p className="text-gray-400 text-center py-4">No payment methods found</p>
+        ) : (
+          paymentNumbers.map((payment) => (
+            <div key={payment.id} className="p-4 bg-casino-dark rounded-lg border border-gray-600">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-white font-medium">{payment.payment_method.toUpperCase()} Configuration</h3>
+                <Button 
+                  onClick={() => deletePaymentMethod(payment.id, payment.name)}
+                  variant="destructive"
+                  size="sm"
+                >
+                  Delete
+                </Button>
               </div>
               
-              <div>
-                <Label htmlFor={`${payment.id}_number`} className="text-white">Payment Number</Label>
-                <Input
-                  id={`${payment.id}_number`}
-                  value={payment.number}
-                  onChange={(e) => setPaymentNumbers(prev => 
-                    prev.map(p => p.id === payment.id ? { ...p, number: e.target.value } : p)
-                  )}
-                  className="bg-casino-dark border-gray-600 text-white mt-2"
-                  placeholder="03XXXXXXXXX"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor={`${payment.id}_name`} className="text-white">Payment Method Name</Label>
+                  <Input
+                    id={`${payment.id}_name`}
+                    value={payment.name}
+                    onChange={(e) => setPaymentNumbers(prev => 
+                      prev.map(p => p.id === payment.id ? { ...p, name: e.target.value } : p)
+                    )}
+                    className="bg-casino-dark border-gray-600 text-white mt-2"
+                    placeholder="EasyPaisa"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor={`${payment.id}_number`} className="text-white">Payment Number</Label>
+                  <Input
+                    id={`${payment.id}_number`}
+                    value={payment.number}
+                    onChange={(e) => setPaymentNumbers(prev => 
+                      prev.map(p => p.id === payment.id ? { ...p, number: e.target.value } : p)
+                    )}
+                    className="bg-casino-dark border-gray-600 text-white mt-2"
+                    placeholder="03XXXXXXXXX"
+                  />
+                </div>
               </div>
+              
+              <Button 
+                onClick={() => updatePaymentNumber(payment.id, payment.name, payment.number)} 
+                disabled={isLoading}
+                className="bg-casino-accent text-black hover:bg-yellow-400 mt-4"
+              >
+                {isLoading ? 'Updating...' : `Update ${payment.name}`}
+              </Button>
             </div>
-            
-            <Button 
-              onClick={() => updatePaymentNumber(payment.id, payment.name, payment.number)} 
-              disabled={isLoading}
-              className="bg-casino-accent text-black hover:bg-yellow-400 mt-4"
-            >
-              {isLoading ? 'Updating...' : `Update ${payment.name}`}
-            </Button>
-          </div>
-        ))}
+          ))
+        )}
       </CardContent>
     </Card>
   );

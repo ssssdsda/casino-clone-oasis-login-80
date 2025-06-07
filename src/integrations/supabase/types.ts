@@ -223,6 +223,33 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_numbers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          number: string
+          payment_method: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          number: string
+          payment_method: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          number?: string
+          payment_method?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           balance: number | null
