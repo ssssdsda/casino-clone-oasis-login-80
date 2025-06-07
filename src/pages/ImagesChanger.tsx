@@ -81,21 +81,24 @@ const ImagesChanger = () => {
 
   const fetchImageConfigs = async () => {
     try {
+      console.log('Fetching image configs from database...');
       const { data, error } = await supabase
         .from('image_configs')
         .select('*');
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching image configs:', error);
         return;
       }
 
-      const configs: {[key: string]: string} = {};
-      data?.forEach(config => {
-        configs[config.image_key] = config.image_url;
-      });
-      setImageConfigs(configs);
-      console.log('Loaded image configs:', configs);
+      if (data) {
+        const configs: {[key: string]: string} = {};
+        data.forEach(config => {
+          configs[config.image_key] = config.image_url;
+        });
+        setImageConfigs(configs);
+        console.log('Loaded image configs:', configs);
+      }
     } catch (error) {
       console.error('Error in fetchImageConfigs:', error);
     }
@@ -132,7 +135,7 @@ const ImagesChanger = () => {
       const imageType = selectedBanner !== null ? 'banner' : 'category';
       const itemId = selectedBanner !== null ? selectedBanner.toString() : selectedCategory!;
 
-      console.log('Updating image:', { imageKey, imageType, itemId, newImageUrl });
+      console.log('Updating image with data:', { imageKey, imageType, itemId, newImageUrl });
 
       const { data, error } = await supabase
         .from('image_configs')
@@ -148,21 +151,21 @@ const ImagesChanger = () => {
         .select();
 
       if (error) {
-        console.error('Supabase error:', error);
+        console.error('Supabase upsert error:', error);
         throw error;
       }
 
-      console.log('Update result:', data);
+      console.log('Update successful:', data);
 
-      // Update local state
+      // Update local state immediately
       setImageConfigs(prev => ({
         ...prev,
         [imageKey]: newImageUrl
       }));
 
       toast({
-        title: "Image Updated",
-        description: "The image has been successfully updated in the database.",
+        title: "Image Updated Successfully",
+        description: "The image has been updated and saved to database.",
       });
 
       // Reset form
@@ -170,14 +173,17 @@ const ImagesChanger = () => {
       setSelectedBanner(null);
       setSelectedCategory(null);
 
-      // Refresh the configs from database
-      await fetchImageConfigs();
+      // Refresh configs to ensure consistency
+      setTimeout(() => {
+        fetchImageConfigs();
+      }, 500);
+
     } catch (error: any) {
       console.error('Error updating image:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to update image",
+        title: "Update Failed",
+        description: error.message || "Failed to update image. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -203,7 +209,7 @@ const ImagesChanger = () => {
         throw error;
       }
 
-      // Update local state
+      // Update local state immediately
       setImageConfigs(prev => {
         const newConfigs = { ...prev };
         delete newConfigs[imageKey];
@@ -211,8 +217,8 @@ const ImagesChanger = () => {
       });
 
       toast({
-        title: "Image Removed",
-        description: "The image has been successfully removed from the database.",
+        title: "Image Removed Successfully",
+        description: "The custom image has been removed. Default image will be shown.",
       });
 
       // Reset form
@@ -220,14 +226,17 @@ const ImagesChanger = () => {
       setSelectedBanner(null);
       setSelectedCategory(null);
 
-      // Refresh the configs from database
-      await fetchImageConfigs();
+      // Refresh configs to ensure consistency
+      setTimeout(() => {
+        fetchImageConfigs();
+      }, 500);
+
     } catch (error: any) {
       console.error('Error removing image:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to remove image",
+        title: "Remove Failed",
+        description: error.message || "Failed to remove image. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -237,8 +246,9 @@ const ImagesChanger = () => {
   const getImageSrc = (type: 'banner' | 'category', id: number | string, defaultSrc: string) => {
     const key = `${type}_${id}`;
     const configuredImage = imageConfigs[key];
-    console.log(`Getting image for ${key}:`, configuredImage || defaultSrc);
-    return configuredImage || defaultSrc;
+    const imageSrc = configuredImage || defaultSrc;
+    console.log(`Getting image for ${key}:`, imageSrc);
+    return imageSrc;
   };
 
   const getCurrentImagePreview = () => {
@@ -255,181 +265,213 @@ const ImagesChanger = () => {
     <div className="min-h-screen bg-casino-dark flex flex-col">
       <Header />
       <main className="flex-1 p-4 overflow-y-auto">
-        <h1 className="text-2xl font-bold text-white mb-6">Image Changer Admin</h1>
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-2xl font-bold text-white mb-6">Image Changer Admin</h1>
 
-        <Tabs defaultValue="banners">
-          <TabsList className="w-full mb-6">
-            <TabsTrigger value="banners" className="flex-1">Promo Banners</TabsTrigger>
-            <TabsTrigger value="categories" className="flex-1">Game Categories</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="banners">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {banners.map(banner => (
-                <Card 
-                  key={banner.id} 
-                  className={`cursor-pointer transition-all ${selectedBanner === banner.id ? 'border-casino-accent ring-2 ring-casino-accent' : 'border-gray-700'}`}
-                  onClick={() => {
-                    setSelectedBanner(banner.id);
-                    setSelectedCategory(null);
-                  }}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-white">{banner.title}</CardTitle>
-                    <CardDescription>Click to select this banner</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <img 
-                      src={getImageSrc('banner', banner.id, banner.image)} 
-                      alt={banner.title} 
-                      className="w-full h-32 object-cover rounded-md"
-                      onError={(e) => {
-                        console.log('Image failed to load:', getImageSrc('banner', banner.id, banner.image));
-                        e.currentTarget.src = banner.image;
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="categories">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-              {gameCategories.map(category => (
-                <Card 
-                  key={category.id} 
-                  className={`cursor-pointer transition-all ${selectedCategory === category.id ? 'border-casino-accent ring-2 ring-casino-accent' : 'border-gray-700'}`}
-                  onClick={() => {
-                    setSelectedCategory(category.id);
-                    setSelectedBanner(null);
-                  }}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-white">{category.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-center">
+          <Tabs defaultValue="banners">
+            <TabsList className="w-full mb-6">
+              <TabsTrigger value="banners" className="flex-1">Promo Banners</TabsTrigger>
+              <TabsTrigger value="categories" className="flex-1">Game Categories</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="banners">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {banners.map(banner => (
+                  <Card 
+                    key={banner.id} 
+                    className={`cursor-pointer transition-all border-2 ${
+                      selectedBanner === banner.id 
+                        ? 'border-casino-accent ring-2 ring-casino-accent bg-casino' 
+                        : 'border-gray-700 bg-casino hover:border-casino-accent'
+                    }`}
+                    onClick={() => {
+                      setSelectedBanner(banner.id);
+                      setSelectedCategory(null);
+                      setNewImageUrl("");
+                    }}
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-white">{banner.title}</CardTitle>
+                      <CardDescription>Click to select and modify this banner</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="relative overflow-hidden rounded-md">
+                        <img 
+                          src={getImageSrc('banner', banner.id, banner.image)} 
+                          alt={banner.title} 
+                          className="w-full h-32 object-cover"
+                          onError={(e) => {
+                            console.log('Banner image failed to load, using fallback');
+                            e.currentTarget.src = banner.image;
+                          }}
+                        />
+                        {imageConfigs[`banner_${banner.id}`] && (
+                          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                            Custom
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="categories">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                {gameCategories.map(category => (
+                  <Card 
+                    key={category.id} 
+                    className={`cursor-pointer transition-all border-2 ${
+                      selectedCategory === category.id 
+                        ? 'border-casino-accent ring-2 ring-casino-accent bg-casino' 
+                        : 'border-gray-700 bg-casino hover:border-casino-accent'
+                    }`}
+                    onClick={() => {
+                      setSelectedCategory(category.id);
+                      setSelectedBanner(null);
+                      setNewImageUrl("");
+                    }}
+                  >
+                    <CardHeader>
+                      <CardTitle className="text-white text-sm">{category.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-center relative">
+                        <img 
+                          src={getImageSrc('category', category.id, category.image)} 
+                          alt={category.title} 
+                          className="w-16 h-16 object-contain"
+                          onError={(e) => {
+                            console.log('Category image failed to load, using fallback');
+                            e.currentTarget.src = category.image;
+                          }}
+                        />
+                        {imageConfigs[`category_${category.id}`] && (
+                          <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded">
+                            Custom
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {(selectedBanner !== null || selectedCategory !== null) && (
+            <Card className="bg-casino border-casino-accent">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5" />
+                  Manage Image
+                </CardTitle>
+                <CardDescription>
+                  {selectedBanner !== null 
+                    ? `Managing Promo Banner ${selectedBanner}` 
+                    : `Managing ${gameCategories.find(c => c.id === selectedCategory)?.title} Icon`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {/* Current Image Preview */}
+                  <div>
+                    <label className="text-sm font-medium text-white mb-2 block">Current Image</label>
+                    <div className="relative inline-block">
                       <img 
-                        src={getImageSrc('category', category.id, category.image)} 
-                        alt={category.title} 
-                        className="w-16 h-16 object-contain"
+                        src={getCurrentImagePreview()} 
+                        alt="Current" 
+                        className="w-full max-w-xs h-32 object-cover rounded-md border border-gray-600"
                         onError={(e) => {
-                          console.log('Category image failed to load:', getImageSrc('category', category.id, category.image));
-                          e.currentTarget.src = category.image;
+                          console.log('Current image preview failed to load');
+                        }}
+                      />
+                      {((selectedBanner && imageConfigs[`banner_${selectedBanner}`]) || 
+                        (selectedCategory && imageConfigs[`category_${selectedCategory}`])) && (
+                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                          Custom Image
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-white mb-2 block">Upload New Image</label>
+                    <div className="flex items-center gap-4">
+                      <Input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="bg-casino-dark border-gray-600 text-white"
+                      />
+                      <Upload className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+                  
+                  <div className="text-center text-gray-400">OR</div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-white mb-2 block">Image URL</label>
+                    <Input 
+                      type="text" 
+                      placeholder="Enter image URL (https://example.com/image.jpg)"
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      className="bg-casino-dark border-gray-600 text-white"
+                    />
+                  </div>
+
+                  {newImageUrl && (
+                    <div>
+                      <label className="text-sm font-medium text-white mb-2 block">New Image Preview</label>
+                      <img 
+                        src={newImageUrl} 
+                        alt="Preview" 
+                        className="w-full max-w-xs h-32 object-cover rounded-md border border-gray-600"
+                        onError={(e) => {
+                          console.log('New image preview failed to load');
                         }}
                       />
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        {(selectedBanner !== null || selectedCategory !== null) && (
-          <Card className="bg-casino border-casino-accent">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <RefreshCw className="h-5 w-5" />
-                Manage Image
-              </CardTitle>
-              <CardDescription>
-                {selectedBanner !== null 
-                  ? `Managing Promo Banner ${selectedBanner}` 
-                  : `Managing ${gameCategories.find(c => c.id === selectedCategory)?.title} Icon`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Current Image Preview */}
-                <div>
-                  <label className="text-sm font-medium text-white mb-2 block">Current Image</label>
-                  <img 
-                    src={getCurrentImagePreview()} 
-                    alt="Current" 
-                    className="w-full max-w-xs h-32 object-cover rounded-md border border-gray-600"
-                    onError={(e) => {
-                      console.log('Current image preview failed');
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setSelectedBanner(null);
+                      setSelectedCategory(null);
+                      setNewImageUrl("");
                     }}
-                  />
+                    className="border-gray-600 text-white hover:bg-gray-700"
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="destructive"
+                    onClick={handleImageRemove}
+                    className="bg-red-600 hover:bg-red-700"
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {isLoading ? 'Removing...' : 'Remove Custom Image'}
+                  </Button>
                 </div>
-
-                <div>
-                  <label className="text-sm font-medium text-white mb-2 block">Upload New Image</label>
-                  <div className="flex items-center gap-4">
-                    <Input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="bg-casino-dark border-gray-600 text-white"
-                    />
-                    <Upload className="h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-                
-                <div className="text-center text-gray-400">OR</div>
-                
-                <div>
-                  <label className="text-sm font-medium text-white mb-2 block">Image URL</label>
-                  <Input 
-                    type="text" 
-                    placeholder="Enter image URL"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    className="bg-casino-dark border-gray-600 text-white"
-                  />
-                </div>
-
-                {newImageUrl && (
-                  <div>
-                    <label className="text-sm font-medium text-white mb-2 block">New Image Preview</label>
-                    <img 
-                      src={newImageUrl} 
-                      alt="Preview" 
-                      className="w-full max-w-xs h-32 object-cover rounded-md border border-gray-600"
-                      onError={(e) => {
-                        console.log('New image preview failed to load');
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <div className="flex gap-2">
                 <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSelectedBanner(null);
-                    setSelectedCategory(null);
-                    setNewImageUrl("");
-                  }}
-                  className="border-gray-600 text-white hover:bg-gray-700"
-                  disabled={isLoading}
+                  onClick={handleImageUpdate}
+                  disabled={!newImageUrl || isLoading}
+                  className="bg-casino-accent text-black hover:bg-yellow-400"
                 >
-                  Cancel
+                  {isLoading ? 'Updating...' : 'Update Image'}
                 </Button>
-                <Button 
-                  variant="destructive"
-                  onClick={handleImageRemove}
-                  className="bg-red-600 hover:bg-red-700"
-                  disabled={isLoading}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Remove Image
-                </Button>
-              </div>
-              <Button 
-                onClick={handleImageUpdate}
-                disabled={!newImageUrl || isLoading}
-                className="bg-casino-accent text-black hover:bg-yellow-400"
-              >
-                {isLoading ? 'Updating...' : 'Update Image'}
-              </Button>
-            </CardFooter>
-          </Card>
-        )}
+              </CardFooter>
+            </Card>
+          )}
+        </div>
       </main>
       <Footer />
     </div>

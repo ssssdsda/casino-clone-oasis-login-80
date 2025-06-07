@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -426,7 +427,6 @@ const DepositsManagement = () => {
                   <th className="text-left p-2">Amount</th>
                   <th className="text-left p-2">Transaction ID</th>
                   <th className="text-left p-2">Payment Method</th>
-                  <th className="text-left p-2">Wallet Number</th>
                   <th className="text-left p-2">Status</th>
                   <th className="text-left p-2">Date</th>
                 </tr>
@@ -434,7 +434,7 @@ const DepositsManagement = () => {
               <tbody>
                 {deposits.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center p-4 text-gray-400">
+                    <td colSpan={6} className="text-center p-4 text-gray-400">
                       No deposits found
                     </td>
                   </tr>
@@ -445,7 +445,6 @@ const DepositsManagement = () => {
                       <td className="p-2">Rs. {deposit.amount}</td>
                       <td className="p-2 font-mono text-sm">{deposit.transaction_id}</td>
                       <td className="p-2">{deposit.payment_method}</td>
-                      <td className="p-2">{deposit.wallet_number || 'N/A'}</td>
                       <td className="p-2">
                         <span className={`px-2 py-1 rounded text-xs ${
                           deposit.status === 'completed' 
@@ -500,12 +499,14 @@ const DepositConfigManager = () => {
     try {
       const { error } = await supabase
         .from('deposit_config')
-        .update({
+        .upsert({
+          id: 1,
           top_number: config.top_number,
           transaction_id_prefix: config.transaction_id_prefix,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', 'id');
+        }, {
+          onConflict: 'id'
+        });
 
       if (error) {
         throw error;
@@ -575,7 +576,7 @@ const DepositConfigManager = () => {
   );
 };
 
-// New component for managing payment numbers
+// Updated component for managing payment numbers
 const PaymentNumberManager = () => {
   const [paymentNumbers, setPaymentNumbers] = useState([
     { id: 'easypaisa', name: 'EasyPaisa', number: '03001234567' },
@@ -584,10 +585,52 @@ const PaymentNumberManager = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Fetch payment numbers from database
+  const fetchPaymentNumbers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_numbers')
+        .select('*')
+        .order('id');
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching payment numbers:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const formattedData = data.map(item => ({
+          id: item.payment_method,
+          name: item.name,
+          number: item.number
+        }));
+        setPaymentNumbers(formattedData);
+      }
+    } catch (error) {
+      console.error('Error in fetchPaymentNumbers:', error);
+    }
+  };
+
   const updatePaymentNumber = async (id: string, name: string, number: string) => {
     setIsLoading(true);
     try {
-      // Update the payment number in the state
+      // Update in database
+      const { error } = await supabase
+        .from('payment_numbers')
+        .upsert({
+          payment_method: id,
+          name: name,
+          number: number,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'payment_method'
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
       setPaymentNumbers(prev => 
         prev.map(payment => 
           payment.id === id 
@@ -595,20 +638,6 @@ const PaymentNumberManager = () => {
             : payment
         )
       );
-
-      // Store in Supabase for persistence
-      const { error } = await supabase
-        .from('deposit_config')
-        .upsert({
-          id: `payment_${id}`,
-          top_number: `${name}: ${number}`,
-          transaction_id_prefix: id,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) {
-        throw error;
-      }
 
       toast({
         title: "Payment Number Updated",
@@ -626,6 +655,10 @@ const PaymentNumberManager = () => {
       setIsLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    fetchPaymentNumbers();
+  }, []);
 
   return (
     <Card className="bg-casino border-casino-accent">

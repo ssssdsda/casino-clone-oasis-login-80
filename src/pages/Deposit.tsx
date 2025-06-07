@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -22,10 +23,7 @@ const Deposit = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [depositConfig, setDepositConfig] = useState({ top_number: '24/7 Support Available', transaction_id_prefix: 'TXN' });
-
-  const predefinedAmounts = [100, 300, 500, 1000, 2000, 5000];
-  
-  const paymentMethods = [
+  const [paymentMethods, setPaymentMethods] = useState([
     {
       id: 'easypaisa',
       name: 'EasyPaisa',
@@ -40,16 +38,49 @@ const Deposit = () => {
       color: 'bg-blue-600',
       paymentNumber: '03007654321'
     }
-  ];
+  ]);
+
+  const predefinedAmounts = [100, 300, 500, 1000, 2000, 5000];
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/');
     } else {
       fetchDepositConfig();
+      fetchPaymentNumbers();
       generateOrderId();
     }
   }, [isAuthenticated, navigate]);
+
+  const fetchPaymentNumbers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_numbers')
+        .select('*');
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching payment numbers:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const updatedMethods = paymentMethods.map(method => {
+          const dbData = data.find(item => item.payment_method === method.id);
+          if (dbData) {
+            return {
+              ...method,
+              name: dbData.name,
+              paymentNumber: dbData.number
+            };
+          }
+          return method;
+        });
+        setPaymentMethods(updatedMethods);
+      }
+    } catch (error) {
+      console.error('Error in fetchPaymentNumbers:', error);
+    }
+  };
 
   const fetchDepositConfig = async () => {
     try {
@@ -178,7 +209,6 @@ const Deposit = () => {
           amount: getDepositAmount(),
           transaction_id: transactionId,
           payment_method: selectedPayment,
-          wallet_number: null, // Removed wallet number
           status: 'completed'
         });
 
