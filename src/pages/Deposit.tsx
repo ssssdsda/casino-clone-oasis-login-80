@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -10,15 +9,6 @@ import { ArrowLeft, Check, Copy } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
-
-interface PaymentMethod {
-  id: string;
-  payment_method: string;
-  name: string;
-  number: string;
-  logo: string;
-  color: string;
-}
 
 const Deposit = () => {
   const { user, isAuthenticated } = useAuth();
@@ -32,63 +22,34 @@ const Deposit = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [depositConfig, setDepositConfig] = useState({ top_number: '24/7 Support Available', transaction_id_prefix: 'TXN' });
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
+
+  const predefinedAmounts = [100, 300, 500, 1000, 2000, 5000];
+  
+  const paymentMethods = [
     {
       id: 'easypaisa',
-      payment_method: 'easypaisa',
       name: 'EasyPaisa',
-      number: '03001234567',
       logo: '🟢',
-      color: 'bg-green-600'
+      color: 'bg-green-600',
+      paymentNumber: '03001234567'
     },
     {
       id: 'jazzcash',
-      payment_method: 'jazzcash',
       name: 'JazzCash',
-      number: '03007654321',
       logo: '🔵',
-      color: 'bg-blue-600'
+      color: 'bg-blue-600',
+      paymentNumber: '03007654321'
     }
-  ]);
-
-  const predefinedAmounts = [100, 300, 500, 1000, 2000, 5000];
+  ];
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/');
     } else {
       fetchDepositConfig();
-      fetchPaymentNumbers();
       generateOrderId();
     }
   }, [isAuthenticated, navigate]);
-
-  const fetchPaymentNumbers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('payment_numbers' as any)
-        .select('*');
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching payment numbers:', error);
-        return;
-      }
-
-      if (data && data.length > 0) {
-        const updatedMethods = data.map((item: any) => ({
-          id: item.payment_method,
-          payment_method: item.payment_method,
-          name: item.name,
-          number: item.number,
-          logo: item.payment_method === 'easypaisa' ? '🟢' : '🔵',
-          color: item.payment_method === 'easypaisa' ? 'bg-green-600' : 'bg-blue-600'
-        }));
-        setPaymentMethods(updatedMethods);
-      }
-    } catch (error) {
-      console.error('Error in fetchPaymentNumbers:', error);
-    }
-  };
 
   const fetchDepositConfig = async () => {
     try {
@@ -217,6 +178,7 @@ const Deposit = () => {
           amount: getDepositAmount(),
           transaction_id: transactionId,
           payment_method: selectedPayment,
+          wallet_number: null, // Removed wallet number
           status: 'completed'
         });
 
@@ -245,7 +207,7 @@ const Deposit = () => {
   };
 
   const getSelectedPaymentMethod = () => {
-    return paymentMethods.find(method => method.payment_method === selectedPayment);
+    return paymentMethods.find(method => method.id === selectedPayment);
   };
 
   if (!isAuthenticated) {
@@ -283,12 +245,12 @@ const Deposit = () => {
             {/* Payment Number Section */}
             <div className="bg-green-50 rounded-lg p-4 border border-green-200">
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                {selectedMethod?.name}: {selectedMethod?.number}
+                {selectedMethod?.name}: {selectedMethod?.paymentNumber}
               </h3>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => copyToClipboard(selectedMethod?.number || '')}
+                onClick={() => copyToClipboard(selectedMethod?.paymentNumber || '')}
                 className="text-blue-600 p-0 h-auto"
               >
                 <Copy className="h-4 w-4 mr-1" />
@@ -317,14 +279,14 @@ const Deposit = () => {
                 {paymentMethods.map((method) => (
                   <div
                     key={method.id}
-                    onClick={() => setSelectedPayment(method.payment_method)}
+                    onClick={() => setSelectedPayment(method.id)}
                     className={`relative border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                      selectedPayment === method.payment_method 
+                      selectedPayment === method.id 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    {selectedPayment === method.payment_method && (
+                    {selectedPayment === method.id && (
                       <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
                         <Check className="h-4 w-4 text-white" />
                       </div>
