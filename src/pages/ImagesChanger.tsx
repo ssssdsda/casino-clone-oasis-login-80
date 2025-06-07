@@ -134,25 +134,53 @@ const ImagesChanger = () => {
 
       console.log('Updating image:', { imageKey, imageType, itemId, newImageUrl });
 
-      const { data, error } = await supabase
+      // First check if record exists
+      const { data: existingData, error: checkError } = await supabase
         .from('image_configs')
-        .upsert({
-          image_key: imageKey,
-          image_url: newImageUrl,
-          image_type: imageType,
-          item_id: itemId,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'image_key'
-        })
-        .select();
+        .select('*')
+        .eq('image_key', imageKey)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+      if (checkError) {
+        console.error('Error checking existing record:', checkError);
+        throw checkError;
       }
 
-      console.log('Update result:', data);
+      let result;
+      if (existingData) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from('image_configs')
+          .update({
+            image_url: newImageUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('image_key', imageKey)
+          .select();
+
+        result = { data, error };
+      } else {
+        // Insert new record
+        const { data, error } = await supabase
+          .from('image_configs')
+          .insert({
+            image_key: imageKey,
+            image_url: newImageUrl,
+            image_type: imageType,
+            item_id: itemId,
+            updated_at: new Date().toISOString()
+          })
+          .select();
+
+        result = { data, error };
+      }
+
+      if (result.error) {
+        console.error('Supabase error:', result.error);
+        throw result.error;
+      }
+
+      console.log('Update result:', result.data);
 
       // Update local state
       setImageConfigs(prev => ({
@@ -162,7 +190,7 @@ const ImagesChanger = () => {
 
       toast({
         title: "Image Updated",
-        description: "The image has been successfully updated in the database.",
+        description: "The image has been successfully updated.",
       });
 
       // Reset form
@@ -212,7 +240,7 @@ const ImagesChanger = () => {
 
       toast({
         title: "Image Removed",
-        description: "The image has been successfully removed from the database.",
+        description: "The image has been successfully removed and will show the default image.",
       });
 
       // Reset form
