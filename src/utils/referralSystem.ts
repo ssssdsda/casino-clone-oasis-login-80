@@ -6,7 +6,7 @@ interface ReferralData {
   referrer_id: string;
   referred_id: string;
   bonus_amount: number;
-  bonus_paid: boolean;
+  is_paid: boolean;
   created_at: string;
 }
 
@@ -102,7 +102,7 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
         referrer_id: referrer.id,
         referred_id: newUserId,
         bonus_amount: 90,
-        bonus_paid: true
+        is_paid: true
       });
 
     if (referralError) {
@@ -160,8 +160,8 @@ export const getReferralStats = async (userId: string) => {
     }
 
     const totalReferrals = referrals?.length || 0;
-    const totalEarned = referrals?.reduce((sum, ref) => sum + (ref.bonus_paid ? ref.bonus_amount : 0), 0) || 0;
-    const pendingRewards = referrals?.filter(ref => !ref.bonus_paid).length || 0;
+    const totalEarned = referrals?.reduce((sum, ref) => sum + (ref.is_paid ? ref.bonus_amount : 0), 0) || 0;
+    const pendingRewards = referrals?.filter(ref => !ref.is_paid).length || 0;
 
     return {
       totalReferrals,
