@@ -9,13 +9,12 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
-// <--- CHANGED: Import supabase client and generateUniqueReferralCode from src/lib/supabase
-import { supabase, generateUniqueReferralCode } from '@/lib/supabase';
+import { doc, getDoc, collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
+import { generateUniqueReferralCode } from '@/lib/firebase';
 import { useNavigate } from 'react-router-dom';
 
 const ReferralProgram = () => {
-  // <--- CHANGED: Get authLoading from useAuth
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [referralLink, setReferralLink] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [referralStats, setReferralStats] = useState({
@@ -26,175 +25,110 @@ const ReferralProgram = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const isMobile = useIsMobile();
   const { t } = useLanguage();
-  // <--- CHANGED: Removed db as it's no longer needed for Firebase Firestore
+  const db = getFirestore();
   const navigate = useNavigate();
 
   useEffect(() => {
     const setupReferralSystem = async () => {
-      // Only proceed if user is loaded and not null, and not already generating a code
-      if (user && user.id && !isGenerating) {
+      if (user && user.id) {
         try {
-          // <--- CHANGED: Fetch user details from Supabase 'users' table
-          // IMPORTANT: Ensure your 'users' table has a 'referral_code' column and an 'id' column matching auth.users.id
-          const { data: userData, error: userFetchError } = await supabase
-            .from('users') // Replace 'users' with your actual table name if different (e.g., 'profiles')
-            .select('referral_code')
-            .eq('id', user.id)
-            .single(); // Use .single() as we expect one user profile
-
-          // Handle case where user data might not exist yet (e.g., new auth user without profile)
-          if (userFetchError && userFetchError.code !== 'PGRST116') { // PGRST116 means "No rows found"
-            console.error("Error fetching user data from Supabase:", userFetchError.message);
-            toast({
-              title: "Error",
-              description: "Failed to retrieve your profile. Please try again.",
-              variant: "destructive",
-              className: "bg-red-600 text-white"
-            });
-            return;
-          }
-
+          // First get user details to check if they have a referral code
+          const userRef = doc(db, "users", user.id);
+          const userDoc = await getDoc(userRef);
+          
           let code = '';
-          if (userData && userData.referral_code) {
+          if (userDoc.exists() && userDoc.data().referralCode) {
             // User already has a referral code
-            code = userData.referral_code;
+            code = userDoc.data().referralCode;
             setReferralCode(code);
           } else {
-            // User does not have a referral code, generate one
+            // Generate a new referral code for the user
             setIsGenerating(true);
             try {
-              code = await generateUniqueReferralCode(); // <--- CHANGED: Call Supabase-based generator
-              // <--- CHANGED: Update the user's row in Supabase with the new code
-              const { error: updateError } = await supabase
-                .from('users') // Replace 'users' if your table name is different
-                .update({ referral_code: code })
-                .eq('id', user.id);
-
-              if (updateError) {
-                console.error("Error saving referral code to Supabase:", updateError.message);
-                throw new Error("Failed to save referral code.");
-              }
+              code = await generateUniqueReferralCode(user.id);
               setReferralCode(code);
-              toast({
-                title: "Referral Code Generated!",
-                description: "Your unique referral code has been created.",
-                className: "bg-green-600 text-white font-bold"
-              });
             } catch (error) {
-              console.error("Error generating or saving referral code:", error);
-              toast({
-                title: "Error",
-                description: "Failed to generate referral code. Please check console.",
-                variant: "destructive",
-                className: "bg-red-600 text-white"
-              });
+              console.error("Error generating referral code:", error);
             } finally {
               setIsGenerating(false);
             }
           }
-
-          // Generate the full referral link if a code exists
+          
+          // Generate the full referral link
           if (code) {
             const baseUrl = window.location.origin;
+            // Use the register route with the ref parameter
             const fullReferralLink = `${baseUrl}/register?ref=${code}`;
             setReferralLink(fullReferralLink);
           }
-
-          // Fetch referral stats regardless
+          
+          // Fetch referral stats
           fetchReferralStats(user.id);
-
         } catch (error) {
-          console.error("Error in setupReferralSystem:", error);
-          toast({
-            title: "Error",
-            description: "An unexpected error occurred during setup.",
-            variant: "destructive",
-            className: "bg-red-600 text-white"
-          });
+          console.error("Error setting up referral system:", error);
         }
       }
     };
+    
+    setupReferralSystem();
+  }, [user, db]);
 
-    // Only run setup when user or authLoading state changes, and user is present
-    if (!authLoading && user) {
-      setupReferralSystem();
-    }
-    // <--- CHANGED: Dependency array
-  }, [user, authLoading, isGenerating]); // isGenerating added to prevent re-running during generation
-
-  const fetchReferralStats = async (userId) => { // userId is a string
+  const fetchReferralStats = async (userId: string) => {
     try {
-      // <--- CHANGED: Query 'referrals' table in Supabase
-      // IMPORTANT: Ensure your 'referrals' table exists with 'referrer_id', 'bonus_paid', 'bonus_amount' columns
-      const { data: referralsData, error: referralsError } = await supabase
-        .from('referrals') // Replace 'referrals' if your table name is different
-        .select('bonus_paid, bonus_amount') // Select only necessary columns
-        .eq('referrer_id', userId); // Assuming 'referrer_id' column stores the referrer's Supabase user ID
-
-      if (referralsError) {
-        console.error("Error fetching referrals (Supabase):", referralsError.message);
-        throw new Error("Failed to fetch referral data.");
-      }
-
+      // Get referrals where this user is the referrer
+      const referralsRef = collection(db, "referrals");
+      const q = query(referralsRef, where("referrer", "==", userId));
+      const querySnapshot = await getDocs(q);
+      
+      // Calculate stats
       let totalRefs = 0;
       let totalEarned = 0;
-
-      referralsData.forEach((referral) => {
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
         totalRefs++;
-        if (referral.bonus_paid) { // Assuming a boolean column `bonus_paid`
-          totalEarned += referral.bonus_amount || 119; // Assuming `bonus_amount` column
+        if (data.bonusPaid) {
+          totalEarned += data.bonusAmount || 119;
         }
       });
-
-      // Get pending referrals
-      const { data: pendingData, error: pendingError } = await supabase
-        .from('referrals')
-        .select('id') // Just need count, so selecting 'id' is efficient
-        .eq('referrer_id', userId)
-        .eq('bonus_paid', false);
-
-      if (pendingError) {
-        console.error("Error fetching pending referrals (Supabase):", pendingError.message);
-        throw new Error("Failed to fetch pending referral data.");
-      }
-
+      
+      // Get pending referrals (users referred but haven't had bonus processed yet)
+      const pendingQuery = query(referralsRef, 
+                                where("referrer", "==", userId), 
+                                where("bonusPaid", "==", false));
+      const pendingSnapshot = await getDocs(pendingQuery);
+      
       setReferralStats({
         totalReferrals: totalRefs,
-        pendingRewards: pendingData.length,
+        pendingRewards: pendingSnapshot.size,
         totalEarned: totalEarned
       });
     } catch (error) {
       console.error("Error fetching referral stats:", error);
+      // Fallback to zeros if there's an error
       setReferralStats({
         totalReferrals: 0,
         pendingRewards: 0,
         totalEarned: 0,
       });
-      toast({
-        title: "Error",
-        description: "Failed to fetch referral statistics.",
-        variant: "destructive",
-        className: "bg-red-600 text-white"
-      });
     }
   };
 
-  const copyToClipboard = async (text, type) => { // text and type are string
-    try {
-      await navigator.clipboard.writeText(text);
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(referralLink).then(() => {
       toast({
-        title: `${type === 'link' ? 'Link' : 'Code'} Copied!`,
-        description: `Your referral ${type} has been copied to clipboard.`,
-        className: "bg-green-600 text-white font-bold",
+        title: "Link Copied!",
+        description: "Your referral link has been copied to clipboard.",
+        className: "bg-red-600 text-white font-bold",
       });
-    } catch (err) {
+    }).catch(err => {
       toast({
-        title: `Copy Failed`,
-        description: `Could not copy the referral ${type}`,
+        title: "Copy Failed",
+        description: "Could not copy the referral link",
         variant: "destructive",
         className: "bg-red-600 text-white"
       });
-    }
+    });
   };
 
   const shareReferralLink = () => {
@@ -205,11 +139,6 @@ const ReferralProgram = () => {
         url: referralLink,
       }).catch(err => {
         console.error('Error: ', err);
-        toast({
-          title: "Share Not Supported",
-          description: "Sharing was cancelled or an error occurred.",
-          className: "bg-red-600 text-white"
-        });
       });
     } else {
       toast({
@@ -220,29 +149,18 @@ const ReferralProgram = () => {
     }
   };
 
-  // <--- CHANGED: Added authLoading check for initial render
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-casino-dark flex flex-col items-center justify-center text-white">
-        <div className="w-10 h-10 border-4 border-t-green-500 border-green-200 rounded-full animate-spin"></div>
-        <p className="mt-3">Loading user data...</p>
-      </div>
-    );
-  }
-
-  // If user is not logged in after loading, prompt them to login
   if (!user) {
     return (
       <div className="min-h-screen bg-casino-dark flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center">
-          <Card className="w-full max-w-md bg-casino border border-casino-accent">
+          <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle className="text-white">Referral Program</CardTitle>
-              <CardDescription className="text-gray-300">Login to access your personal referral link</CardDescription>
+              <CardDescription className="text-white">Login to access your personal referral link</CardDescription>
             </CardHeader>
             <CardFooter>
-              <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={() => navigate('/login')}>Login to Continue</Button>
+              <Button className="w-full" onClick={() => navigate('/login')}>Login to Continue</Button>
             </CardFooter>
           </Card>
         </div>
@@ -285,8 +203,8 @@ const ReferralProgram = () => {
                             className="rounded-r-none bg-gray-800 text-white border-gray-700 text-center font-bold text-lg"
                           />
                           <Button
-                            onClick={() => copyToClipboard(referralCode, 'code')}
-                            className="rounded-l-none bg-blue-700 hover:bg-blue-800"
+                            onClick={() => navigator.clipboard.writeText(referralCode)}
+                            className="rounded-l-none"
                             variant="secondary"
                           >
                             <Copy className="h-4 w-4" />
@@ -294,42 +212,42 @@ const ReferralProgram = () => {
                         </div>
                       </div>
                     )}
-
+                    
                     <div>
                       <p className="text-sm font-medium mb-1.5 text-white">Your Referral Link:</p>
                       <div className="flex">
-                        <Input
+                        <Input 
                           value={referralLink}
                           readOnly
                           className="rounded-r-none bg-gray-800 text-white border-gray-700"
                         />
                         <Button
-                          onClick={() => copyToClipboard(referralLink, 'link')}
-                          className="rounded-l-none bg-blue-700 hover:bg-blue-800"
+                          onClick={copyToClipboard}
+                          className="rounded-l-none"
                           variant="secondary"
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-
+                    
                     <div className="flex flex-col sm:flex-row gap-4">
-                      <Button
-                        onClick={() => copyToClipboard(referralLink, 'link')}
+                      <Button 
+                        onClick={copyToClipboard} 
                         className="flex-1 bg-purple-700 hover:bg-purple-800"
                       >
                         <Copy className="h-4 w-4 mr-2" />
                         Copy Link
                       </Button>
-                      <Button
-                        onClick={shareReferralLink}
+                      <Button 
+                        onClick={shareReferralLink} 
                         className="flex-1 bg-green-600 hover:bg-green-700"
                       >
                         <Share2 className="h-4 w-4 mr-2" />
                         Share Link
                       </Button>
                     </div>
-
+                    
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                       <Card className="bg-purple-900/20 border-purple-800">
                         <CardContent className="p-4 flex flex-col items-center justify-center">
@@ -338,7 +256,7 @@ const ReferralProgram = () => {
                           <div className="text-sm text-gray-300">Total Referrals</div>
                         </CardContent>
                       </Card>
-
+                      
                       <Card className="bg-blue-900/20 border-blue-800">
                         <CardContent className="p-4 flex flex-col items-center justify-center">
                           <Gift className="h-8 w-8 mb-2 text-blue-500" />
@@ -346,7 +264,7 @@ const ReferralProgram = () => {
                           <div className="text-sm text-gray-300">Pending</div>
                         </CardContent>
                       </Card>
-
+                      
                       <Card className="bg-green-900/20 border-green-800">
                         <CardContent className="p-4 flex flex-col items-center justify-center">
                           <div className="text-2xl font-bold text-white">৳{referralStats.totalEarned}</div>
@@ -364,7 +282,7 @@ const ReferralProgram = () => {
               </p>
             </CardFooter>
           </Card>
-
+          
           <Card>
             <CardHeader>
               <CardTitle className="text-white">How It Works</CardTitle>
