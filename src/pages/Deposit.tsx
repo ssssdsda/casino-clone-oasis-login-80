@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -94,10 +95,10 @@ const Deposit = () => {
       return;
     }
 
-    if (parseFloat(amount) < 500) {
+    if (parseFloat(amount) < 100) {
       toast({
         title: "Error",
-        description: "Minimum deposit amount is PKR 500",
+        description: "Minimum deposit amount is PKR 100",
         variant: "destructive",
       });
       return;
@@ -235,11 +236,11 @@ const Deposit = () => {
                     <Input
                       id="amount"
                       type="number"
-                      placeholder="Enter amount (minimum PKR 500)"
+                      placeholder="Enter amount (minimum PKR 100)"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       className="bg-casino-dark border-gray-600 text-white mt-2"
-                      min="500"
+                      min="100"
                       required
                     />
                   </div>
