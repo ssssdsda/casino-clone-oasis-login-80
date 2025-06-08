@@ -10,8 +10,10 @@ import { Copy, CheckCircle2, AlertCircle, Phone } from "lucide-react";
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 const Deposit = () => {
+  const { user } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [transactionId, setTransactionId] = useState<string>('');
@@ -86,6 +88,15 @@ const Deposit = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please login first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (!selectedMethod || !amount || !transactionId) {
       toast({
         title: "Error",
@@ -107,11 +118,12 @@ const Deposit = () => {
     setIsSubmitting(true);
 
     try {
-      // Store deposit tracking in database
+      // Store deposit tracking in database with proper user info
       const { data, error } = await supabase
         .from('deposit_tracking')
         .insert({
-          username: 'current_user', // Replace with actual username from auth
+          user_id: user.id,
+          username: user.username || user.email,
           amount: parseFloat(amount),
           transaction_id: transactionId,
           payment_method: selectedMethod,
@@ -120,6 +132,7 @@ const Deposit = () => {
         });
 
       if (error) {
+        console.error('Deposit submission error:', error);
         throw error;
       }
 

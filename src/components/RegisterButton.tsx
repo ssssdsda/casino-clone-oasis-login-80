@@ -82,7 +82,10 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
 
       console.log('User registered successfully:', authData.user.id);
 
-      // Create/update profile
+      // Wait a moment for auth to settle
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Create/update profile with error handling
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -91,38 +94,58 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
           email: formData.email,
           balance: 0,
           created_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
         });
 
       if (profileError) {
         console.error('Profile creation error:', profileError);
+        // Continue anyway as the profile might have been created by trigger
       }
 
       // Award registration bonus
       console.log('Awarding registration bonus...');
-      const registrationBonusAwarded = await awardRegistrationBonus(authData.user.id);
-      if (registrationBonusAwarded) {
-        console.log('Registration bonus awarded successfully');
+      try {
+        const registrationBonusAwarded = await awardRegistrationBonus(authData.user.id);
+        if (registrationBonusAwarded) {
+          console.log('Registration bonus awarded successfully');
+        } else {
+          console.log('Failed to award registration bonus, but continuing...');
+        }
+      } catch (bonusError) {
+        console.error('Registration bonus error:', bonusError);
+        // Continue anyway
       }
 
       // Process referral bonus if referral code exists
       const referralCode = localStorage.getItem('referralCode');
       if (referralCode) {
         console.log(`Processing referral with code: ${referralCode}`);
-        const referralProcessed = await processReferralBonus(referralCode, authData.user.id);
-        if (referralProcessed) {
-          console.log('Referral bonus processed successfully');
-          localStorage.removeItem('referralCode'); // Clean up
-        } else {
-          console.log('Failed to process referral bonus');
+        try {
+          // Wait for profile to be fully created
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          const referralProcessed = await processReferralBonus(referralCode, authData.user.id);
+          if (referralProcessed) {
+            console.log('Referral bonus processed successfully');
+            localStorage.removeItem('referralCode'); // Clean up
+            toast.success('Registration successful! Welcome bonus and referral bonus added!');
+          } else {
+            console.log('Failed to process referral bonus');
+            toast.success('Registration successful! Welcome bonus added!');
+          }
+        } catch (referralError) {
+          console.error('Referral processing error:', referralError);
+          toast.success('Registration successful! Welcome bonus added!');
         }
       } else {
         console.log('No referral code found');
+        toast.success('Registration successful! Welcome bonus added to your account.');
       }
 
       // Login the user using the correct method name
       await loginWithEmail(formData.email, formData.password);
       
-      toast.success('Registration successful! Welcome bonus added to your account.');
       setIsOpen(false);
       setFormData({ username: '', email: '', password: '' });
       

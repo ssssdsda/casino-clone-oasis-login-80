@@ -106,33 +106,42 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
 
     console.log(`Awarding registration bonus: ${registrationBonus} PKR to user ${userId}`);
 
-    // Get current user balance
-    const { data: userProfile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('balance')
-      .eq('id', userId)
-      .single();
+    // Use SQL function to atomically update balance
+    const { data, error } = await supabase.rpc('update_user_balance', {
+      user_id: userId,
+      amount_to_add: registrationBonus
+    });
 
-    if (fetchError) {
-      console.error('Error fetching user balance:', fetchError);
-      return false;
+    if (error) {
+      console.error('Error updating user balance for registration bonus:', error);
+      
+      // Fallback to manual update
+      const { data: userProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', userId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching user balance:', fetchError);
+        return false;
+      }
+
+      const currentBalance = userProfile.balance || 0;
+      const newBalance = currentBalance + registrationBonus;
+
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', userId);
+
+      if (balanceError) {
+        console.error('Error updating user balance for registration bonus:', balanceError);
+        return false;
+      }
     }
 
-    const currentBalance = userProfile.balance || 0;
-    const newBalance = currentBalance + registrationBonus;
-
-    // Update user balance
-    const { error: balanceError } = await supabase
-      .from('profiles')
-      .update({ balance: newBalance })
-      .eq('id', userId);
-
-    if (balanceError) {
-      console.error('Error updating user balance for registration bonus:', balanceError);
-      return false;
-    }
-
-    console.log(`Successfully awarded registration bonus: ${registrationBonus} PKR to user ${userId}. New balance: ${newBalance}`);
+    console.log(`Successfully awarded registration bonus: ${registrationBonus} PKR to user ${userId}`);
     return true;
   } catch (error) {
     console.error('Error awarding registration bonus:', error);
@@ -140,7 +149,7 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
   }
 };
 
-// Process referral bonus - Fixed to work properly and add to balance immediately
+// Process referral bonus - Enhanced with better balance management
 export const processReferralBonus = async (referrerCode: string, newUserId: string): Promise<boolean> => {
   try {
     console.log(`Processing referral bonus for code: ${referrerCode}, new user: ${newUserId}`);
@@ -172,32 +181,41 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     console.log(`Referral bonus amount: ${referralBonus} PKR`);
 
-    // Get current referrer balance first
-    const { data: referrerProfile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('balance')
-      .eq('id', referrer.id)
-      .single();
+    // Try to use SQL function for atomic update
+    const { data: sqlResult, error: sqlError } = await supabase.rpc('update_user_balance', {
+      user_id: referrer.id,
+      amount_to_add: referralBonus
+    });
 
-    if (fetchError) {
-      console.error('Error fetching referrer balance:', fetchError);
-      return false;
-    }
+    if (sqlError) {
+      console.log('SQL function not available, using manual balance update');
+      
+      // Fallback to manual balance update
+      const { data: referrerProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', referrer.id)
+        .single();
 
-    const currentBalance = referrerProfile.balance || 0;
-    const newBalance = currentBalance + referralBonus;
+      if (fetchError) {
+        console.error('Error fetching referrer balance:', fetchError);
+        return false;
+      }
 
-    console.log(`Updating referrer balance from ${currentBalance} to ${newBalance}`);
+      const currentBalance = referrerProfile.balance || 0;
+      const newBalance = currentBalance + referralBonus;
 
-    // Update referrer's balance immediately
-    const { error: balanceError } = await supabase
-      .from('profiles')
-      .update({ balance: newBalance })
-      .eq('id', referrer.id);
+      console.log(`Updating referrer balance from ${currentBalance} to ${newBalance}`);
 
-    if (balanceError) {
-      console.error('Error updating referrer balance:', balanceError);
-      return false;
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', referrer.id);
+
+      if (balanceError) {
+        console.error('Error updating referrer balance:', balanceError);
+        return false;
+      }
     }
 
     // Create referral record after successful balance update
@@ -212,15 +230,10 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     if (referralError) {
       console.error('Error creating referral record:', referralError);
-      // Try to revert balance if referral record fails
-      await supabase
-        .from('profiles')
-        .update({ balance: currentBalance })
-        .eq('id', referrer.id);
       return false;
     }
 
-    console.log(`Successfully processed referral bonus: ${referrer.username} received ${referralBonus} PKR for referring user ${newUserId}. New balance: ${newBalance}`);
+    console.log(`Successfully processed referral bonus: ${referrer.username} received ${referralBonus} PKR for referring user ${newUserId}`);
     return true;
   } catch (error) {
     console.error('Error processing referral bonus:', error);

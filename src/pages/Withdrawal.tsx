@@ -18,7 +18,7 @@ interface WithdrawalHistory {
   amount: number;
   payment_method: string;
   account_number: string;
-  account_name?: string;
+  account_holder_name?: string;
   status: string;
   created_at: string;
 }
@@ -31,7 +31,7 @@ const Withdrawal = () => {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
-  const [accountName, setAccountName] = useState('');
+  const [accountHolderName, setAccountHolderName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalHistory[]>([]);
 
@@ -95,10 +95,10 @@ const Withdrawal = () => {
       return;
     }
     
-    if (!paymentMethod || !accountNumber || !accountName) {
+    if (!paymentMethod || !accountNumber || !accountHolderName) {
       toast({
         title: "Error",
-        description: "Please fill in all fields including account name",
+        description: "Please fill in all fields including account holder name",
         variant: "destructive"
       });
       return;
@@ -113,7 +113,7 @@ const Withdrawal = () => {
           username: user.username,
           amount: withdrawalAmount,
           account_number: accountNumber,
-          account_name: accountName,
+          account_holder_name: accountHolderName,
           payment_method: paymentMethod,
           status: 'pending'
         })
@@ -121,6 +121,7 @@ const Withdrawal = () => {
         .single();
 
       if (error) {
+        console.error('Withdrawal submission error:', error);
         throw error;
       }
 
@@ -132,6 +133,7 @@ const Withdrawal = () => {
         .eq('id', user.id);
 
       if (balanceError) {
+        console.error('Balance update error:', balanceError);
         throw balanceError;
       }
 
@@ -145,7 +147,7 @@ const Withdrawal = () => {
       setAmount('');
       setPaymentMethod('');
       setAccountNumber('');
-      setAccountName('');
+      setAccountHolderName('');
       
       // Refresh history
       fetchWithdrawalHistory();
@@ -278,13 +280,13 @@ const Withdrawal = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="account-name" className="text-white">
+                    <Label htmlFor="account-holder-name" className="text-white">
                       Account Holder Name
                     </Label>
                     <Input
-                      id="account-name"
-                      value={accountName}
-                      onChange={(e) => setAccountName(e.target.value)}
+                      id="account-holder-name"
+                      value={accountHolderName}
+                      onChange={(e) => setAccountHolderName(e.target.value)}
                       className="bg-casino-dark border-gray-700 text-white"
                       placeholder="Enter account holder name"
                     />
@@ -292,7 +294,7 @@ const Withdrawal = () => {
 
                   <Button
                     type="submit"
-                    disabled={isProcessing || !amount || !paymentMethod || !accountNumber || !accountName}
+                    disabled={isProcessing || !amount || !paymentMethod || !accountNumber || !accountHolderName}
                     className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3"
                   >
                     {isProcessing ? 'Processing...' : `Withdraw PKR ${amount || '0'}`}
@@ -319,9 +321,9 @@ const Withdrawal = () => {
                           <p className="text-gray-400 text-sm">
                             {withdrawal.payment_method.toUpperCase()} - {withdrawal.account_number}
                           </p>
-                          {withdrawal.account_name && (
+                          {withdrawal.account_holder_name && (
                             <p className="text-gray-400 text-sm">
-                              Name: {withdrawal.account_name}
+                              Name: {withdrawal.account_holder_name}
                             </p>
                           )}
                           <p className="text-gray-500 text-xs">
