@@ -98,14 +98,15 @@ export const getBonusSettings = async () => {
   }
 };
 
-// Award registration bonus
+// Award registration bonus - Fixed to work properly
 export const awardRegistrationBonus = async (userId: string): Promise<boolean> => {
   try {
     const bonusSettings = await getBonusSettings();
     const registrationBonus = bonusSettings.registration_bonus || 100;
 
-    // Check if user already received registration bonus by checking if they have a balance > 0
-    // This is a simplified check since we don't have bonus_history table
+    console.log(`Awarding registration bonus: ${registrationBonus} PKR to user ${userId}`);
+
+    // Get current user balance
     const { data: userProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('balance')
@@ -117,13 +118,8 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
       return false;
     }
 
-    // If user already has a balance, assume they already got the bonus
-    if (userProfile.balance && userProfile.balance > 0) {
-      console.log('User may have already received registration bonus');
-      return false;
-    }
-
-    const newBalance = (userProfile.balance || 0) + registrationBonus;
+    const currentBalance = userProfile.balance || 0;
+    const newBalance = currentBalance + registrationBonus;
 
     // Update user balance
     const { error: balanceError } = await supabase
@@ -132,11 +128,11 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
       .eq('id', userId);
 
     if (balanceError) {
-      console.error('Error updating user balance:', balanceError);
+      console.error('Error updating user balance for registration bonus:', balanceError);
       return false;
     }
 
-    console.log(`Awarded registration bonus: ${registrationBonus} PKR to user ${userId}`);
+    console.log(`Successfully awarded registration bonus: ${registrationBonus} PKR to user ${userId}. New balance: ${newBalance}`);
     return true;
   } catch (error) {
     console.error('Error awarding registration bonus:', error);
@@ -144,15 +140,19 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
   }
 };
 
-// Process referral bonus
+// Process referral bonus - Fixed to work properly
 export const processReferralBonus = async (referrerCode: string, newUserId: string): Promise<boolean> => {
   try {
+    console.log(`Processing referral bonus for code: ${referrerCode}, new user: ${newUserId}`);
+    
     // Get referrer user
     const referrer = await getUserByReferralCode(referrerCode);
     if (!referrer) {
       console.log('Referrer not found for code:', referrerCode);
       return false;
     }
+
+    console.log(`Found referrer: ${referrer.username} (${referrer.id})`);
 
     // Check if this user was already referred
     const { data: existingReferral } = await supabase
@@ -170,7 +170,9 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
     const bonusSettings = await getBonusSettings();
     const referralBonus = bonusSettings.referral_bonus || 90;
 
-    // Create referral record
+    console.log(`Referral bonus amount: ${referralBonus} PKR`);
+
+    // Create referral record first
     const { error: referralError } = await supabase
       .from('referrals')
       .insert({
@@ -182,8 +184,10 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     if (referralError) {
       console.error('Error creating referral record:', referralError);
-      throw referralError;
+      return false;
     }
+
+    console.log('Referral record created successfully');
 
     // Update referrer's balance
     const { data: referrerProfile, error: fetchError } = await supabase
@@ -194,10 +198,13 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     if (fetchError) {
       console.error('Error fetching referrer balance:', fetchError);
-      throw fetchError;
+      return false;
     }
 
-    const newBalance = (referrerProfile.balance || 0) + referralBonus;
+    const currentBalance = referrerProfile.balance || 0;
+    const newBalance = currentBalance + referralBonus;
+
+    console.log(`Updating referrer balance from ${currentBalance} to ${newBalance}`);
 
     const { error: balanceError } = await supabase
       .from('profiles')
@@ -206,10 +213,10 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     if (balanceError) {
       console.error('Error updating referrer balance:', balanceError);
-      throw balanceError;
+      return false;
     }
 
-    console.log(`Processed referral bonus: ${referrer.username} received ${referralBonus} PKR for referring user ${newUserId}`);
+    console.log(`Successfully processed referral bonus: ${referrer.username} received ${referralBonus} PKR for referring user ${newUserId}. New balance: ${newBalance}`);
     return true;
   } catch (error) {
     console.error('Error processing referral bonus:', error);

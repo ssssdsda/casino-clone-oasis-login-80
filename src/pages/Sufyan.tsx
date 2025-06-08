@@ -13,17 +13,7 @@ const Sufyan = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  React.useEffect(() => {
-    // Check if user is admin
-    if (!user || user.role !== 'admin') {
-      toast({
-        title: "Unauthorized",
-        description: "You don't have permission to access this page",
-        variant: "destructive",
-      });
-      navigate('/');
-    }
-  }, [user, navigate, toast]);
+  // Removed admin check - now accessible to anyone
 
   const adminTools = [
     {

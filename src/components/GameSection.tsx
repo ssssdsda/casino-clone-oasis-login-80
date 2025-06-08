@@ -59,7 +59,7 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
     
     console.log("Original games data:", propGames);
     
-    // Validate each game to ensure it has required properties
+    // Validate each game to ensure it has required properties and update multiplier to show PKR
     const validGames = propGames.map(game => {
       // Ensure each game has an ID
       const gameId = game.id || `game-${Math.random().toString(36).substr(2, 9)}`;
@@ -67,12 +67,23 @@ const GameSection = ({ title, games: propGames, isAdmin = false, onEditGame }: G
       // Validate and fix image path
       const gameImage = validateImagePath(game.image);
       
-      console.log(`Game: ${game.title}, Original image: ${game.image}, Validated image: ${gameImage}`);
+      // Update multiplier to show PKR instead of x
+      let gameMultiplier = game.multiplier;
+      if (gameMultiplier && !gameMultiplier.includes('PKR')) {
+        // Convert multiplier format to PKR (e.g., "x2.5" -> "PKR 250")
+        if (gameMultiplier.startsWith('x')) {
+          const multiplierValue = parseFloat(gameMultiplier.substring(1));
+          gameMultiplier = `PKR ${Math.round(multiplierValue * 100)}`;
+        }
+      }
+      
+      console.log(`Game: ${game.title}, Original image: ${game.image}, Validated image: ${gameImage}, Multiplier: ${gameMultiplier}`);
       
       return {
         ...game,
         id: gameId,
-        image: gameImage
+        image: gameImage,
+        multiplier: gameMultiplier
       };
     });
     

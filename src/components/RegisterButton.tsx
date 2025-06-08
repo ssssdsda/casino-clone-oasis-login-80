@@ -1,267 +1,185 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Mail, User, Lock, Gift, Percent } from 'lucide-react';
-import { useLanguage } from '@/context/LanguageContext';
-import { getUserByReferralCode, processReferralBonus, awardRegistrationBonus } from '@/utils/referralSystem';
 
-export function RegisterButton(props: any) {
-  const [open, setOpen] = useState(false);
-  
-  // Email register state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
-  
-  // Referral code
-  const [referralCode, setReferralCode] = useState('');
-  const [referrerFound, setReferrerFound] = useState(false);
-  
-  const { registerWithEmail, isLoading, user } = useAuth();
-  const { toast } = useToast();
+import React, { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { toast } from 'sonner';
+import { UserPlus } from 'lucide-react';
+import { processReferralBonus, awardRegistrationBonus } from '@/utils/referralSystem';
+
+interface RegisterButtonProps {
+  'data-register-button'?: boolean;
+}
+
+export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: RegisterButtonProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+  });
+  const { login } = useAuth();
   const { t } = useLanguage();
 
-  // Load referral code from localStorage or URL
-  useEffect(() => {
-    const loadReferralCode = async () => {
-      // Check URL for referral code
-      const urlParams = new URLSearchParams(window.location.search);
-      const refCode = urlParams.get('ref');
-      
-      // Check localStorage if no URL parameter
-      const storedReferralCode = localStorage.getItem('referralCode');
-      
-      // Priority: URL parameter > localStorage
-      const codeToUse = refCode || storedReferralCode || '';
-      
-      if (codeToUse) {
-        setReferralCode(codeToUse);
-        
-        // Save to localStorage for persistence
-        if (refCode) {
-          localStorage.setItem('referralCode', refCode);
-        }
-        
-        // Verify if referral code exists
-        try {
-          const referrer = await getUserByReferralCode(codeToUse);
-          setReferrerFound(!!referrer);
-          
-          if (referrer) {
-            console.log(`Found referrer for code ${codeToUse}: ${referrer.id}`);
-          } else {
-            console.log(`No referrer found for code ${codeToUse}`);
-          }
-        } catch (error) {
-          console.error("Error verifying referral code:", error);
-        }
-      }
-    };
-    
-    loadReferralCode();
-  }, []);
-
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password || !username) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!email.includes('@')) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid email address",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      console.log("Registering with email and referral code:", email, referralCode);
-      
-      // Register with email
-      const success = await registerWithEmail(email, username, password);
-      if (success) {
-        
-        // Wait for user to be available and process bonuses
-        setTimeout(async () => {
-          try {
-            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-            if (currentUser.id) {
-              // Award registration bonus first
-              const registrationBonus = await awardRegistrationBonus(currentUser.id);
-              if (registrationBonus) {
-                toast({
-                  title: "Welcome Bonus!",
-                  description: "You received 100 PKR registration bonus!",
-                  className: "bg-green-600 text-white"
-                });
-              }
-
-              // Process referral bonus if referral code exists
-              if (referralCode && referrerFound) {
-                const referralBonus = await processReferralBonus(referralCode, currentUser.id);
-                if (referralBonus) {
-                  toast({
-                    title: "Referral Bonus!",
-                    description: "Your referrer has received 90 PKR bonus!",
-                    className: "bg-blue-600 text-white"
-                  });
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Error processing bonuses:", error);
-          }
-        }, 3000);
-        
-        // Clear referral code from localStorage after successful use
-        if (referralCode) {
-          localStorage.removeItem('referralCode');
-        }
-        setOpen(false);
-      }
-    } catch (error: any) {
-      console.error("Email registration error:", error);
-      // Errors are handled in the registerWithEmail function
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
-  const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setUsername('');
-    // Don't clear referral code as it might be needed for the next attempt
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      console.log('Starting registration process...');
+      
+      // Register user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            username: formData.username,
+          }
+        }
+      });
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        toast.error('Registration failed: ' + authError.message);
+        return;
+      }
+
+      if (!authData.user) {
+        console.error('No user returned from registration');
+        toast.error('Registration failed');
+        return;
+      }
+
+      console.log('User registered successfully:', authData.user.id);
+
+      // Create/update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: authData.user.id,
+          username: formData.username,
+          email: formData.email,
+          balance: 0,
+          created_at: new Date().toISOString()
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+      }
+
+      // Award registration bonus
+      console.log('Awarding registration bonus...');
+      const registrationBonusAwarded = await awardRegistrationBonus(authData.user.id);
+      if (registrationBonusAwarded) {
+        console.log('Registration bonus awarded successfully');
+      }
+
+      // Process referral bonus if referral code exists
+      const referralCode = localStorage.getItem('referralCode');
+      if (referralCode) {
+        console.log(`Processing referral with code: ${referralCode}`);
+        const referralProcessed = await processReferralBonus(referralCode, authData.user.id);
+        if (referralProcessed) {
+          console.log('Referral bonus processed successfully');
+          localStorage.removeItem('referralCode'); // Clean up
+        } else {
+          console.log('Failed to process referral bonus');
+        }
+      } else {
+        console.log('No referral code found');
+      }
+
+      // Login the user
+      await login(formData.email, formData.password);
+      
+      toast.success('Registration successful! Welcome bonus added to your account.');
+      setIsOpen(false);
+      setFormData({ username: '', email: '', password: '' });
+      
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      toast.error('Registration failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <>
-      <Button 
-        onClick={() => setOpen(true)}
-        className="bg-green-600 hover:bg-green-700 text-white font-bold"
-        {...props}
-      >
-        {t('register')}
-      </Button>
-
-      <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-      }}>
-        <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-[#0e363d] to-[#0a2328] border-casino-accent">
-          <DialogHeader>
-            <DialogTitle className="text-white text-xl">{t('register')}</DialogTitle>
-            <DialogDescription className="text-white">
-              Create a new account to start playing.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="bg-yellow-600/20 border border-yellow-500/30 rounded-lg p-3 mb-4">
-            <div className="flex items-start space-x-2">
-              <Gift className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-yellow-300 font-medium text-sm">Register for bonus!</p>
-                <p className="text-white text-xs">Get 100 PKR registration bonus + deposit bonus. Minimum withdrawal amount is PKR 200.</p>
-              </div>
-            </div>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button 
+          className="bg-green-600 hover:bg-green-700 text-white font-bold" 
+          data-register-button={dataRegisterButton}
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          {t('register')}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px] bg-casino border border-casino-accent">
+        <DialogHeader>
+          <DialogTitle className="text-white">{t('register')}</DialogTitle>
+          <DialogDescription className="text-gray-300">
+            {t('createAccount')}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="username" className="text-white">Username</Label>
+            <Input
+              id="username"
+              name="username"
+              type="text"
+              value={formData.username}
+              onChange={handleInputChange}
+              required
+              className="bg-casino-dark border-gray-600 text-white"
+              placeholder="Enter your username"
+            />
           </div>
-          
-          {referralCode && (
-            <div className="bg-green-600/20 border border-green-500/30 rounded-lg p-3 mb-4">
-              <div className="flex items-start space-x-2">
-                <Percent className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-green-300 font-medium text-sm">{referrerFound ? "Valid Referral Code!" : "Referral Code Applied"}</p>
-                  <p className="text-white text-xs">
-                    {referrerFound 
-                      ? "You were referred by a friend! Complete registration to activate your referrer's 90 PKR bonus."
-                      : "Referral code applied. Complete registration to continue."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <form onSubmit={handleEmailSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email-username" className="text-white flex items-center gap-2">
-                <User className="h-4 w-4" /> {t('username')}
-              </Label>
-              <Input 
-                id="email-username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="bg-casino-dark border-gray-700 text-white"
-                placeholder="Enter your username"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="register-email" className="text-white flex items-center gap-2">
-                <Mail className="h-4 w-4" /> Email
-              </Label>
-              <Input 
-                id="register-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-casino-dark border-gray-700 text-white"
-                placeholder="your@email.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="register-email-password" className="text-white flex items-center gap-2">
-                <Lock className="h-4 w-4" /> {t('password')}
-              </Label>
-              <Input
-                id="register-email-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-casino-dark border-gray-700 text-white"
-                placeholder="Your password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="referral-code" className="text-white flex items-center gap-2">
-                <Gift className="h-4 w-4" /> Referral Code (Optional)
-              </Label>
-              <Input
-                id="referral-code"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
-                className="bg-casino-dark border-gray-700 text-white"
-                placeholder="Enter referral code"
-              />
-            </div>
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
-              <Button 
-                type="submit" 
-                className="bg-green-600 hover:bg-green-700 text-white font-bold w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Processing...' : 'Register Now'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-white">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+              className="bg-casino-dark border-gray-600 text-white"
+              placeholder="Enter your email"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-white">Password</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              required
+              className="bg-casino-dark border-gray-600 text-white"
+              placeholder="Enter your password"
+            />
+          </div>
+          <Button type="submit" disabled={isLoading} className="w-full bg-casino-accent text-black hover:bg-yellow-400 font-bold">
+            {isLoading ? 'Creating Account...' : t('register')}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
