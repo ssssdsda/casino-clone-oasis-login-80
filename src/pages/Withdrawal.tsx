@@ -18,6 +18,7 @@ interface WithdrawalHistory {
   amount: number;
   payment_method: string;
   account_number: string;
+  account_name?: string;
   status: string;
   created_at: string;
 }
@@ -30,15 +31,14 @@ const Withdrawal = () => {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalHistory[]>([]);
 
   const paymentMethods = [
-    { value: 'bkash', label: 'bKash', icon: Smartphone },
-    { value: 'nagad', label: 'Nagad', icon: Smartphone },
-    { value: 'rocket', label: 'Rocket', icon: Smartphone },
-    { value: 'bank', label: 'Bank Transfer', icon: Building },
-    { value: 'card', label: 'Credit/Debit Card', icon: CreditCard }
+    { value: 'easypaisa', label: 'EasyPaisa', icon: Smartphone },
+    { value: 'jazzcash', label: 'JazzCash', icon: Smartphone },
+    { value: 'bank', label: 'Bank Account', icon: Building }
   ];
 
   useEffect(() => {
@@ -77,10 +77,10 @@ const Withdrawal = () => {
     
     const withdrawalAmount = parseFloat(amount);
     
-    if (!withdrawalAmount || withdrawalAmount < 200) {
+    if (!withdrawalAmount || withdrawalAmount < 1000) {
       toast({
         title: "Error",
-        description: "Minimum withdrawal amount is ৳200",
+        description: "Minimum withdrawal amount is PKR 1000",
         variant: "destructive"
       });
       return;
@@ -95,10 +95,10 @@ const Withdrawal = () => {
       return;
     }
     
-    if (!paymentMethod || !accountNumber) {
+    if (!paymentMethod || !accountNumber || !accountName) {
       toast({
         title: "Error",
-        description: "Please fill in all fields",
+        description: "Please fill in all fields including account name",
         variant: "destructive"
       });
       return;
@@ -113,6 +113,7 @@ const Withdrawal = () => {
           username: user.username,
           amount: withdrawalAmount,
           account_number: accountNumber,
+          account_name: accountName,
           payment_method: paymentMethod,
           status: 'pending'
         })
@@ -144,6 +145,7 @@ const Withdrawal = () => {
       setAmount('');
       setPaymentMethod('');
       setAccountNumber('');
+      setAccountName('');
       
       // Refresh history
       fetchWithdrawalHistory();
@@ -212,25 +214,25 @@ const Withdrawal = () => {
                   Withdraw Funds
                 </CardTitle>
                 <CardDescription className="text-gray-100">
-                  Current Balance: ৳{user?.balance?.toLocaleString() || '0'}
+                  Current Balance: PKR {user?.balance?.toLocaleString() || '0'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <form onSubmit={handleWithdrawal} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="amount" className="text-white">Amount (৳)</Label>
+                    <Label htmlFor="amount" className="text-white">Amount (PKR)</Label>
                     <Input
                       id="amount"
                       type="number"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       className="bg-casino-dark border-gray-700 text-white"
-                      placeholder="Minimum ৳200"
-                      min="200"
+                      placeholder="Minimum PKR 1000"
+                      min="1000"
                       max={user?.balance || 0}
                     />
                     <p className="text-xs text-gray-400">
-                      Minimum: ৳200 | Available: ৳{user?.balance?.toLocaleString() || '0'}
+                      Minimum: PKR 1000 | Available: PKR {user?.balance?.toLocaleString() || '0'}
                     </p>
                   </div>
 
@@ -262,8 +264,7 @@ const Withdrawal = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="account-number" className="text-white">
-                      {paymentMethod === 'bank' ? 'Account Number' : 
-                       paymentMethod === 'card' ? 'Card Number' : 'Mobile Number'}
+                      {paymentMethod === 'bank' ? 'Account Number' : 'Mobile Number'}
                     </Label>
                     <Input
                       id="account-number"
@@ -271,18 +272,30 @@ const Withdrawal = () => {
                       onChange={(e) => setAccountNumber(e.target.value)}
                       className="bg-casino-dark border-gray-700 text-white"
                       placeholder={
-                        paymentMethod === 'bank' ? 'Enter account number' :
-                        paymentMethod === 'card' ? 'Enter card number' : 'Enter mobile number'
+                        paymentMethod === 'bank' ? 'Enter account number' : 'Enter mobile number'
                       }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="account-name" className="text-white">
+                      Account Holder Name
+                    </Label>
+                    <Input
+                      id="account-name"
+                      value={accountName}
+                      onChange={(e) => setAccountName(e.target.value)}
+                      className="bg-casino-dark border-gray-700 text-white"
+                      placeholder="Enter account holder name"
                     />
                   </div>
 
                   <Button
                     type="submit"
-                    disabled={isProcessing || !amount || !paymentMethod || !accountNumber}
+                    disabled={isProcessing || !amount || !paymentMethod || !accountNumber || !accountName}
                     className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3"
                   >
-                    {isProcessing ? 'Processing...' : `Withdraw ৳${amount || '0'}`}
+                    {isProcessing ? 'Processing...' : `Withdraw PKR ${amount || '0'}`}
                   </Button>
                 </form>
               </CardContent>
@@ -302,10 +315,15 @@ const Withdrawal = () => {
                         className="flex justify-between items-center p-4 bg-casino-dark rounded-lg border border-gray-700"
                       >
                         <div>
-                          <p className="text-white font-medium">৳{withdrawal.amount.toLocaleString()}</p>
+                          <p className="text-white font-medium">PKR {withdrawal.amount.toLocaleString()}</p>
                           <p className="text-gray-400 text-sm">
                             {withdrawal.payment_method.toUpperCase()} - {withdrawal.account_number}
                           </p>
+                          {withdrawal.account_name && (
+                            <p className="text-gray-400 text-sm">
+                              Name: {withdrawal.account_name}
+                            </p>
+                          )}
                           <p className="text-gray-500 text-xs">
                             {formatDate(withdrawal.created_at)}
                           </p>

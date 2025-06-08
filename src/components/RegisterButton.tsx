@@ -35,6 +35,23 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!formData.username || !formData.email || !formData.password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+    
+    if (!formData.email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -111,7 +128,7 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
       
     } catch (error: any) {
       console.error('Registration error:', error);
-      toast.error('Registration failed: ' + error.message);
+      toast.error('Registration failed: ' + (error.message || 'Unknown error occurred'));
     } finally {
       setIsLoading(false);
     }
@@ -171,8 +188,9 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
               value={formData.password}
               onChange={handleInputChange}
               required
+              minLength={6}
               className="bg-casino-dark border-gray-600 text-white"
-              placeholder="Enter your password"
+              placeholder="Enter your password (min 6 characters)"
             />
           </div>
           <Button type="submit" disabled={isLoading} className="w-full bg-casino-accent text-black hover:bg-yellow-400 font-bold">

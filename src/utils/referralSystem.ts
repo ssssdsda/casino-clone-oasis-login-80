@@ -140,7 +140,7 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
   }
 };
 
-// Process referral bonus - Fixed to work properly
+// Process referral bonus - Fixed to work properly and add to balance immediately
 export const processReferralBonus = async (referrerCode: string, newUserId: string): Promise<boolean> => {
   try {
     console.log(`Processing referral bonus for code: ${referrerCode}, new user: ${newUserId}`);
@@ -172,24 +172,7 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     console.log(`Referral bonus amount: ${referralBonus} PKR`);
 
-    // Create referral record first
-    const { error: referralError } = await supabase
-      .from('referrals')
-      .insert({
-        referrer_id: referrer.id,
-        referred_id: newUserId,
-        bonus_amount: referralBonus,
-        is_paid: true
-      });
-
-    if (referralError) {
-      console.error('Error creating referral record:', referralError);
-      return false;
-    }
-
-    console.log('Referral record created successfully');
-
-    // Update referrer's balance
+    // Get current referrer balance first
     const { data: referrerProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('balance')
@@ -206,6 +189,7 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     console.log(`Updating referrer balance from ${currentBalance} to ${newBalance}`);
 
+    // Update referrer's balance immediately
     const { error: balanceError } = await supabase
       .from('profiles')
       .update({ balance: newBalance })
@@ -213,6 +197,26 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     if (balanceError) {
       console.error('Error updating referrer balance:', balanceError);
+      return false;
+    }
+
+    // Create referral record after successful balance update
+    const { error: referralError } = await supabase
+      .from('referrals')
+      .insert({
+        referrer_id: referrer.id,
+        referred_id: newUserId,
+        bonus_amount: referralBonus,
+        is_paid: true
+      });
+
+    if (referralError) {
+      console.error('Error creating referral record:', referralError);
+      // Try to revert balance if referral record fails
+      await supabase
+        .from('profiles')
+        .update({ balance: currentBalance })
+        .eq('id', referrer.id);
       return false;
     }
 
@@ -224,7 +228,7 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
   }
 };
 
-// Get referral stats for user
+// Get referral stats for user - Fixed to calculate earnings properly
 export const getReferralStats = async (userId: string) => {
   try {
     const { data: referrals, error } = await supabase
@@ -244,6 +248,8 @@ export const getReferralStats = async (userId: string) => {
     const totalReferrals = referrals?.length || 0;
     const totalEarned = referrals?.reduce((sum, ref) => sum + (ref.is_paid ? ref.bonus_amount : 0), 0) || 0;
     const pendingRewards = referrals?.filter(ref => !ref.is_paid).length || 0;
+
+    console.log(`Referral stats for user ${userId}: ${totalReferrals} referrals, ${totalEarned} PKR earned, ${pendingRewards} pending`);
 
     return {
       totalReferrals,
