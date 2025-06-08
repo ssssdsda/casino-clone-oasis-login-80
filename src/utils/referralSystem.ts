@@ -73,12 +73,13 @@ export const getUserByReferralCode = async (referralCode: string) => {
   }
 };
 
-// Get bonus settings from database
+// Get bonus settings from betting_system_settings table
 export const getBonusSettings = async () => {
   try {
     const { data, error } = await supabase
-      .from('bonus_settings')
+      .from('betting_system_settings')
       .select('*')
+      .eq('setting_key', 'bonus_config')
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -89,7 +90,19 @@ export const getBonusSettings = async () => {
       };
     }
 
-    return data || {
+    if (data?.setting_value) {
+      try {
+        const bonusConfig = JSON.parse(data.setting_value as string);
+        return {
+          referral_bonus: bonusConfig.referral_bonus || 90,
+          registration_bonus: bonusConfig.registration_bonus || 100
+        };
+      } catch (parseError) {
+        console.error('Error parsing bonus settings:', parseError);
+      }
+    }
+
+    return {
       referral_bonus: 90,
       registration_bonus: 100
     };
@@ -108,20 +121,8 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
     const bonusSettings = await getBonusSettings();
     const registrationBonus = bonusSettings.registration_bonus || 100;
 
-    // Check if user already received registration bonus
-    const { data: existingBonus } = await supabase
-      .from('bonus_history')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('bonus_type', 'registration')
-      .single();
-
-    if (existingBonus) {
-      console.log('User already received registration bonus');
-      return false;
-    }
-
-    // Get current user balance
+    // Check if user already received registration bonus by checking if they have a balance > 0
+    // This is a simplified check since we don't have bonus_history table
     const { data: userProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('balance')
@@ -130,6 +131,12 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
 
     if (fetchError) {
       console.error('Error fetching user balance:', fetchError);
+      return false;
+    }
+
+    // If user already has a balance, assume they already got the bonus
+    if (userProfile.balance && userProfile.balance > 0) {
+      console.log('User may have already received registration bonus');
       return false;
     }
 
@@ -144,20 +151,6 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
     if (balanceError) {
       console.error('Error updating user balance:', balanceError);
       return false;
-    }
-
-    // Record bonus history
-    const { error: historyError } = await supabase
-      .from('bonus_history')
-      .insert({
-        user_id: userId,
-        bonus_type: 'registration',
-        bonus_amount: registrationBonus,
-        description: 'Registration bonus'
-      });
-
-    if (historyError) {
-      console.error('Error recording bonus history:', historyError);
     }
 
     console.log(`Awarded registration bonus: ${registrationBonus} PKR to user ${userId}`);
@@ -231,20 +224,6 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
     if (balanceError) {
       console.error('Error updating referrer balance:', balanceError);
       throw balanceError;
-    }
-
-    // Record bonus history
-    const { error: historyError } = await supabase
-      .from('bonus_history')
-      .insert({
-        user_id: referrer.id,
-        bonus_type: 'referral',
-        bonus_amount: referralBonus,
-        description: `Referral bonus for user ${newUserId}`
-      });
-
-    if (historyError) {
-      console.error('Error recording referral bonus history:', historyError);
     }
 
     console.log(`Processed referral bonus: ${referrer.username} received ${referralBonus} PKR for referring user ${newUserId}`);

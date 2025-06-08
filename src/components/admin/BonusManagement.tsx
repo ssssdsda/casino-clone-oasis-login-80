@@ -28,8 +28,9 @@ const BonusManagement = () => {
   const loadBonusSettings = async () => {
     try {
       const { data, error } = await supabase
-        .from('bonus_settings')
+        .from('betting_system_settings')
         .select('*')
+        .eq('setting_key', 'bonus_config')
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -37,9 +38,14 @@ const BonusManagement = () => {
         return;
       }
 
-      if (data) {
-        setReferralBonus(data.referral_bonus || 90);
-        setRegistrationBonus(data.registration_bonus || 100);
+      if (data?.setting_value) {
+        try {
+          const bonusConfig = JSON.parse(data.setting_value as string);
+          setReferralBonus(bonusConfig.referral_bonus || 90);
+          setRegistrationBonus(bonusConfig.registration_bonus || 100);
+        } catch (parseError) {
+          console.error('Error parsing bonus settings:', parseError);
+        }
       }
     } catch (error) {
       console.error('Error in loadBonusSettings:', error);
@@ -57,21 +63,21 @@ const BonusManagement = () => {
         console.error('Error loading referral stats:', referralError);
       }
 
-      // Get bonus history stats
-      const { data: bonusHistory, error: bonusError } = await supabase
-        .from('bonus_history')
-        .select('bonus_type, bonus_amount');
+      // Get all user profiles to count registrations (simplified approach)
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, created_at');
 
-      if (bonusError) {
-        console.error('Error loading bonus history:', bonusError);
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
       }
 
       const totalReferrals = referrals?.length || 0;
       const totalReferralPaid = referrals?.reduce((sum, ref) => sum + (ref.is_paid ? ref.bonus_amount : 0), 0) || 0;
 
-      const registrationBonuses = bonusHistory?.filter(bonus => bonus.bonus_type === 'registration') || [];
-      const totalRegistrations = registrationBonuses.length;
-      const totalRegistrationPaid = registrationBonuses.reduce((sum, bonus) => sum + bonus.bonus_amount, 0);
+      // Estimate registration bonuses based on user count
+      const totalRegistrations = profiles?.length || 0;
+      const totalRegistrationPaid = totalRegistrations * registrationBonus;
 
       setStats({
         totalReferrals,
@@ -87,15 +93,21 @@ const BonusManagement = () => {
   const saveBonusSettings = async () => {
     setIsLoading(true);
     try {
+      const bonusConfig = {
+        referral_bonus: referralBonus,
+        registration_bonus: registrationBonus,
+        updated_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
-        .from('bonus_settings')
+        .from('betting_system_settings')
         .upsert({
-          id: 1,
-          referral_bonus: referralBonus,
-          registration_bonus: registrationBonus,
+          setting_key: 'bonus_config',
+          setting_value: JSON.stringify(bonusConfig),
+          setting_type: 'json',
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'id'
+          onConflict: 'setting_key'
         });
 
       if (error) {
