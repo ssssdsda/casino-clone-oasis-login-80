@@ -23,7 +23,7 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
     email: '',
     password: '',
   });
-  const { login } = useAuth();
+  const { loginWithEmail } = useAuth();
   const { t } = useLanguage();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,8 +102,8 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
         console.log('No referral code found');
       }
 
-      // Login the user
-      await login(formData.email, formData.password);
+      // Login the user using the correct method name
+      await loginWithEmail(formData.email, formData.password);
       
       toast.success('Registration successful! Welcome bonus added to your account.');
       setIsOpen(false);
