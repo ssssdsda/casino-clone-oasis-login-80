@@ -73,33 +73,16 @@ export const getUserByReferralCode = async (referralCode: string) => {
   }
 };
 
-// Get bonus settings from betting_system_settings table
+// Get bonus settings from localStorage
 export const getBonusSettings = async () => {
   try {
-    const { data, error } = await supabase
-      .from('betting_system_settings')
-      .select('*')
-      .eq('setting_key', 'bonus_config')
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error getting bonus settings:', error);
+    const savedSettings = localStorage.getItem('bonusSettings');
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings);
       return {
-        referral_bonus: 90,
-        registration_bonus: 100
+        referral_bonus: settings.referral_bonus || 90,
+        registration_bonus: settings.registration_bonus || 100
       };
-    }
-
-    if (data?.setting_value) {
-      try {
-        const bonusConfig = JSON.parse(data.setting_value as string);
-        return {
-          referral_bonus: bonusConfig.referral_bonus || 90,
-          registration_bonus: bonusConfig.registration_bonus || 100
-        };
-      } catch (parseError) {
-        console.error('Error parsing bonus settings:', parseError);
-      }
     }
 
     return {

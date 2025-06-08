@@ -27,28 +27,15 @@ const BonusManagement = () => {
 
   const loadBonusSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('betting_system_settings')
-        .select('*')
-        .eq('setting_key', 'bonus_config')
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading bonus settings:', error);
-        return;
-      }
-
-      if (data?.setting_value) {
-        try {
-          const bonusConfig = JSON.parse(data.setting_value as string);
-          setReferralBonus(bonusConfig.referral_bonus || 90);
-          setRegistrationBonus(bonusConfig.registration_bonus || 100);
-        } catch (parseError) {
-          console.error('Error parsing bonus settings:', parseError);
-        }
+      // Load from localStorage for now since we don't have a proper settings table
+      const savedSettings = localStorage.getItem('bonusSettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        setReferralBonus(settings.referral_bonus || 90);
+        setRegistrationBonus(settings.registration_bonus || 100);
       }
     } catch (error) {
-      console.error('Error in loadBonusSettings:', error);
+      console.error('Error loading bonus settings:', error);
     }
   };
 
@@ -63,7 +50,7 @@ const BonusManagement = () => {
         console.error('Error loading referral stats:', referralError);
       }
 
-      // Get all user profiles to count registrations (simplified approach)
+      // Get all user profiles to count registrations
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, created_at');
@@ -99,20 +86,8 @@ const BonusManagement = () => {
         updated_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
-        .from('betting_system_settings')
-        .upsert({
-          setting_key: 'bonus_config',
-          setting_value: JSON.stringify(bonusConfig),
-          setting_type: 'json',
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
-
-      if (error) {
-        throw error;
-      }
+      // Save to localStorage for now
+      localStorage.setItem('bonusSettings', JSON.stringify(bonusConfig));
 
       toast({
         title: "Settings Saved",
