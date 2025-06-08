@@ -14,22 +14,22 @@ const banners = [
   {
     id: 1,
     title: "Promo Banner 1",
-    image: "/lovable-uploads/a023c13d-3432-4f56-abd9-5bcdbbd30602.png",
+    image: "/lovable-uploads/a1c08101-4964-4060-9c92-da874d8f1545.png",
   },
   {
     id: 2,
     title: "Promo Banner 2",
-    image: "/lovable-uploads/7e03f44f-1482-4424-8f8c-40ab158dba36.png",
+    image: "/lovable-uploads/775928d2-6812-404d-9ebb-2e620311cef9.png",
   },
   {
     id: 3,
     title: "Promo Banner 3",
-    image: "/lovable-uploads/6fc263a6-a7b2-4cf2-afe5-9fb0b99fdd91.png",
+    image: "/lovable-uploads/092a4562-a61a-488e-b918-abdb6f27bc24.png",
   },
   {
     id: 4,
     title: "Promo Banner 4",
-    image: "/lovable-uploads/d10fd039-e61a-4e50-8145-a1efe284ada2.png",
+    image: "/lovable-uploads/75130282-ef0e-4d13-8a32-3048c60bc45f.png",
   }
 ];
 
@@ -133,6 +133,24 @@ const ImagesChanger = () => {
       const itemId = selectedBanner !== null ? selectedBanner.toString() : selectedCategory!;
 
       console.log('Updating image:', { imageKey, imageType, itemId, newImageUrl });
+
+      // Check if the table exists and create it if it doesn't
+      const { data: tableExists, error: tableError } = await supabase
+        .from('image_configs')
+        .select('id')
+        .limit(1);
+
+      if (tableError && tableError.code === '42P01') {
+        // Table doesn't exist, create it
+        console.log('Creating image_configs table...');
+        // We can't create tables from the client, so we'll inform the user
+        toast({
+          variant: "destructive",
+          title: "Database Setup Required",
+          description: "The image_configs table needs to be created in your Supabase database. Please contact an administrator.",
+        });
+        return;
+      }
 
       const { data, error } = await supabase
         .from('image_configs')

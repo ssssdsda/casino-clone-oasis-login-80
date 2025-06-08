@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,9 +10,9 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
-import { doc, getDoc, collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
-import { generateUniqueReferralCode } from '@/lib/firebase';
 import { useNavigate } from 'react-router-dom';
+import { generateReferralCode, getReferralStats, generateReferralLink } from '@/utils/referralSystem';
+import { supabase } from '@/integrations/supabase/client';
 
 const ReferralProgram = () => {
   const { user } = useAuth();
@@ -25,7 +26,6 @@ const ReferralProgram = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const isMobile = useIsMobile();
   const { t } = useLanguage();
-  const db = getFirestore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,19 +33,27 @@ const ReferralProgram = () => {
       if (user && user.id) {
         try {
           // First get user details to check if they have a referral code
-          const userRef = doc(db, "users", user.id);
-          const userDoc = await getDoc(userRef);
+          const { data: userProfile, error } = await supabase
+            .from('profiles')
+            .select('referral_code')
+            .eq('id', user.id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching user profile:', error);
+            return;
+          }
           
           let code = '';
-          if (userDoc.exists() && userDoc.data().referralCode) {
+          if (userProfile && userProfile.referral_code) {
             // User already has a referral code
-            code = userDoc.data().referralCode;
+            code = userProfile.referral_code;
             setReferralCode(code);
           } else {
             // Generate a new referral code for the user
             setIsGenerating(true);
             try {
-              code = await generateUniqueReferralCode(user.id);
+              code = await generateReferralCode(user.id);
               setReferralCode(code);
             } catch (error) {
               console.error("Error generating referral code:", error);
@@ -56,14 +64,13 @@ const ReferralProgram = () => {
           
           // Generate the full referral link
           if (code) {
-            const baseUrl = window.location.origin;
-            // Use the register route with the ref parameter
-            const fullReferralLink = `${baseUrl}/register?ref=${code}`;
+            const fullReferralLink = generateReferralLink(code);
             setReferralLink(fullReferralLink);
           }
           
           // Fetch referral stats
-          fetchReferralStats(user.id);
+          const stats = await getReferralStats(user.id);
+          setReferralStats(stats);
         } catch (error) {
           console.error("Error setting up referral system:", error);
         }
@@ -71,48 +78,7 @@ const ReferralProgram = () => {
     };
     
     setupReferralSystem();
-  }, [user, db]);
-
-  const fetchReferralStats = async (userId: string) => {
-    try {
-      // Get referrals where this user is the referrer
-      const referralsRef = collection(db, "referrals");
-      const q = query(referralsRef, where("referrer", "==", userId));
-      const querySnapshot = await getDocs(q);
-      
-      // Calculate stats
-      let totalRefs = 0;
-      let totalEarned = 0;
-      
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        totalRefs++;
-        if (data.bonusPaid) {
-          totalEarned += data.bonusAmount || 119;
-        }
-      });
-      
-      // Get pending referrals (users referred but haven't had bonus processed yet)
-      const pendingQuery = query(referralsRef, 
-                                where("referrer", "==", userId), 
-                                where("bonusPaid", "==", false));
-      const pendingSnapshot = await getDocs(pendingQuery);
-      
-      setReferralStats({
-        totalReferrals: totalRefs,
-        pendingRewards: pendingSnapshot.size,
-        totalEarned: totalEarned
-      });
-    } catch (error) {
-      console.error("Error fetching referral stats:", error);
-      // Fallback to zeros if there's an error
-      setReferralStats({
-        totalReferrals: 0,
-        pendingRewards: 0,
-        totalEarned: 0,
-      });
-    }
-  };
+  }, [user]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink).then(() => {
@@ -181,7 +147,7 @@ const ReferralProgram = () => {
                 <span>Refer & Earn</span>
               </CardTitle>
               <CardDescription className="text-white">
-                Share your link and earn ৳119 for each friend who registers and deposits!
+                Share your link and earn PKR 90 for each friend who registers and deposits!
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -267,7 +233,7 @@ const ReferralProgram = () => {
                       
                       <Card className="bg-green-900/20 border-green-800">
                         <CardContent className="p-4 flex flex-col items-center justify-center">
-                          <div className="text-2xl font-bold text-white">৳{referralStats.totalEarned}</div>
+                          <div className="text-2xl font-bold text-white">PKR {referralStats.totalEarned}</div>
                           <div className="text-sm text-gray-300">Total Earned</div>
                         </CardContent>
                       </Card>
@@ -304,7 +270,7 @@ const ReferralProgram = () => {
                 <div className="bg-green-700 rounded-full h-8 w-8 flex items-center justify-center shrink-0">
                   <span className="text-white font-bold">3</span>
                 </div>
-                <p className="text-gray-300">When they make their first deposit, you earn ৳119!</p>
+                <p className="text-gray-300">When they make their first deposit, you earn PKR 90!</p>
               </div>
             </CardContent>
           </Card>

@@ -15,7 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, User, Lock, Gift, Percent } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { getUserByReferralCode } from '@/lib/firebase';
+import { getUserByReferralCode, processReferralBonus } from '@/utils/referralSystem';
 
 export function RegisterButton(props: any) {
   const [open, setOpen] = useState(false);
@@ -98,8 +98,29 @@ export function RegisterButton(props: any) {
       console.log("Registering with email and referral code:", email, referralCode);
       
       // Register with email
-      const success = await registerWithEmail(email, username, password, referralCode);
+      const success = await registerWithEmail(email, username, password);
       if (success) {
+        // Process referral bonus if referral code exists
+        if (referralCode && referrerFound) {
+          try {
+            // Get the newly created user ID from auth context
+            // We'll need to wait a moment for the user to be available in context
+            setTimeout(async () => {
+              const user = JSON.parse(localStorage.getItem('user') || '{}');
+              if (user.id) {
+                await processReferralBonus(referralCode, user.id);
+                toast({
+                  title: "Referral Bonus!",
+                  description: "Your referrer has received 90 PKR bonus!",
+                  className: "bg-green-600 text-white"
+                });
+              }
+            }, 2000);
+          } catch (error) {
+            console.error("Error processing referral bonus:", error);
+          }
+        }
+        
         // Clear referral code from localStorage after successful use
         if (referralCode) {
           localStorage.removeItem('referralCode');
@@ -146,7 +167,7 @@ export function RegisterButton(props: any) {
               <Gift className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-yellow-300 font-medium text-sm">Register for bonus!</p>
-                <p className="text-white text-xs">Deposit and get 100% deposit bonus. Minimum withdrawal amount is ৳200. Low turnover requirements!</p>
+                <p className="text-white text-xs">Deposit and get 100% deposit bonus. Minimum withdrawal amount is PKR 200. Low turnover requirements!</p>
               </div>
             </div>
           </div>
@@ -159,7 +180,7 @@ export function RegisterButton(props: any) {
                   <p className="text-green-300 font-medium text-sm">{referrerFound ? "Valid Referral Code!" : "Referral Code Applied"}</p>
                   <p className="text-white text-xs">
                     {referrerFound 
-                      ? "You were referred by a friend! Complete registration to activate your ৳119 referral bonus."
+                      ? "You were referred by a friend! Complete registration to activate your referrer's 90 PKR bonus."
                       : "Referral code applied. Complete registration to continue."}
                   </p>
                 </div>

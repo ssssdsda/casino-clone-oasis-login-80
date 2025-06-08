@@ -17,8 +17,8 @@ const Header = () => {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
   
-  // Use ৳ symbol for currency display
-  const currencySymbol = '৳';
+  // Use PKR symbol for currency display
+  const currencySymbol = 'PKR';
   
   // Format balance to remove decimal part
   const formatBalance = (balance: number | undefined) => {
@@ -84,7 +84,7 @@ const Header = () => {
                             <User className="h-4 w-4 text-casino-accent mr-2" />
                             <span className="font-medium text-white">{user?.username}</span>
                           </div>
-                          <span className="text-casino-accent font-bold">{currencySymbol}{formattedBalance}</span>
+                          <span className="text-casino-accent font-bold">{currencySymbol} {formattedBalance}</span>
                         </div>
                         
                         <Button 
@@ -114,7 +114,7 @@ const Header = () => {
             {isAuthenticated && (
               <div className="bg-casino-dark rounded-lg px-2 py-1 flex items-center">
                 <span className="text-xs font-medium mr-1 text-white">{user?.username}</span>
-                <span className="text-casino-accent text-xs font-bold">{currencySymbol}{formattedBalance}</span>
+                <span className="text-casino-accent text-xs font-bold">{currencySymbol} {formattedBalance}</span>
               </div>
             )}
           </div>
@@ -179,7 +179,7 @@ const Header = () => {
                 <div className="bg-casino-dark rounded-full px-2 py-1 flex items-center">
                   <User className="h-3 w-3 text-casino-accent mr-1" />
                   <span className="text-xs font-medium mr-1 text-white">{user?.username}</span>
-                  <span className="text-casino-accent text-xs font-bold">{currencySymbol}{formattedBalance}</span>
+                  <span className="text-casino-accent text-xs font-bold">{currencySymbol} {formattedBalance}</span>
                 </div>
                 <Button 
                   variant="ghost" 

@@ -6,15 +6,28 @@ import GameCategories from '@/components/GameCategories';
 import { WelcomePopup } from '@/components/WelcomePopup';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/context/LanguageContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import GameSection from '@/components/GameSection';
 
 const Index = () => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Handle referral codes from URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const refCode = urlParams.get('ref');
+    
+    if (refCode) {
+      // Store referral code in localStorage
+      localStorage.setItem('referralCode', refCode);
+      console.log(`Referral code stored from URL: ${refCode}`);
+    }
+  }, [location.search]);
   
   useEffect(() => {
     const timer = setTimeout(() => {
