@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, User, Lock, Gift, Percent } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { getUserByReferralCode, processReferralBonus } from '@/utils/referralSystem';
+import { getUserByReferralCode, processReferralBonus, awardRegistrationBonus } from '@/utils/referralSystem';
 
 export function RegisterButton(props: any) {
   const [open, setOpen] = useState(false);
@@ -29,7 +28,7 @@ export function RegisterButton(props: any) {
   const [referralCode, setReferralCode] = useState('');
   const [referrerFound, setReferrerFound] = useState(false);
   
-  const { registerWithEmail, isLoading } = useAuth();
+  const { registerWithEmail, isLoading, user } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
 
@@ -100,26 +99,38 @@ export function RegisterButton(props: any) {
       // Register with email
       const success = await registerWithEmail(email, username, password);
       if (success) {
-        // Process referral bonus if referral code exists
-        if (referralCode && referrerFound) {
+        
+        // Wait for user to be available and process bonuses
+        setTimeout(async () => {
           try {
-            // Get the newly created user ID from auth context
-            // We'll need to wait a moment for the user to be available in context
-            setTimeout(async () => {
-              const user = JSON.parse(localStorage.getItem('user') || '{}');
-              if (user.id) {
-                await processReferralBonus(referralCode, user.id);
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            if (currentUser.id) {
+              // Award registration bonus first
+              const registrationBonus = await awardRegistrationBonus(currentUser.id);
+              if (registrationBonus) {
                 toast({
-                  title: "Referral Bonus!",
-                  description: "Your referrer has received 90 PKR bonus!",
+                  title: "Welcome Bonus!",
+                  description: "You received 100 PKR registration bonus!",
                   className: "bg-green-600 text-white"
                 });
               }
-            }, 2000);
+
+              // Process referral bonus if referral code exists
+              if (referralCode && referrerFound) {
+                const referralBonus = await processReferralBonus(referralCode, currentUser.id);
+                if (referralBonus) {
+                  toast({
+                    title: "Referral Bonus!",
+                    description: "Your referrer has received 90 PKR bonus!",
+                    className: "bg-blue-600 text-white"
+                  });
+                }
+              }
+            }
           } catch (error) {
-            console.error("Error processing referral bonus:", error);
+            console.error("Error processing bonuses:", error);
           }
-        }
+        }, 3000);
         
         // Clear referral code from localStorage after successful use
         if (referralCode) {
@@ -167,7 +178,7 @@ export function RegisterButton(props: any) {
               <Gift className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-yellow-300 font-medium text-sm">Register for bonus!</p>
-                <p className="text-white text-xs">Deposit and get 100% deposit bonus. Minimum withdrawal amount is PKR 200. Low turnover requirements!</p>
+                <p className="text-white text-xs">Get 100 PKR registration bonus + deposit bonus. Minimum withdrawal amount is PKR 200.</p>
               </div>
             </div>
           </div>

@@ -73,6 +73,101 @@ export const getUserByReferralCode = async (referralCode: string) => {
   }
 };
 
+// Get bonus settings from database
+export const getBonusSettings = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('bonus_settings')
+      .select('*')
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error getting bonus settings:', error);
+      return {
+        referral_bonus: 90,
+        registration_bonus: 100
+      };
+    }
+
+    return data || {
+      referral_bonus: 90,
+      registration_bonus: 100
+    };
+  } catch (error) {
+    console.error('Error in getBonusSettings:', error);
+    return {
+      referral_bonus: 90,
+      registration_bonus: 100
+    };
+  }
+};
+
+// Award registration bonus
+export const awardRegistrationBonus = async (userId: string): Promise<boolean> => {
+  try {
+    const bonusSettings = await getBonusSettings();
+    const registrationBonus = bonusSettings.registration_bonus || 100;
+
+    // Check if user already received registration bonus
+    const { data: existingBonus } = await supabase
+      .from('bonus_history')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('bonus_type', 'registration')
+      .single();
+
+    if (existingBonus) {
+      console.log('User already received registration bonus');
+      return false;
+    }
+
+    // Get current user balance
+    const { data: userProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching user balance:', fetchError);
+      return false;
+    }
+
+    const newBalance = (userProfile.balance || 0) + registrationBonus;
+
+    // Update user balance
+    const { error: balanceError } = await supabase
+      .from('profiles')
+      .update({ balance: newBalance })
+      .eq('id', userId);
+
+    if (balanceError) {
+      console.error('Error updating user balance:', balanceError);
+      return false;
+    }
+
+    // Record bonus history
+    const { error: historyError } = await supabase
+      .from('bonus_history')
+      .insert({
+        user_id: userId,
+        bonus_type: 'registration',
+        bonus_amount: registrationBonus,
+        description: 'Registration bonus'
+      });
+
+    if (historyError) {
+      console.error('Error recording bonus history:', historyError);
+    }
+
+    console.log(`Awarded registration bonus: ${registrationBonus} PKR to user ${userId}`);
+    return true;
+  } catch (error) {
+    console.error('Error awarding registration bonus:', error);
+    return false;
+  }
+};
+
 // Process referral bonus
 export const processReferralBonus = async (referrerCode: string, newUserId: string): Promise<boolean> => {
   try {
@@ -95,13 +190,17 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
       return false;
     }
 
+    // Get bonus settings
+    const bonusSettings = await getBonusSettings();
+    const referralBonus = bonusSettings.referral_bonus || 90;
+
     // Create referral record
     const { error: referralError } = await supabase
       .from('referrals')
       .insert({
         referrer_id: referrer.id,
         referred_id: newUserId,
-        bonus_amount: 90,
+        bonus_amount: referralBonus,
         is_paid: true
       });
 
@@ -122,7 +221,7 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
       throw fetchError;
     }
 
-    const newBalance = (referrerProfile.balance || 0) + 90;
+    const newBalance = (referrerProfile.balance || 0) + referralBonus;
 
     const { error: balanceError } = await supabase
       .from('profiles')
@@ -134,7 +233,21 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
       throw balanceError;
     }
 
-    console.log(`Processed referral bonus: ${referrer.username} received 90 PKR for referring user ${newUserId}`);
+    // Record bonus history
+    const { error: historyError } = await supabase
+      .from('bonus_history')
+      .insert({
+        user_id: referrer.id,
+        bonus_type: 'referral',
+        bonus_amount: referralBonus,
+        description: `Referral bonus for user ${newUserId}`
+      });
+
+    if (historyError) {
+      console.error('Error recording referral bonus history:', historyError);
+    }
+
+    console.log(`Processed referral bonus: ${referrer.username} received ${referralBonus} PKR for referring user ${newUserId}`);
     return true;
   } catch (error) {
     console.error('Error processing referral bonus:', error);

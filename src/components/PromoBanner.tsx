@@ -9,8 +9,9 @@ import {
   CarouselNext,
   CarouselPrevious
 } from "@/components/ui/carousel";
+import { supabase } from '@/integrations/supabase/client';
 
-const banners = [
+const defaultBanners = [
   {
     id: 1,
     image: "/lovable-uploads/a1c08101-4964-4060-9c92-da874d8f1545.png",
@@ -36,7 +37,38 @@ const banners = [
 const PromoBanner = () => {
   const [api, setApi] = React.useState<any>();
   const [current, setCurrent] = React.useState(0);
+  const [banners, setBanners] = useState(defaultBanners);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load dynamic images from database
+  useEffect(() => {
+    const loadDynamicImages = async () => {
+      try {
+        const { data: imageConfigs, error } = await supabase
+          .from('image_configs')
+          .select('*')
+          .eq('image_type', 'banner');
+
+        if (error) {
+          console.log('No custom banner images found, using defaults');
+          return;
+        }
+
+        if (imageConfigs && imageConfigs.length > 0) {
+          const updatedBanners = defaultBanners.map(banner => {
+            const config = imageConfigs.find(config => config.item_id === banner.id.toString());
+            return config ? { ...banner, image: config.image_url } : banner;
+          });
+          setBanners(updatedBanners);
+          console.log('Updated banners with custom images:', updatedBanners);
+        }
+      } catch (error) {
+        console.error('Error loading dynamic images:', error);
+      }
+    };
+
+    loadDynamicImages();
+  }, []);
 
   // Auto scroll effect
   useEffect(() => {
@@ -78,6 +110,13 @@ const PromoBanner = () => {
                   src={banner.image} 
                   alt={banner.alt} 
                   className="w-full h-full object-cover object-center transition-all hover:scale-105 duration-500"
+                  onError={(e) => {
+                    console.log('Banner image failed to load, using default');
+                    const defaultBanner = defaultBanners.find(b => b.id === banner.id);
+                    if (defaultBanner) {
+                      e.currentTarget.src = defaultBanner.image;
+                    }
+                  }}
                 />
               </div>
             </CarouselItem>
