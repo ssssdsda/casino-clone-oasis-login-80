@@ -23,7 +23,7 @@ interface WithdrawalHistory {
 }
 
 const Withdrawal = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUserBalance } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -104,7 +104,7 @@ const Withdrawal = () => {
 
     setIsProcessing(true);
     try {
-      // Submit withdrawal without account holder name
+      // Submit withdrawal first
       const { data, error } = await supabase
         .from('withdrawals')
         .insert({
@@ -123,16 +123,25 @@ const Withdrawal = () => {
         throw error;
       }
 
-      // Update user balance using RPC function for atomicity
-      const { error: balanceError } = await (supabase.rpc as any)('update_user_balance', {
-        user_id: user.id,
-        amount: -withdrawalAmount
-      });
+      // Update user balance directly using the SQL UPDATE
+      const newBalance = user.balance - withdrawalAmount;
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', user.id);
 
       if (balanceError) {
         console.error('Balance update error:', balanceError);
+        // Try to delete the withdrawal record if balance update fails
+        await supabase
+          .from('withdrawals')
+          .delete()
+          .eq('id', data.id);
         throw balanceError;
       }
+
+      // Update local state
+      await updateUserBalance(newBalance);
 
       toast({
         title: "Success",

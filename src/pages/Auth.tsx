@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
-import { Mail, User, Lock, Gift } from 'lucide-react';
+import { Smartphone, User, Lock, Gift } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 const Auth = () => {
-  const { isAuthenticated, loginWithEmail, registerWithEmail, isLoading } = useAuth();
+  const { isAuthenticated, loginWithPhone, registerWithPhone, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -21,11 +21,11 @@ const Auth = () => {
   const [activeTab, setActiveTab] = useState('login');
   
   // Login state
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
   // Register state
-  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPhone, setRegisterPhone] = useState('');
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
@@ -54,10 +54,10 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!loginEmail || !loginEmail.includes('@')) {
+    if (!loginPhone) {
       toast({
         title: "Error",
-        description: "Please enter a valid email address",
+        description: "Please enter your phone number",
         variant: "destructive"
       });
       return;
@@ -72,7 +72,7 @@ const Auth = () => {
       return;
     }
     
-    const success = await loginWithEmail(loginEmail, loginPassword);
+    const success = await loginWithPhone(loginPhone, loginPassword);
     if (success) {
       navigate('/');
     }
@@ -81,19 +81,10 @@ const Auth = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!registerUsername || !registerEmail || !registerPassword) {
+    if (!registerUsername || !registerPhone || !registerPassword) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!registerEmail.includes('@')) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid email address",
         variant: "destructive"
       });
       return;
@@ -108,8 +99,8 @@ const Auth = () => {
       return;
     }
     
-    const success = await registerWithEmail(
-      registerEmail, 
+    const success = await registerWithPhone(
+      registerPhone, 
       registerUsername, 
       registerPassword, 
       referralCode || undefined
@@ -149,16 +140,16 @@ const Auth = () => {
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email" className="text-white flex items-center gap-2">
-                      <Mail className="h-4 w-4" /> Email Address
+                    <Label htmlFor="login-phone" className="text-white flex items-center gap-2">
+                      <Smartphone className="h-4 w-4" /> Phone Number
                     </Label>
                     <Input
-                      id="login-email"
-                      type="email"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
+                      id="login-phone"
+                      type="tel"
+                      value={loginPhone}
+                      onChange={(e) => setLoginPhone(e.target.value)}
                       className="bg-casino-dark border-gray-700 text-white"
-                      placeholder="your@email.com"
+                      placeholder="Enter your phone number"
                     />
                   </div>
                   
@@ -194,7 +185,7 @@ const Auth = () => {
                       <div>
                         <p className="text-green-300 font-medium text-sm">Referral Code Applied!</p>
                         <p className="text-white text-xs">
-                          Complete registration to get your ৳119 referral bonus.
+                          Complete registration to get your ৳100 registration bonus + ৳90 referral bonus for your referrer.
                         </p>
                       </div>
                     </div>
@@ -216,16 +207,16 @@ const Auth = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="register-email" className="text-white flex items-center gap-2">
-                      <Mail className="h-4 w-4" /> Email Address
+                    <Label htmlFor="register-phone" className="text-white flex items-center gap-2">
+                      <Smartphone className="h-4 w-4" /> Phone Number
                     </Label>
                     <Input
-                      id="register-email"
-                      type="email"
-                      value={registerEmail}
-                      onChange={(e) => setRegisterEmail(e.target.value)}
+                      id="register-phone"
+                      type="tel"
+                      value={registerPhone}
+                      onChange={(e) => setRegisterPhone(e.target.value)}
                       className="bg-casino-dark border-gray-700 text-white"
-                      placeholder="your@email.com"
+                      placeholder="Enter your phone number"
                     />
                   </div>
                   

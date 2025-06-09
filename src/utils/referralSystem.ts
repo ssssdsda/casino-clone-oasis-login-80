@@ -76,9 +76,7 @@ export const getUserByReferralCode = async (referralCode: string) => {
 // Get bonus settings - using fallback values since bonus_settings table doesn't exist
 export const getBonusSettings = async () => {
   try {
-    // Since bonus_settings table doesn't exist in the current schema,
-    // we'll return default values and potentially store them in profiles or a config table later
-    console.log('Using default bonus settings - bonus_settings table not found in schema');
+    console.log('Using default bonus settings');
     
     return {
       referral_bonus: 90,
@@ -93,7 +91,7 @@ export const getBonusSettings = async () => {
   }
 };
 
-// Award registration bonus using Supabase RPC function - UPDATED to add to main balance
+// Award registration bonus directly to main balance
 export const awardRegistrationBonus = async (userId: string): Promise<boolean> => {
   try {
     const bonusSettings = await getBonusSettings();
@@ -101,11 +99,13 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
 
     console.log(`Awarding registration bonus: ${registrationBonus} PKR to user ${userId} - ADDING TO MAIN BALANCE`);
 
-    // Use Supabase RPC function for atomic balance update - this adds to main balance
-    const { data, error } = await (supabase.rpc as any)('update_user_balance', {
-      user_id: userId,
-      amount: registrationBonus
-    });
+    // Update balance directly using SQL UPDATE
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        balance: supabase.raw(`balance + ${registrationBonus}`)
+      })
+      .eq('id', userId);
 
     if (error) {
       console.error('Error awarding registration bonus:', error);
@@ -153,10 +153,12 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
     console.log(`Referral bonus amount: ${referralBonus} PKR - ADDING TO MAIN BALANCE IMMEDIATELY`);
 
     // Award referral bonus immediately to main balance upon registration
-    const { data, error } = await (supabase.rpc as any)('update_user_balance', {
-      user_id: referrer.id,
-      amount: referralBonus
-    });
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        balance: supabase.raw(`balance + ${referralBonus}`)
+      })
+      .eq('id', referrer.id);
 
     if (error) {
       console.error('Error updating referrer main balance:', error);

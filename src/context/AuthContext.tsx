@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 interface AuthUser {
   id: string;
   username: string;
-  email?: string;
+  phone?: string;
   balance: number;
   role: string;
   referralCode?: string;
@@ -18,8 +19,8 @@ interface AuthContextType {
   session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  loginWithEmail: (email: string, password: string) => Promise<boolean>;
-  registerWithEmail: (email: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
+  loginWithPhone: (phone: string, password: string) => Promise<boolean>;
+  registerWithPhone: (phone: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUserBalance: (newBalance: number) => Promise<void>;
 }
@@ -56,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         id: data.id,
         username: data.username,
-        email: data.email || undefined,
+        phone: data.phone || undefined,
         balance: parseFloat((data.balance || 0).toString()),
         role: data.role,
         referralCode: data.referral_code,
@@ -152,12 +153,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const loginWithEmail = async (email: string, password: string): Promise<boolean> => {
+  const loginWithPhone = async (phone: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       
+      // First, find user by phone number
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, id')
+        .eq('phone', phone)
+        .single();
+
+      if (profileError || !userProfile) {
+        console.error('User not found with phone number:', phone);
+        toast({
+          title: "Login Failed",
+          description: "User not found with this phone number",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      // Use the email associated with the phone number to sign in
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: userProfile.email,
         password
       });
 
@@ -165,7 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Login error:', error);
         toast({
           title: "Login Failed",
-          description: error.message,
+          description: "Invalid phone number or password",
           variant: "destructive"
         });
         return false;
@@ -194,8 +213,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const registerWithEmail = async (
-    email: string, 
+  const registerWithPhone = async (
+    phone: string, 
     username: string, 
     password: string, 
     referralCode?: string
@@ -218,6 +237,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      // Check if phone number already exists
+      const { data: existingPhone } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('phone', phone);
+
+      if (existingPhone && existingPhone.length > 0) {
+        toast({
+          title: "Error",
+          description: "Phone number already registered",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      // Create a temporary email using phone number for Supabase auth
+      const tempEmail = `${phone}@temp.local`;
+
       // Find referrer if referral code provided
       let referrerId = null;
       if (referralCode) {
@@ -233,12 +270,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: tempEmail,
         password,
         options: {
           data: {
             username,
-            email,
+            phone,
             referred_by: referrerId
           }
         }
@@ -260,8 +297,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('profiles')
           .update({
             username,
-            email,
-            referred_by: referrerId
+            phone,
+            email: tempEmail,
+            referred_by: referrerId,
+            balance: 100 // Give 100 PKR registration bonus directly in balance
           })
           .eq('id', data.user.id);
 
@@ -269,19 +308,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Profile update error:', updateError);
         }
 
-        // Create referral relationship if applicable
+        // Process referral bonus if applicable
         if (referrerId && data.user.id !== referrerId) {
-          await supabase
-            .from('referrals')
-            .insert({
-              referrer_id: referrerId,
-              referred_id: data.user.id
-            });
+          try {
+            // Award referral bonus to the referrer immediately
+            const { error: referralBonusError } = await supabase
+              .from('profiles')
+              .update({
+                balance: supabase.raw('balance + 90') // Add 90 PKR referral bonus
+              })
+              .eq('id', referrerId);
+
+            if (!referralBonusError) {
+              // Create referral record
+              await supabase
+                .from('referrals')
+                .insert({
+                  referrer_id: referrerId,
+                  referred_id: data.user.id,
+                  bonus_amount: 90,
+                  is_paid: true
+                });
+              
+              console.log('Referral bonus awarded successfully');
+            }
+          } catch (referralError) {
+            console.error('Referral processing error:', referralError);
+          }
         }
 
         toast({
           title: "Success",
-          description: "Account created successfully!",
+          description: "Account created successfully with 100 PKR bonus!",
           variant: "default"
         });
         return true;
@@ -326,8 +384,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     isAuthenticated: !!user,
     isLoading,
-    loginWithEmail,
-    registerWithEmail,
+    loginWithPhone,
+    registerWithPhone,
     logout,
     updateUserBalance
   };
