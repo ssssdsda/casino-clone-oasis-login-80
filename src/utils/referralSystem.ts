@@ -73,26 +73,16 @@ export const getUserByReferralCode = async (referralCode: string) => {
   }
 };
 
-// Get bonus settings from Supabase bonus_settings table
+// Get bonus settings - using fallback values since bonus_settings table doesn't exist
 export const getBonusSettings = async () => {
   try {
-    const { data, error } = await supabase
-      .from('bonus_settings')
-      .select('*')
-      .single();
-
-    if (error) {
-      console.error('Error fetching bonus settings from Supabase:', error);
-      // Fallback to default values
-      return {
-        referral_bonus: 90,
-        registration_bonus: 100
-      };
-    }
-
+    // Since bonus_settings table doesn't exist in the current schema,
+    // we'll return default values and potentially store them in profiles or a config table later
+    console.log('Using default bonus settings - bonus_settings table not found in schema');
+    
     return {
-      referral_bonus: data.referral_bonus || 90,
-      registration_bonus: data.registration_bonus || 100
+      referral_bonus: 90,
+      registration_bonus: 100
     };
   } catch (error) {
     console.error('Error in getBonusSettings:', error);
@@ -214,7 +204,7 @@ export const getReferralStats = async (userId: string) => {
     }
 
     const totalReferrals = referrals?.length || 0;
-    const totalEarned = referrals?.reduce((sum, ref) => sum + (ref.is_paid ? ref.bonus_amount : 0), 0) || 0;
+    const totalEarned = referrals?.reduce((sum, ref) => sum + (ref.is_paid ? ref.bonus_amount || 0 : 0), 0) || 0;
     const pendingRewards = referrals?.filter(ref => !ref.is_paid).length || 0;
 
     console.log(`Referral stats for user ${userId}: ${totalReferrals} referrals, ${totalEarned} PKR earned, ${pendingRewards} pending`);
