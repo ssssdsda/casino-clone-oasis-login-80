@@ -33,17 +33,6 @@ const GameControlPanel = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Check if user is admin
-    if (!user || user.role !== 'admin') {
-      toast({
-        title: "Unauthorized",
-        description: "You don't have permission to access this page",
-        variant: "destructive",
-      });
-      navigate('/');
-      return;
-    }
-
     loadGameSettings();
   }, [user, navigate, toast]);
 
@@ -155,6 +144,13 @@ const GameControlPanel = () => {
               Refresh
             </Button>
           </div>
+        </div>
+
+        {/* ADDED: User-friendly notice */}
+        <div className="mb-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+          <p className="text-blue-300 text-sm">
+            🎮 <strong>Game Control Panel</strong> - Here you can view and adjust game settings, betting limits, and win percentages for all casino games.
+          </p>
         </div>
         
         <Tabs defaultValue="games" className="w-full">

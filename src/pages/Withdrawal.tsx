@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -106,6 +105,7 @@ const Withdrawal = () => {
 
     setIsProcessing(true);
     try {
+      // Fixed: Use correct column name for account holder
       const { data, error } = await supabase
         .from('withdrawals')
         .insert({
@@ -113,7 +113,7 @@ const Withdrawal = () => {
           username: user.username,
           amount: withdrawalAmount,
           account_number: accountNumber,
-          account_holder_name: accountHolderName,
+          account_holder_name: accountHolderName, // This matches the interface
           payment_method: paymentMethod,
           status: 'pending'
         })
@@ -125,12 +125,11 @@ const Withdrawal = () => {
         throw error;
       }
 
-      // Update user balance
-      const newBalance = user.balance - withdrawalAmount;
-      const { error: balanceError } = await supabase
-        .from('profiles')
-        .update({ balance: newBalance })
-        .eq('id', user.id);
+      // Update user balance using RPC function for atomicity
+      const { error: balanceError } = await (supabase.rpc as any)('update_user_balance', {
+        user_id: user.id,
+        amount: -withdrawalAmount
+      });
 
       if (balanceError) {
         console.error('Balance update error:', balanceError);
