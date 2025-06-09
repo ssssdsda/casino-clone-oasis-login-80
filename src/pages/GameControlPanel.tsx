@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -56,7 +55,20 @@ const GameControlPanel = () => {
       await initializeDefaultGameSettings();
       
       const settings = await getAllGameSettings();
-      setGameSettings(settings);
+      
+      // Map GameControlSettings to GameSettings interface
+      const mappedSettings: GameSettings[] = settings.map(setting => ({
+        id: setting.id,
+        game_name: setting.game_type,
+        min_bet: setting.min_bet,
+        max_bet: setting.max_bet,
+        win_percentage: Math.round(setting.win_ratio * 100),
+        max_daily_win: setting.max_win,
+        is_enabled: setting.is_enabled,
+        house_edge: Math.round((1 - setting.win_ratio) * 100)
+      }));
+      
+      setGameSettings(mappedSettings);
     } catch (error) {
       console.error('Error loading game settings:', error);
       toast({
@@ -72,7 +84,21 @@ const GameControlPanel = () => {
   const updateGameSetting = async (gameName: string, field: keyof GameSettings, value: any) => {
     try {
       setSaving(true);
-      const success = await updateGameSettings(gameName, { [field]: value });
+      
+      // Map UI field names to database field names
+      let dbField = field;
+      let dbValue = value;
+      
+      if (field === 'game_name') {
+        dbField = 'game_type';
+      } else if (field === 'win_percentage') {
+        dbField = 'win_ratio';
+        dbValue = value / 100; // Convert percentage to ratio
+      } else if (field === 'max_daily_win') {
+        dbField = 'max_win';
+      }
+      
+      const success = await updateGameSettings(gameName, { [dbField]: dbValue });
       
       if (success) {
         // Update local state

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface ReferralData {
@@ -102,7 +101,7 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
     console.log(`Awarding registration bonus: ${registrationBonus} PKR to user ${userId}`);
 
     // Use Supabase RPC function for atomic balance update
-    const { data, error } = await supabase.rpc('update_user_balance', {
+    const { data, error } = await supabase.rpc('update_user_balance' as any, {
       user_id: userId,
       amount: registrationBonus
     });
@@ -153,7 +152,7 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
     console.log(`Referral bonus amount: ${referralBonus} PKR`);
 
     // Use Supabase RPC function for atomic balance update
-    const { data, error } = await supabase.rpc('update_user_balance', {
+    const { data, error } = await supabase.rpc('update_user_balance' as any, {
       user_id: referrer.id,
       amount: referralBonus
     });

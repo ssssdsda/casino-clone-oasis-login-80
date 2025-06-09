@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface GameControlSettings {
@@ -227,7 +226,7 @@ export const processBet = async (
     }
 
     // Deduct bet amount
-    const { error: deductError } = await supabase.rpc('update_user_balance', {
+    const { error: deductError } = await supabase.rpc('update_user_balance' as any, {
       user_id: userId,
       amount: -betAmount
     });
@@ -259,7 +258,7 @@ export const processBet = async (
     // Add winnings to balance if player wins
     let newBalance = currentBalance - betAmount;
     if (playerWins && winAmount > 0) {
-      const { error: winError } = await supabase.rpc('update_user_balance', {
+      const { error: winError } = await supabase.rpc('update_user_balance' as any, {
         user_id: userId,
         amount: winAmount
       });
