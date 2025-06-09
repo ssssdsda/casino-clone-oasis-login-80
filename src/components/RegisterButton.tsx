@@ -88,23 +88,23 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button 
-          className="bg-green-600 hover:bg-green-700 text-white font-bold" 
+          className="bg-green-600 hover:bg-green-700 text-white font-bold w-full sm:w-auto" 
           data-register-button={dataRegisterButton}
         >
           <UserPlus className="w-4 h-4 mr-2" />
           {t('register')}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-casino border border-casino-accent">
+      <DialogContent className="sm:max-w-[425px] w-[95%] max-h-[90vh] overflow-y-auto bg-casino border border-casino-accent">
         <DialogHeader>
-          <DialogTitle className="text-white">{t('register')}</DialogTitle>
-          <DialogDescription className="text-gray-300">
+          <DialogTitle className="text-white text-center">{t('register')}</DialogTitle>
+          <DialogDescription className="text-gray-300 text-center">
             {t('createAccount')}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleRegister} className="space-y-4">
+        <form onSubmit={handleRegister} className="space-y-4 p-2">
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-white">Username</Label>
+            <Label htmlFor="username" className="text-white text-sm font-medium">Username</Label>
             <Input
               id="username"
               name="username"
@@ -112,12 +112,12 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
               value={formData.username}
               onChange={handleInputChange}
               required
-              className="bg-casino-dark border-gray-600 text-white"
+              className="bg-casino-dark border-gray-600 text-white h-12 text-base"
               placeholder="Enter your username"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone" className="text-white flex items-center gap-2">
+            <Label htmlFor="phone" className="text-white flex items-center gap-2 text-sm font-medium">
               <Smartphone className="h-4 w-4" /> Phone Number
             </Label>
             <Input
@@ -127,12 +127,12 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
               value={formData.phone}
               onChange={handleInputChange}
               required
-              className="bg-casino-dark border-gray-600 text-white"
+              className="bg-casino-dark border-gray-600 text-white h-12 text-base"
               placeholder="Enter your phone number"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-white">Password</Label>
+            <Label htmlFor="password" className="text-white text-sm font-medium">Password</Label>
             <Input
               id="password"
               name="password"
@@ -141,11 +141,15 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
               onChange={handleInputChange}
               required
               minLength={6}
-              className="bg-casino-dark border-gray-600 text-white"
+              className="bg-casino-dark border-gray-600 text-white h-12 text-base"
               placeholder="Enter your password (min 6 characters)"
             />
           </div>
-          <Button type="submit" disabled={isLoading} className="w-full bg-casino-accent text-black hover:bg-yellow-400 font-bold">
+          <Button 
+            type="submit" 
+            disabled={isLoading} 
+            className="w-full bg-casino-accent text-black hover:bg-yellow-400 font-bold h-12 text-base mt-6"
+          >
             {isLoading ? 'Creating Account...' : t('register')}
           </Button>
         </form>

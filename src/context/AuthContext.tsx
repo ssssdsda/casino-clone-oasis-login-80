@@ -337,7 +337,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        // Update the profile with additional data
+        // Update the profile with additional data and registration bonus
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -356,26 +356,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Process referral bonus if applicable
         if (referrerId && data.user.id !== referrerId) {
           try {
-            // Award referral bonus to the referrer immediately using direct balance update
-            const { error: referralBonusError } = await supabase
+            // Get current referrer balance
+            const { data: referrerData, error: fetchError } = await supabase
               .from('profiles')
-              .update({ 
-                balance: supabase.raw('balance + 90')
-              })
-              .eq('id', referrerId);
+              .select('balance')
+              .eq('id', referrerId)
+              .single();
 
-            if (!referralBonusError) {
-              // Create referral record
-              await supabase
-                .from('referrals')
-                .insert({
-                  referrer_id: referrerId,
-                  referred_id: data.user.id,
-                  bonus_amount: 90,
-                  is_paid: true
-                });
+            if (!fetchError && referrerData) {
+              const newReferrerBalance = parseFloat(referrerData.balance.toString()) + 90;
               
-              console.log('Referral bonus awarded successfully');
+              // Award referral bonus to the referrer immediately
+              const { error: referralBonusError } = await supabase
+                .from('profiles')
+                .update({ balance: newReferrerBalance })
+                .eq('id', referrerId);
+
+              if (!referralBonusError) {
+                // Create referral record
+                await supabase
+                  .from('referrals')
+                  .insert({
+                    referrer_id: referrerId,
+                    referred_id: data.user.id,
+                    bonus_amount: 90,
+                    is_paid: true
+                  });
+                
+                console.log('Referral bonus awarded successfully');
+              }
             }
           } catch (referralError) {
             console.error('Referral processing error:', referralError);

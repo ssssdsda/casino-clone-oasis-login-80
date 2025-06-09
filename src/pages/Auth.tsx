@@ -11,12 +11,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Smartphone, User, Lock, Gift } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Auth = () => {
   const { isAuthenticated, loginWithPhone, registerWithPhone, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [activeTab, setActiveTab] = useState('login');
   
@@ -122,25 +124,25 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-casino-dark flex flex-col">
       <Header />
-      <div className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-casino border-casino-accent">
-          <CardHeader className="bg-gradient-to-r from-casino-accent to-yellow-500">
-            <CardTitle className="text-casino-dark text-2xl text-center">CK444</CardTitle>
-            <CardDescription className="text-casino-dark text-center">
+      <div className={`flex-1 flex items-center justify-center p-4 ${isMobile ? 'pb-16 pt-4' : ''}`}>
+        <Card className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-md'} bg-casino border-casino-accent`}>
+          <CardHeader className="bg-gradient-to-r from-casino-accent to-yellow-500 p-4">
+            <CardTitle className="text-casino-dark text-xl sm:text-2xl text-center">CK444</CardTitle>
+            <CardDescription className="text-casino-dark text-center text-sm">
               Login or create your account
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
+                <TabsTrigger value="login" className="text-sm">Login</TabsTrigger>
+                <TabsTrigger value="register" className="text-sm">Register</TabsTrigger>
               </TabsList>
               
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-phone" className="text-white flex items-center gap-2">
+                    <Label htmlFor="login-phone" className="text-white flex items-center gap-2 text-sm">
                       <Smartphone className="h-4 w-4" /> Phone Number
                     </Label>
                     <Input
@@ -148,13 +150,13 @@ const Auth = () => {
                       type="tel"
                       value={loginPhone}
                       onChange={(e) => setLoginPhone(e.target.value)}
-                      className="bg-casino-dark border-gray-700 text-white"
+                      className="bg-casino-dark border-gray-700 text-white h-12 text-base"
                       placeholder="Enter your phone number"
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="login-password" className="text-white flex items-center gap-2">
+                    <Label htmlFor="login-password" className="text-white flex items-center gap-2 text-sm">
                       <Lock className="h-4 w-4" /> Password
                     </Label>
                     <Input
@@ -162,14 +164,14 @@ const Auth = () => {
                       type="password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      className="bg-casino-dark border-gray-700 text-white"
+                      className="bg-casino-dark border-gray-700 text-white h-12 text-base"
                       placeholder="********"
                     />
                   </div>
                   
                   <Button
                     type="submit"
-                    className="w-full bg-casino-accent hover:bg-casino-accent-hover text-black font-bold"
+                    className="w-full bg-casino-accent hover:bg-casino-accent-hover text-black font-bold h-12 text-base mt-6"
                     disabled={isLoading}
                   >
                     {isLoading ? 'Logging in...' : 'Login'}
@@ -194,20 +196,20 @@ const Auth = () => {
                 
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="register-username" className="text-white flex items-center gap-2">
+                    <Label htmlFor="register-username" className="text-white flex items-center gap-2 text-sm">
                       <User className="h-4 w-4" /> Username
                     </Label>
                     <Input
                       id="register-username"
                       value={registerUsername}
                       onChange={(e) => setRegisterUsername(e.target.value)}
-                      className="bg-casino-dark border-gray-700 text-white"
+                      className="bg-casino-dark border-gray-700 text-white h-12 text-base"
                       placeholder="Enter your username"
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="register-phone" className="text-white flex items-center gap-2">
+                    <Label htmlFor="register-phone" className="text-white flex items-center gap-2 text-sm">
                       <Smartphone className="h-4 w-4" /> Phone Number
                     </Label>
                     <Input
@@ -215,13 +217,13 @@ const Auth = () => {
                       type="tel"
                       value={registerPhone}
                       onChange={(e) => setRegisterPhone(e.target.value)}
-                      className="bg-casino-dark border-gray-700 text-white"
+                      className="bg-casino-dark border-gray-700 text-white h-12 text-base"
                       placeholder="Enter your phone number"
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="register-password" className="text-white flex items-center gap-2">
+                    <Label htmlFor="register-password" className="text-white flex items-center gap-2 text-sm">
                       <Lock className="h-4 w-4" /> Password
                     </Label>
                     <Input
@@ -229,27 +231,27 @@ const Auth = () => {
                       type="password"
                       value={registerPassword}
                       onChange={(e) => setRegisterPassword(e.target.value)}
-                      className="bg-casino-dark border-gray-700 text-white"
+                      className="bg-casino-dark border-gray-700 text-white h-12 text-base"
                       placeholder="Minimum 6 characters"
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="referral-code" className="text-white flex items-center gap-2">
+                    <Label htmlFor="referral-code" className="text-white flex items-center gap-2 text-sm">
                       <Gift className="h-4 w-4" /> Referral Code (Optional)
                     </Label>
                     <Input
                       id="referral-code"
                       value={referralCode}
                       onChange={(e) => setReferralCode(e.target.value)}
-                      className="bg-casino-dark border-gray-700 text-white"
+                      className="bg-casino-dark border-gray-700 text-white h-12 text-base"
                       placeholder="Enter referral code"
                     />
                   </div>
                   
                   <Button
                     type="submit"
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12 text-base mt-6"
                     disabled={isLoading}
                   >
                     {isLoading ? 'Creating Account...' : 'Register Now'}

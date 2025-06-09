@@ -99,12 +99,25 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
 
     console.log(`Awarding registration bonus: ${registrationBonus} PKR to user ${userId} - ADDING TO MAIN BALANCE`);
 
-    // Update balance using direct SQL update instead of RPC
+    // Get current balance first
+    const { data: userData, error: fetchError } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching user balance:', fetchError);
+      return false;
+    }
+
+    const currentBalance = parseFloat(userData.balance.toString()) || 0;
+    const newBalance = currentBalance + registrationBonus;
+
+    // Update balance
     const { error } = await supabase
       .from('profiles')
-      .update({ 
-        balance: supabase.raw(`balance + ${registrationBonus}`)
-      })
+      .update({ balance: newBalance })
       .eq('id', userId);
 
     if (error) {
@@ -152,12 +165,25 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     console.log(`Referral bonus amount: ${referralBonus} PKR - ADDING TO MAIN BALANCE IMMEDIATELY`);
 
-    // Award referral bonus immediately to main balance upon registration using direct SQL update
+    // Get current referrer balance
+    const { data: referrerData, error: fetchError } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', referrer.id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching referrer balance:', fetchError);
+      return false;
+    }
+
+    const currentBalance = parseFloat(referrerData.balance.toString()) || 0;
+    const newBalance = currentBalance + referralBonus;
+
+    // Award referral bonus immediately to main balance upon registration
     const { error } = await supabase
       .from('profiles')
-      .update({ 
-        balance: supabase.raw(`balance + ${referralBonus}`)
-      })
+      .update({ balance: newBalance })
       .eq('id', referrer.id);
 
     if (error) {
