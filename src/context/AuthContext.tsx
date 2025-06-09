@@ -440,6 +440,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
-
-// Export the registerWithPhone function for components that need to import it directly
-export { registerWithPhone } from './AuthContext';
