@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Home, FileText, Gift, Bell, Menu, Phone, Mail, MessageCircle } from 'lucide-react';
+import { Home, FileText, Gift, Bell, Menu, Mail, MessageCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import ReferralButton from './ReferralButton';
@@ -18,7 +18,7 @@ const Footer = () => {
   };
   
   const openTelegram = () => {
-    window.open('https://t.me/shadow3132', '_blank');
+    window.open('https://t.me/Miki12347', '_blank');
   };
   
   // Support chat button that floats in the bottom right corner
@@ -74,11 +74,7 @@ const Footer = () => {
                 <h3 className="font-bold mb-2">Contact Us</h3>
                 <div className="flex items-center space-x-2 mb-1">
                   <Mail className="h-4 w-4" />
-                  <span>support@ck444.com</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4" />
-                  <span>+855965603197</span>
+                  <span>rabellty96@gmail.com</span>
                 </div>
               </div>
               <div className="text-left">
@@ -105,7 +101,7 @@ const Footer = () => {
                       <path d="M12 17v.01"/>
                       <path d="M3 8l1 3 3 3L8 21l3-1 3-3 3 1"/>
                     </svg>
-                    <span>@shadow3132</span>
+                    <span>@Miki12347</span>
                   </button>
                 </div>
               </div>
@@ -126,17 +122,6 @@ const Footer = () => {
             <div className="mb-2">
               <div className="flex items-center justify-center space-x-4 mb-2">
                 <button 
-                  onClick={openWhatsApp}
-                  className="flex items-center space-x-1 text-green-400"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/>
-                    <path d="M9 10a.5.5 0 0 1 1 0c0 .97 1.08 1.73 2 1.73a.5.5 0 0 1 0 1c-1.48 0-3-1.14-3-2.73z"/>
-                    <path d="M12 16.5c2.28 0 4.5-1.37 4.5-4.74 0-2.48-1.38-4.5-4.5-4.5-2.3 0-4.5 1.38-4.5 4.5 0 3.4 2.24 4.74 4.5 4.74z"/>
-                  </svg>
-                  <span>+855965603197</span>
-                </button>
-                <button 
                   onClick={openTelegram}
                   className="flex items-center space-x-1 text-blue-400"
                 >
@@ -146,12 +131,12 @@ const Footer = () => {
                     <path d="M12 17v.01"/>
                     <path d="M3 8l1 3 3 3L8 21l3-1 3-3 3 1"/>
                   </svg>
-                  <span>@shadow3132</span>
+                  <span>@Miki12347</span>
                 </button>
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <p className="text-xs">support@ck444.com | +855965603197</p>
+              <p className="text-xs">rabellty96@gmail.com</p>
               <p className="text-xs mt-1">&copy; 2025 CK444</p>
             </div>
           </div>

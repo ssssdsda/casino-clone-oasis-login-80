@@ -93,15 +93,15 @@ export const getBonusSettings = async () => {
   }
 };
 
-// Award registration bonus using Supabase RPC function
+// Award registration bonus using Supabase RPC function - UPDATED to add to main balance
 export const awardRegistrationBonus = async (userId: string): Promise<boolean> => {
   try {
     const bonusSettings = await getBonusSettings();
     const registrationBonus = bonusSettings.registration_bonus || 100;
 
-    console.log(`Awarding registration bonus: ${registrationBonus} PKR to user ${userId}`);
+    console.log(`Awarding registration bonus: ${registrationBonus} PKR to user ${userId} - ADDING TO MAIN BALANCE`);
 
-    // Use Supabase RPC function for atomic balance update
+    // Use Supabase RPC function for atomic balance update - this adds to main balance
     const { data, error } = await (supabase.rpc as any)('update_user_balance', {
       user_id: userId,
       amount: registrationBonus
@@ -112,7 +112,7 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
       return false;
     }
 
-    console.log(`Successfully awarded registration bonus: ${registrationBonus} PKR to user ${userId}`);
+    console.log(`Successfully awarded registration bonus: ${registrationBonus} PKR to user ${userId} MAIN BALANCE`);
     return true;
   } catch (error) {
     console.error('Error awarding registration bonus:', error);
@@ -120,7 +120,7 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
   }
 };
 
-// Process referral bonus IMMEDIATELY upon registration (no deposit required)
+// Process referral bonus IMMEDIATELY upon registration - UPDATED to add to main balance
 export const processReferralBonus = async (referrerCode: string, newUserId: string): Promise<boolean> => {
   try {
     console.log(`Processing referral bonus for code: ${referrerCode}, new user: ${newUserId}`);
@@ -150,16 +150,16 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
     const bonusSettings = await getBonusSettings();
     const referralBonus = bonusSettings.referral_bonus || 90;
 
-    console.log(`Referral bonus amount: ${referralBonus} PKR - AWARDING IMMEDIATELY`);
+    console.log(`Referral bonus amount: ${referralBonus} PKR - ADDING TO MAIN BALANCE IMMEDIATELY`);
 
-    // FIXED: Award referral bonus immediately upon registration (no deposit requirement)
+    // Award referral bonus immediately to main balance upon registration
     const { data, error } = await (supabase.rpc as any)('update_user_balance', {
       user_id: referrer.id,
       amount: referralBonus
     });
 
     if (error) {
-      console.error('Error updating referrer balance:', error);
+      console.error('Error updating referrer main balance:', error);
       return false;
     }
 
@@ -170,7 +170,7 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
         referrer_id: referrer.id,
         referred_id: newUserId,
         bonus_amount: referralBonus,
-        is_paid: true // Mark as paid immediately since we're awarding it right away
+        is_paid: true // Mark as paid immediately since we're awarding it right away to main balance
       });
 
     if (referralError) {
@@ -178,7 +178,7 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
       return false;
     }
 
-    console.log(`SUCCESS: ${referrer.username} received ${referralBonus} PKR immediately for referring user ${newUserId}`);
+    console.log(`SUCCESS: ${referrer.username} received ${referralBonus} PKR to MAIN BALANCE immediately for referring user ${newUserId}`);
     return true;
   } catch (error) {
     console.error('Error processing referral bonus:', error);
@@ -186,7 +186,7 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
   }
 };
 
-// Get referral stats for user - Updated to show only paid referrals since we pay immediately
+// Get referral stats for user - Updated to show earnings added to main balance
 export const getReferralStats = async (userId: string) => {
   try {
     const { data: referrals, error } = await supabase
@@ -204,12 +204,12 @@ export const getReferralStats = async (userId: string) => {
     }
 
     const totalReferrals = referrals?.length || 0;
-    // Since we pay immediately, all referrals should be paid
+    // Since we add to main balance immediately, all referrals are counted as earned
     const totalEarned = referrals?.reduce((sum, ref) => sum + (ref.bonus_amount || 0), 0) || 0;
-    // No pending rewards since we pay immediately
+    // No pending rewards since we add to main balance immediately
     const pendingRewards = 0;
 
-    console.log(`Referral stats for user ${userId}: ${totalReferrals} referrals, ${totalEarned} PKR earned, ${pendingRewards} pending`);
+    console.log(`Referral stats for user ${userId}: ${totalReferrals} referrals, ${totalEarned} PKR earned and added to main balance, ${pendingRewards} pending`);
 
     return {
       totalReferrals,

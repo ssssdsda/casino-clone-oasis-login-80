@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -17,7 +18,6 @@ interface WithdrawalHistory {
   amount: number;
   payment_method: string;
   account_number: string;
-  account_holder_name?: string;
   status: string;
   created_at: string;
 }
@@ -30,7 +30,6 @@ const Withdrawal = () => {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
-  const [accountHolderName, setAccountHolderName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalHistory[]>([]);
 
@@ -94,10 +93,10 @@ const Withdrawal = () => {
       return;
     }
     
-    if (!paymentMethod || !accountNumber || !accountHolderName) {
+    if (!paymentMethod || !accountNumber) {
       toast({
         title: "Error",
-        description: "Please fill in all fields including account holder name",
+        description: "Please fill in all fields",
         variant: "destructive"
       });
       return;
@@ -105,7 +104,7 @@ const Withdrawal = () => {
 
     setIsProcessing(true);
     try {
-      // Fixed: Use correct column name for account holder
+      // Submit withdrawal without account holder name
       const { data, error } = await supabase
         .from('withdrawals')
         .insert({
@@ -113,7 +112,6 @@ const Withdrawal = () => {
           username: user.username,
           amount: withdrawalAmount,
           account_number: accountNumber,
-          account_holder_name: accountHolderName, // This matches the interface
           payment_method: paymentMethod,
           status: 'pending'
         })
@@ -146,7 +144,6 @@ const Withdrawal = () => {
       setAmount('');
       setPaymentMethod('');
       setAccountNumber('');
-      setAccountHolderName('');
       
       // Refresh history
       fetchWithdrawalHistory();
@@ -278,22 +275,9 @@ const Withdrawal = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="account-holder-name" className="text-white">
-                      Account Holder Name
-                    </Label>
-                    <Input
-                      id="account-holder-name"
-                      value={accountHolderName}
-                      onChange={(e) => setAccountHolderName(e.target.value)}
-                      className="bg-casino-dark border-gray-700 text-white"
-                      placeholder="Enter account holder name"
-                    />
-                  </div>
-
                   <Button
                     type="submit"
-                    disabled={isProcessing || !amount || !paymentMethod || !accountNumber || !accountHolderName}
+                    disabled={isProcessing || !amount || !paymentMethod || !accountNumber}
                     className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3"
                   >
                     {isProcessing ? 'Processing...' : `Withdraw PKR ${amount || '0'}`}
@@ -320,11 +304,6 @@ const Withdrawal = () => {
                           <p className="text-gray-400 text-sm">
                             {withdrawal.payment_method.toUpperCase()} - {withdrawal.account_number}
                           </p>
-                          {withdrawal.account_holder_name && (
-                            <p className="text-gray-400 text-sm">
-                              Name: {withdrawal.account_holder_name}
-                            </p>
-                          )}
                           <p className="text-gray-500 text-xs">
                             {formatDate(withdrawal.created_at)}
                           </p>
