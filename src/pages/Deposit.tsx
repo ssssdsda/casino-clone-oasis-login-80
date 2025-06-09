@@ -123,7 +123,7 @@ const Deposit = () => {
         .from('deposit_tracking')
         .insert({
           user_id: user.id,
-          username: user.username || user.email,
+          username: user.username || user.phone || 'Unknown',
           amount: parseFloat(amount),
           transaction_id: transactionId,
           payment_method: selectedMethod,

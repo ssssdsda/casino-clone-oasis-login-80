@@ -8,6 +8,7 @@ interface AuthUser {
   id: string;
   username: string;
   phone?: string;
+  email?: string;
   balance: number;
   role: string;
   referralCode?: string;
@@ -20,6 +21,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   loginWithPhone: (phone: string, password: string) => Promise<boolean>;
+  loginWithEmail: (email: string, password: string) => Promise<boolean>;
   registerWithPhone: (phone: string, username: string, password: string, referralCode?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUserBalance: (newBalance: number) => Promise<void>;
@@ -58,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: data.id,
         username: data.username,
         phone: data.phone || undefined,
+        email: data.email || undefined,
         balance: parseFloat((data.balance || 0).toString()),
         role: data.role,
         referralCode: data.referral_code,
@@ -152,6 +155,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const loginWithEmail = async (email: string, password: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('Login error:', error);
+        toast({
+          title: "Login Failed",
+          description: "Invalid email or password",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      if (data.user) {
+        toast({
+          title: "Success",
+          description: "Login successful!",
+          variant: "default"
+        });
+        return true;
+      }
+
+      return false;
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loginWithPhone = async (phone: string, password: string): Promise<boolean> => {
     try {
@@ -311,13 +356,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Process referral bonus if applicable
         if (referrerId && data.user.id !== referrerId) {
           try {
-            // Award referral bonus to the referrer immediately
-            const { error: referralBonusError } = await supabase
-              .from('profiles')
-              .update({
-                balance: supabase.raw('balance + 90') // Add 90 PKR referral bonus
-              })
-              .eq('id', referrerId);
+            // Award referral bonus to the referrer immediately using SQL function
+            const { error: referralBonusError } = await supabase.rpc('increment_balance', {
+              user_id: referrerId,
+              amount: 90
+            });
 
             if (!referralBonusError) {
               // Create referral record
@@ -385,6 +428,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: !!user,
     isLoading,
     loginWithPhone,
+    loginWithEmail,
     registerWithPhone,
     logout,
     updateUserBalance
@@ -396,3 +440,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+
+// Export the registerWithPhone function for components that need to import it directly
+export { registerWithPhone } from './AuthContext';

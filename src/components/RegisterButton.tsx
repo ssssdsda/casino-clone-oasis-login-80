@@ -21,7 +21,7 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
     phone: '',
     password: '',
   });
-  const { loginWithPhone } = useAuth();
+  const { loginWithPhone, registerWithPhone } = useAuth();
   const { t } = useLanguage();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,10 +53,7 @@ export const RegisterButton = ({ 'data-register-button': dataRegisterButton }: R
       // Get referral code from localStorage
       const referralCode = localStorage.getItem('referralCode');
       
-      // Register user with phone authentication
-      const { registerWithPhone } = await import('@/context/AuthContext');
-      
-      // Call the registration function
+      // Call the registration function directly from the hook
       const success = await registerWithPhone(
         formData.phone,
         formData.username,

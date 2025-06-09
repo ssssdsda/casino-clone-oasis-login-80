@@ -99,13 +99,11 @@ export const awardRegistrationBonus = async (userId: string): Promise<boolean> =
 
     console.log(`Awarding registration bonus: ${registrationBonus} PKR to user ${userId} - ADDING TO MAIN BALANCE`);
 
-    // Update balance directly using SQL UPDATE
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        balance: supabase.raw(`balance + ${registrationBonus}`)
-      })
-      .eq('id', userId);
+    // Update balance using RPC function instead of raw SQL
+    const { error } = await supabase.rpc('increment_balance', {
+      user_id: userId,
+      amount: registrationBonus
+    });
 
     if (error) {
       console.error('Error awarding registration bonus:', error);
@@ -152,13 +150,11 @@ export const processReferralBonus = async (referrerCode: string, newUserId: stri
 
     console.log(`Referral bonus amount: ${referralBonus} PKR - ADDING TO MAIN BALANCE IMMEDIATELY`);
 
-    // Award referral bonus immediately to main balance upon registration
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        balance: supabase.raw(`balance + ${referralBonus}`)
-      })
-      .eq('id', referrer.id);
+    // Award referral bonus immediately to main balance upon registration using RPC function
+    const { error } = await supabase.rpc('increment_balance', {
+      user_id: referrer.id,
+      amount: referralBonus
+    });
 
     if (error) {
       console.error('Error updating referrer main balance:', error);
