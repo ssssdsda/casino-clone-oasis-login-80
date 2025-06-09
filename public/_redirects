@@ -1,0 +1,13 @@
+
+# Netlify redirects file
+/*    /index.html   200
+
+# Handle client-side routing
+/referral    /index.html   200
+/admin       /index.html   200
+/deposit     /index.html   200
+/withdrawal  /index.html   200
+/bonus       /index.html   200
+/game/*      /index.html   200
+/auth        /index.html   200
+/register    /index.html   200

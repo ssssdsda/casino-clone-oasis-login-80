@@ -1,0 +1,32 @@
+
+{
+  "name": "CK444 Casino",
+  "short_name": "CK444",
+  "description": "Premium online casino with exciting games and bonuses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#ffd700",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/placeholder.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/placeholder.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "lang": "en",
+  "dir": "ltr"
+}
