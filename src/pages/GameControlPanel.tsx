@@ -86,7 +86,7 @@ const GameControlPanel = () => {
       setSaving(true);
       
       // Map UI field names to database field names
-      let dbField = field;
+      let dbField: string = field;
       let dbValue = value;
       
       if (field === 'game_name') {
