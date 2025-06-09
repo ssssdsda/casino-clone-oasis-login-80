@@ -356,11 +356,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Process referral bonus if applicable
         if (referrerId && data.user.id !== referrerId) {
           try {
-            // Award referral bonus to the referrer immediately using SQL function
-            const { error: referralBonusError } = await supabase.rpc('increment_balance', {
-              user_id: referrerId,
-              amount: 90
-            });
+            // Award referral bonus to the referrer immediately using direct balance update
+            const { error: referralBonusError } = await supabase
+              .from('profiles')
+              .update({ 
+                balance: supabase.raw('balance + 90')
+              })
+              .eq('id', referrerId);
 
             if (!referralBonusError) {
               // Create referral record
