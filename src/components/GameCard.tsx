@@ -21,27 +21,37 @@ const GameCard = ({ title, image, isNew, onClick, onEditClick, requiresLogin }: 
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [currentImage, setCurrentImage] = useState(image);
   
-  // Reset states when image changes
+  // Reset states when image changes and force reload
   useEffect(() => {
+    console.log(`GameCard: Image changed to ${image}`);
     setImageError(false);
     setImageLoaded(false);
     setRetryCount(0);
+    
+    // Add timestamp to force reload and prevent caching
+    const timestamp = new Date().getTime();
+    const imageWithTimestamp = image.includes('?') 
+      ? `${image}&t=${timestamp}` 
+      : `${image}?t=${timestamp}`;
+    
+    setCurrentImage(imageWithTimestamp);
   }, [image]);
   
   // Handle image load error
   const handleImageError = () => {
-    console.error(`Failed to load image: ${image}`);
+    console.error(`Failed to load image: ${currentImage}`);
     
     // Try to reload the image a few times before giving up
     if (retryCount < 3) {
       setTimeout(() => {
         setRetryCount(prev => prev + 1);
-        const imgElement = document.querySelector(`img[src="${image}"]`) as HTMLImageElement;
-        if (imgElement) {
-          const timestamp = new Date().getTime();
-          imgElement.src = `${image}?retry=${timestamp}`;
-        }
+        const timestamp = new Date().getTime();
+        const imageWithTimestamp = image.includes('?') 
+          ? `${image}&retry=${retryCount + 1}&t=${timestamp}` 
+          : `${image}?retry=${retryCount + 1}&t=${timestamp}`;
+        setCurrentImage(imageWithTimestamp);
       }, 1000);
     } else {
       setImageError(true);
@@ -49,6 +59,7 @@ const GameCard = ({ title, image, isNew, onClick, onEditClick, requiresLogin }: 
   };
   
   const handleImageLoad = () => {
+    console.log(`GameCard: Image loaded successfully for ${title}`);
     setImageLoaded(true);
   };
   
@@ -65,7 +76,7 @@ const GameCard = ({ title, image, isNew, onClick, onEditClick, requiresLogin }: 
   const fallbackImage = "/placeholder.svg";
   
   // Determine the image source based on error state
-  const imageSrc = imageError ? fallbackImage : image;
+  const imageSrc = imageError ? fallbackImage : currentImage;
   
   return (
     <div 
@@ -104,6 +115,7 @@ const GameCard = ({ title, image, isNew, onClick, onEditClick, requiresLogin }: 
         )}
         
         <img 
+          key={currentImage} // Force re-render when image changes
           src={imageSrc} 
           alt={title} 
           className={`w-full h-full object-cover ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
