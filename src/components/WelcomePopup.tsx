@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
 
 export function WelcomePopup() {
   const [open, setOpen] = useState(false);
@@ -30,27 +29,19 @@ export function WelcomePopup() {
   });
   
   useEffect(() => {
-    // Load popup settings from Supabase
+    // Load popup settings from localStorage as fallback
     const loadPopupSettings = async () => {
       try {
-        const { data, error } = await supabase
-          .from('bonus_popup_settings')
-          .select('*')
-          .single();
-        
-        if (error && error.code !== 'PGRST116') {
-          console.error("Error loading popup settings:", error);
-          return;
-        }
-        
-        if (data) {
+        const savedSettings = localStorage.getItem('bonus_popup_settings');
+        if (savedSettings) {
+          const parsedSettings = JSON.parse(savedSettings);
           setPopupSettings(prevSettings => ({
             ...prevSettings,
-            ...data
+            ...parsedSettings
           }));
         }
       } catch (error) {
-        console.error("Error loading popup settings:", error);
+        console.error("Error loading popup settings from localStorage:", error);
       }
     };
     

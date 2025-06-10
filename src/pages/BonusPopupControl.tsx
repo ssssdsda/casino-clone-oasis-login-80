@@ -1,6 +1,4 @@
-
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,25 +25,17 @@ const BonusPopupControl = () => {
 
   const { toast } = useToast();
 
-  // Load current popup settings
+  // Load current popup settings from localStorage
   useEffect(() => {
     const loadPopupSettings = async () => {
       try {
-        const { data, error } = await supabase
-          .from('bonus_popup_settings')
-          .select('*')
-          .single();
-        
-        if (error && error.code !== 'PGRST116') {
-          console.error("Error loading popup settings:", error);
-          return;
-        }
-        
-        if (data) {
-          setPopupData(data);
+        const savedSettings = localStorage.getItem('bonus_popup_settings');
+        if (savedSettings) {
+          const parsedSettings = JSON.parse(savedSettings);
+          setPopupData(parsedSettings);
         }
       } catch (error) {
-        console.error("Error loading popup settings:", error);
+        console.error("Error loading popup settings from localStorage:", error);
       }
     };
     
@@ -62,21 +52,18 @@ const BonusPopupControl = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('bonus_popup_settings')
-        .upsert(popupData);
-      
-      if (error) throw error;
+      // Save to localStorage as fallback since Supabase table doesn't exist yet
+      localStorage.setItem('bonus_popup_settings', JSON.stringify(popupData));
 
       toast({
         title: "Success",
-        description: "Bonus popup settings updated successfully",
+        description: "Bonus popup settings saved to local storage. Note: Create the Supabase table for persistent storage.",
       });
     } catch (error) {
       console.error("Error saving popup settings:", error);
       toast({
         title: "Error",
-        description: "Failed to update bonus popup settings",
+        description: "Failed to save bonus popup settings",
         variant: "destructive"
       });
     } finally {
@@ -87,7 +74,6 @@ const BonusPopupControl = () => {
   const createTable = async () => {
     setLoading(true);
     try {
-      // This would typically be done via Supabase dashboard, but here's the SQL for reference
       const createTableSQL = `
         CREATE TABLE IF NOT EXISTS bonus_popup_settings (
           id BIGSERIAL PRIMARY KEY,
@@ -140,6 +126,13 @@ const BonusPopupControl = () => {
     <div className="min-h-screen bg-casino p-4">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-2xl font-bold text-white mb-6">Bonus Popup Control Panel</h1>
+        
+        <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded-lg">
+          <p className="text-yellow-800 text-sm">
+            <strong>Note:</strong> Currently using localStorage for settings storage. 
+            Create the Supabase table using the Database Setup tab for persistent storage across devices.
+          </p>
+        </div>
         
         <Tabs defaultValue="settings">
           <TabsList className="mb-4">
