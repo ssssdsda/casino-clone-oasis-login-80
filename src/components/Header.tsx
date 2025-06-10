@@ -53,11 +53,8 @@ const Header = () => {
                 <SheetContent side="right" className="bg-casino border-casino-accent">
                   <div className="flex flex-col space-y-4 pt-6">
                     <div className="flex flex-col space-y-2">
-                      <Button variant={language === 'en' ? "secondary" : "ghost"} onClick={() => setLanguage('en')}>
+                      <Button variant="secondary" onClick={() => setLanguage('en')}>
                         EN - English
-                      </Button>
-                      <Button variant={language === 'bn' ? "secondary" : "ghost"} onClick={() => setLanguage('bn')}>
-                        BN - বাংলা
                       </Button>
                     </div>
                     
@@ -131,18 +128,11 @@ const Header = () => {
                   <PopoverContent className="w-40 p-0">
                     <div className="flex flex-col">
                       <Button 
-                        variant={language === 'en' ? "secondary" : "ghost"} 
+                        variant="secondary" 
                         className="justify-start rounded-none"
                         onClick={() => setLanguage('en')}
                       >
                         EN - English
-                      </Button>
-                      <Button 
-                        variant={language === 'bn' ? "secondary" : "ghost"} 
-                        className="justify-start rounded-none"
-                        onClick={() => setLanguage('bn')}
-                      >
-                        BN - বাংলা
                       </Button>
                     </div>
                   </PopoverContent>
