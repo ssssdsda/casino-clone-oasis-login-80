@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface BonusPopupSettings {
-  id?: number;
+  id?: string;
   enabled: boolean;
   title: string;
   description: string;
@@ -16,64 +16,34 @@ export interface BonusPopupSettings {
   updated_at?: string;
 }
 
-// Get bonus popup settings from Supabase
+// Get bonus popup settings from localStorage (primary storage since Supabase table doesn't exist)
 export const getBonusPopupSettings = async (): Promise<BonusPopupSettings | null> => {
   try {
-    const { data, error } = await supabase
-      .from('bonus_popup_settings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      console.error('Error fetching bonus popup settings:', error);
-      return null;
+    // Try localStorage first since Supabase table is not available
+    const localSettings = localStorage.getItem('bonus_popup_settings');
+    if (localSettings) {
+      return JSON.parse(localSettings);
     }
-
-    return data;
+    return null;
   } catch (error) {
     console.error('Error in getBonusPopupSettings:', error);
     return null;
   }
 };
 
-// Save bonus popup settings to Supabase
+// Save bonus popup settings to localStorage (primary storage since Supabase table doesn't exist)
 export const saveBonusPopupSettings = async (settings: Omit<BonusPopupSettings, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
   try {
-    // First check if settings exist
-    const existingSettings = await getBonusPopupSettings();
+    // Save to localStorage as primary storage
+    const settingsWithTimestamp = {
+      ...settings,
+      id: Date.now().toString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
     
-    if (existingSettings && existingSettings.id) {
-      // Update existing settings
-      const { error } = await supabase
-        .from('bonus_popup_settings')
-        .update({
-          ...settings,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingSettings.id);
-
-      if (error) {
-        console.error('Error updating bonus popup settings:', error);
-        return false;
-      }
-    } else {
-      // Insert new settings
-      const { error } = await supabase
-        .from('bonus_popup_settings')
-        .insert({
-          ...settings,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) {
-        console.error('Error inserting bonus popup settings:', error);
-        return false;
-      }
-    }
-
+    localStorage.setItem('bonus_popup_settings', JSON.stringify(settingsWithTimestamp));
+    console.log('Bonus popup settings saved to localStorage successfully');
     return true;
   } catch (error) {
     console.error('Error in saveBonusPopupSettings:', error);
@@ -81,23 +51,13 @@ export const saveBonusPopupSettings = async (settings: Omit<BonusPopupSettings, 
   }
 };
 
-// Get settings with fallback to localStorage
+// Get settings with fallback to default values
 export const getBonusPopupSettingsWithFallback = async (): Promise<BonusPopupSettings> => {
-  // Try Supabase first
-  const supabaseSettings = await getBonusPopupSettings();
+  // Try localStorage
+  const localSettings = await getBonusPopupSettings();
   
-  if (supabaseSettings) {
-    return supabaseSettings;
-  }
-  
-  // Fallback to localStorage
-  try {
-    const localSettings = localStorage.getItem('bonus_popup_settings');
-    if (localSettings) {
-      return JSON.parse(localSettings);
-    }
-  } catch (error) {
-    console.error('Error reading from localStorage:', error);
+  if (localSettings) {
+    return localSettings;
   }
   
   // Return default settings if nothing found
