@@ -127,16 +127,16 @@ const Auth = () => {
       <div className={`flex-1 flex items-center justify-center p-4 ${isMobile ? 'pb-16 pt-4' : ''}`}>
         <Card className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-md'} bg-casino border-casino-accent`}>
           <CardHeader className="bg-gradient-to-r from-casino-accent to-yellow-500 p-4">
-            <CardTitle className="text-casino-dark text-xl sm:text-2xl text-center">CK444</CardTitle>
-            <CardDescription className="text-casino-dark text-center text-sm">
+            <CardTitle className="text-casino-dark text-xl sm:text-2xl text-center">Jiliglory</CardTitle>
+            <CardDescription className="text-casino-dark text-center text-sm text-white">
               Login or create your account
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
-                <TabsTrigger value="login" className="text-sm">Login</TabsTrigger>
-                <TabsTrigger value="register" className="text-sm">Register</TabsTrigger>
+                <TabsTrigger value="login" className="text-sm text-white">Login</TabsTrigger>
+                <TabsTrigger value="register" className="text-sm text-white">Register</TabsTrigger>
               </TabsList>
               
               <TabsContent value="login">

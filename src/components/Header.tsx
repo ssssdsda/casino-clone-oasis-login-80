@@ -37,7 +37,7 @@ const Header = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <Link to="/" className="text-casino-accent text-2xl md:text-3xl font-bold tracking-wider animate-pulse-gold">
-            CK444
+            Jiliglory
           </Link>
         </div>
         
