@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 interface GameControlSettings {
@@ -303,19 +304,23 @@ export const getUserBetHistory = async (userId: string, limit: number = 20) => {
   }
 };
 
-// Initialize default game settings
+// Initialize default game settings - UPDATED WITH ALL GAMES
 export const initializeDefaultGameSettings = async (): Promise<void> => {
   const defaultGames = [
     { game_type: 'aviator', min_bet: 10, max_bet: 1000, win_ratio: 0.25, max_win: 5000 },
     { game_type: 'superAce', min_bet: 10, max_bet: 500, win_ratio: 0.30, max_win: 3000 },
     { game_type: 'goldenBasin', min_bet: 5, max_bet: 800, win_ratio: 0.20, max_win: 4000 },
     { game_type: 'coinUp', min_bet: 10, max_bet: 600, win_ratio: 0.25, max_win: 3500 },
-    { game_type: 'fruityBonanza', min_bet: 5, max_bet: 400, win_ratio: 0.20, max_win: 2500 },
+    { game_type: 'fruityBonanza', min_bet: 10, max_bet: 1000, win_ratio: 0.20, max_win: 2500 },
     { game_type: 'megaSpin', min_bet: 15, max_bet: 1200, win_ratio: 0.30, max_win: 6000 },
     { game_type: 'fortuneGems', min_bet: 10, max_bet: 500, win_ratio: 0.20, max_win: 3000 },
     { game_type: 'coins', min_bet: 5, max_bet: 300, win_ratio: 0.20, max_win: 2000 },
     { game_type: 'superElement', min_bet: 10, max_bet: 700, win_ratio: 0.25, max_win: 4000 },
-    { game_type: 'plinko', min_bet: 10, max_bet: 800, win_ratio: 0.25, max_win: 4500 }
+    { game_type: 'plinko', min_bet: 10, max_bet: 800, win_ratio: 0.25, max_win: 4500 },
+    { game_type: 'boxingKing', min_bet: 20, max_bet: 1500, win_ratio: 0.30, max_win: 7000 },
+    { game_type: 'casinoWin', min_bet: 15, max_bet: 1000, win_ratio: 0.25, max_win: 5000 },
+    { game_type: 'moneyGram', min_bet: 10, max_bet: 800, win_ratio: 0.20, max_win: 4000 },
+    { game_type: 'bookOfDead', min_bet: 10, max_bet: 600, win_ratio: 0.25, max_win: 3500 }
   ];
 
   for (const game of defaultGames) {

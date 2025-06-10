@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from '@/hooks/use-toast';
-import { getAllBettingSettings, updateBettingSettings } from '@/utils/supabaseBetting';
+import { getAllGameSettings, updateGameSettings, initializeDefaultGameSettings } from '@/utils/supabaseGameControl';
 import { GamepadIcon, TrendingUp, Shield, Settings, RotateCcw } from 'lucide-react';
 
 interface GameSettings {
@@ -25,13 +25,31 @@ export const BettingSystemControl = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadGameSettings();
+    initializeAndLoadSettings();
   }, []);
+
+  const initializeAndLoadSettings = async () => {
+    try {
+      setLoading(true);
+      // Initialize default settings for all games first
+      await initializeDefaultGameSettings();
+      // Then load all settings
+      await loadGameSettings();
+    } catch (error) {
+      console.error('Error initializing settings:', error);
+      toast({
+        title: "خرابی",
+        description: "گیم سیٹنگز شروع کرنے میں ناکامی",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadGameSettings = async () => {
     try {
-      setLoading(true);
-      const settings = await getAllBettingSettings();
+      const settings = await getAllGameSettings();
       setGameSettings(settings);
     } catch (error) {
       console.error('Error loading game settings:', error);
@@ -40,14 +58,12 @@ export const BettingSystemControl = () => {
         description: "گیم سیٹنگز لوڈ کرنے میں ناکامی",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const updateGameSetting = async (gameType: string, field: keyof GameSettings, value: any) => {
     try {
-      const success = await updateBettingSettings(gameType, { [field]: value });
+      const success = await updateGameSettings(gameType, { [field]: value });
       
       if (success) {
         setGameSettings(prev => 
@@ -80,13 +96,13 @@ export const BettingSystemControl = () => {
     const defaults = {
       min_bet: 10,
       max_bet: 1000,
-      win_ratio: 0.35,
+      win_ratio: 0.25,
       max_win: 5000,
       is_enabled: true
     };
 
     try {
-      const success = await updateBettingSettings(gameType, defaults);
+      const success = await updateGameSettings(gameType, defaults);
       
       if (success) {
         setGameSettings(prev => 
@@ -116,7 +132,7 @@ export const BettingSystemControl = () => {
   const enableAllGames = async () => {
     try {
       const updatePromises = gameSettings.map(setting => 
-        updateBettingSettings(setting.game_type, { is_enabled: true })
+        updateGameSettings(setting.game_type, { is_enabled: true })
       );
       
       await Promise.all(updatePromises);
@@ -145,7 +161,7 @@ export const BettingSystemControl = () => {
     
     try {
       const updatePromises = gameSettings.map(setting => 
-        updateBettingSettings(setting.game_type, { is_enabled: false })
+        updateGameSettings(setting.game_type, { is_enabled: false })
       );
       
       await Promise.all(updatePromises);
@@ -169,6 +185,28 @@ export const BettingSystemControl = () => {
     }
   };
 
+  // Game display names mapping
+  const getGameDisplayName = (gameType: string) => {
+    const displayNames: Record<string, string> = {
+      aviator: 'Aviator',
+      superAce: 'Super Ace',
+      goldenBasin: 'Golden Basin',
+      coinUp: 'Coin Up', 
+      fruityBonanza: 'Fruity Bonanza',
+      megaSpin: 'Mega Spin',
+      fortuneGems: 'Fortune Gems',
+      coins: 'Coins',
+      superElement: 'Super Element',
+      plinko: 'Plinko',
+      boxingKing: 'Boxing King',
+      casinoWin: 'Casino Win',
+      moneyGram: 'Money Gram',
+      bookOfDead: 'Book of Dead'
+    };
+    
+    return displayNames[gameType] || gameType;
+  };
+
   if (loading) {
     return (
       <div className="text-center py-8">
@@ -183,10 +221,10 @@ export const BettingSystemControl = () => {
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <GamepadIcon className="h-5 w-5" />
-            گیم بیٹنگ کنٹرولز
+            تمام گیمز کی بیٹنگ کنٹرولز (PKR Currency)
           </CardTitle>
           <CardDescription className="text-gray-300">
-            تمام گیمز کی بیٹنگ حدود اور جیتنے کی شرح کا ریئل ٹائم کنٹرول
+            تمام گیمز کی بیٹنگ حدود اور جیتنے کی شرح کا Supabase سے براہ راست کنٹرول
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -210,6 +248,12 @@ export const BettingSystemControl = () => {
                 >
                   تمام گیمز بند کریں
                 </Button>
+                <Button
+                  onClick={initializeAndLoadSettings}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  سیٹنگز ری لوڈ کریں
+                </Button>
               </div>
             </div>
           </div>
@@ -220,7 +264,7 @@ export const BettingSystemControl = () => {
                 <CardHeader>
                   <CardTitle className="text-white flex items-center justify-between">
                     <span className="flex items-center gap-2">
-                      {setting.game_type.toUpperCase()}
+                      {getGameDisplayName(setting.game_type)}
                       <span className={`px-2 py-1 text-xs rounded ${
                         setting.is_enabled ? 'bg-green-600' : 'bg-red-600'
                       }`}>
@@ -245,13 +289,13 @@ export const BettingSystemControl = () => {
                     </div>
                   </CardTitle>
                   <CardDescription className="text-gray-400">
-                    {setting.game_type} کی مکمل کنٹرول سیٹنگز
+                    {getGameDisplayName(setting.game_type)} کی مکمل کنٹرول سیٹنگز (PKR میں)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-white">کم سے کم بیٹ (৳)</Label>
+                      <Label className="text-white">کم سے کم بیٹ (PKR)</Label>
                       <Input
                         type="number"
                         value={setting.min_bet}
@@ -263,7 +307,7 @@ export const BettingSystemControl = () => {
                       />
                     </div>
                     <div>
-                      <Label className="text-white">زیادہ سے زیادہ بیٹ (৳)</Label>
+                      <Label className="text-white">زیادہ سے زیادہ بیٹ (PKR)</Label>
                       <Input
                         type="number"
                         value={setting.max_bet}
@@ -316,7 +360,7 @@ export const BettingSystemControl = () => {
                   
                   <div>
                     <Label className="text-white">
-                      روزانہ زیادہ سے زیادہ جیت (৳)
+                      روزانہ زیادہ سے زیادہ جیت (PKR)
                       <span className="text-gray-400 text-sm ml-2">
                         (اس سے زیادہ نہیں جیت سکتے)
                       </span>
@@ -358,7 +402,7 @@ export const BettingSystemControl = () => {
             <div className="text-center py-8">
               <div className="text-gray-400">کوئی گیم سیٹنگز نہیں ملیں</div>
               <p className="text-gray-500 text-sm mt-2">
-                پہلے کچھ گیمز کھیلیں تاکہ سیٹنگز یہاں دکھائی جائیں
+                سیٹنگز کو دوبارہ لوڈ کرنے کے لیے "سیٹنگز ری لوڈ کریں" کا بٹن دبائیں
               </p>
             </div>
           )}
