@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -348,5 +349,3 @@ const Deposit = () => {
 };
 
 export default Deposit;
-
-</edits_to_apply>
