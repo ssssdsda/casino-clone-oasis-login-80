@@ -37,12 +37,20 @@ export const handleGameSpin = async (
       // Update balance
       updateBalance(result.newBalance);
       
+      // Always show win/loss toast
       if (result.winAmount > 0) {
         showToast({
-          title: "You Won!",
-          description: formatCurrency(result.winAmount),
+          title: "🎉 You Won!",
+          description: `Won ${formatCurrency(result.winAmount)}`,
           variant: "default",
           className: "bg-green-500 text-white font-bold"
+        });
+      } else {
+        showToast({
+          title: "😔 You Lost",
+          description: `Lost ${formatCurrency(betAmount)}`,
+          variant: "default",
+          className: "bg-red-500 text-white font-bold"
         });
       }
       

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { shouldPlayerWin, processBet } from '@/utils/supabaseGameControl';
+import { handleGameSpin } from '@/utils/gameUpdater';
 import { formatCurrency } from '@/utils/currency';
 
 // Fruit symbols for the game with proper icons
@@ -93,24 +92,6 @@ const FruityBonanzaGame: React.FC = () => {
   const handleSpin = async () => {
     if (isSpinning) return;
     
-    if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please login to play",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (user.balance < betAmount) {
-      toast({
-        title: "Insufficient Funds",
-        description: "Please deposit more to play",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     setIsSpinning(true);
     setWinAmount(0);
     
@@ -123,13 +104,17 @@ const FruityBonanzaGame: React.FC = () => {
     // Simulate spinning animation
     setTimeout(async () => {
       try {
-        // Use Supabase game control system
-        const result = await processBet(user.id, 'fruityBonanza', betAmount, 2);
+        // Use improved game spinner with proper toast notifications
+        const result = await handleGameSpin(
+          user,
+          'fruityBonanza',
+          betAmount,
+          2,
+          updateUserBalance,
+          toast
+        );
         
-        if (result.success) {
-          // Update balance with new balance from Supabase
-          updateUserBalance(result.newBalance);
-          
+        if (result) {
           // Generate new symbols for each position
           generateReels();
           
@@ -141,22 +126,10 @@ const FruityBonanzaGame: React.FC = () => {
               winSound.current.currentTime = 0;
               winSound.current.play().catch(e => console.error("Error playing sound:", e));
             }
-            
-            toast({
-              title: "You Won!",
-              description: formatCurrency(result.winAmount),
-              variant: "default",
-              className: "bg-green-500 text-white font-bold"
-            });
           }
         }
       } catch (error) {
         console.error("Error processing bet:", error);
-        toast({
-          title: "Error",
-          description: "Failed to process bet",
-          variant: "destructive"
-        });
       }
       
       setIsSpinning(false);
@@ -305,6 +278,13 @@ const FruityBonanzaGame: React.FC = () => {
           </motion.button>
         </div>
       </main>
+      
+      {/* Don't show bonus page on mobile */}
+      {!isMobile && (
+        <div className="text-center p-4 text-white">
+          Bonus features available on desktop
+        </div>
+      )}
       
       <Footer />
     </div>

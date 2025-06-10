@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -9,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getAllBettingSettings, updateBettingSettings } from '@/utils/supabaseBetting';
+import { getAllGameSettings, updateGameSettings } from '@/utils/supabaseGameControl';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Settings, GamepadIcon, TrendingUp, Shield } from 'lucide-react';
@@ -32,24 +31,14 @@ const CasinoControl = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is admin
-    if (!user || user.role !== 'admin') {
-      toast({
-        title: "Unauthorized",
-        description: "You don't have permission to access this page",
-        variant: "destructive",
-      });
-      navigate('/');
-      return;
-    }
-
+    // Removed admin check - now accessible to anyone
     loadGameSettings();
-  }, [user, navigate, toast]);
+  }, []);
 
   const loadGameSettings = async () => {
     try {
       setLoading(true);
-      const settings = await getAllBettingSettings();
+      const settings = await getAllGameSettings();
       setGameSettings(settings);
     } catch (error) {
       console.error('Error loading game settings:', error);
@@ -65,7 +54,7 @@ const CasinoControl = () => {
 
   const updateGameSetting = async (gameType: string, field: keyof GameSettings, value: any) => {
     try {
-      const success = await updateBettingSettings(gameType, { [field]: value });
+      const success = await updateGameSettings(gameType, { [field]: value });
       
       if (success) {
         // Update local state
@@ -111,6 +100,7 @@ const CasinoControl = () => {
         <div className="flex items-center gap-3 mb-8">
           <Settings className="h-8 w-8 text-casino-accent" />
           <h1 className="text-3xl font-bold text-white">Casino Game Control Panel</h1>
+          <div className="text-green-400 text-sm">(Public Access)</div>
         </div>
         
         <Tabs defaultValue="games" className="w-full">
@@ -319,3 +309,5 @@ const CasinoControl = () => {
 };
 
 export default CasinoControl;
+
+</edits_to_apply>
