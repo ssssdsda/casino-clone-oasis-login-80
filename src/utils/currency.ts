@@ -1,7 +1,7 @@
 
 // Currency utility for displaying PKR symbol consistently across all games
 export const formatCurrency = (amount: number): string => {
-  return `PKR ${amount.toLocaleString()}`;
+  return `PKR ${amount.toFixed(0)}`;
 };
 
 export const getCurrencySymbol = (): string => {
@@ -9,5 +9,5 @@ export const getCurrencySymbol = (): string => {
 };
 
 export const formatBalance = (balance: number): string => {
-  return `PKR ${balance}`;
+  return `PKR ${balance.toFixed(0)}`;
 };

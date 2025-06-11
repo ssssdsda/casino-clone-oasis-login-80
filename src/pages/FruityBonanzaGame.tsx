@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
@@ -10,6 +11,7 @@ import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { handleGameSpin } from '@/utils/gameUpdater';
 import { formatCurrency } from '@/utils/currency';
+import { getGameLimits, validateGameBet } from '@/utils/gameConnections';
 
 // Fruit symbols for the game with proper icons
 const symbols = [
@@ -46,6 +48,7 @@ const FruityBonanzaGame: React.FC = () => {
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [winAmount, setWinAmount] = useState<number>(0);
   const [reels, setReels] = useState<number[][]>([]);
+  const [gameLimits, setGameLimits] = useState({ minBet: 10, maxBet: 1000, isEnabled: true });
   const [jackpots, setJackpots] = useState<Jackpot[]>([
     { type: 'GRAND', amount: 2000.00, color: 'bg-red-600' },
     { type: 'MAJOR', amount: 50.00, color: 'bg-pink-500' },
@@ -65,6 +68,18 @@ const FruityBonanzaGame: React.FC = () => {
     spinSound.current = new Audio('/sounds/spin.mp3');
     winSound.current = new Audio('/sounds/win.mp3');
     
+    // Load game limits from Supabase
+    const loadGameLimits = async () => {
+      try {
+        const limits = await getGameLimits('fruityBonanza');
+        setGameLimits(limits);
+        console.log('Loaded Fruity Bonanza limits:', limits);
+      } catch (error) {
+        console.error('Error loading game limits:', error);
+      }
+    };
+    
+    loadGameLimits();
     generateReels();
     
     return () => {
@@ -77,7 +92,7 @@ const FruityBonanzaGame: React.FC = () => {
         winSound.current = null;
       }
     };
-  }, [user]);
+  }, []);
   
   const generateReels = () => {
     const newReels: number[][] = Array(5).fill(0).map(() => 
@@ -89,8 +104,46 @@ const FruityBonanzaGame: React.FC = () => {
     setReels(newReels);
   };
   
+  const calculateWin = (reelResults: number[][]) => {
+    // Check for matching symbols in any line
+    let totalWin = 0;
+    
+    // Check horizontal lines
+    for (let row = 0; row < 3; row++) {
+      const rowSymbols = reelResults.map(reel => reel[row + 1]);
+      const symbolCounts = rowSymbols.reduce((acc, symbolIndex) => {
+        acc[symbolIndex] = (acc[symbolIndex] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+      
+      const maxCount = Math.max(...Object.values(symbolCounts));
+      if (maxCount >= 3) {
+        const winningSymbolIndex = Object.keys(symbolCounts).find(
+          key => symbolCounts[parseInt(key)] === maxCount
+        );
+        if (winningSymbolIndex) {
+          const symbol = symbols[parseInt(winningSymbolIndex)];
+          totalWin += betAmount * symbol.multiplier * (maxCount / 3);
+        }
+      }
+    }
+    
+    return Math.floor(totalWin);
+  };
+  
   const handleSpin = async () => {
-    if (isSpinning) return;
+    if (isSpinning || !user) return;
+    
+    // Validate bet before processing
+    const validation = await validateGameBet('fruityBonanza', betAmount, user.balance);
+    if (!validation.valid) {
+      toast({
+        title: "Invalid Bet",
+        description: validation.message,
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsSpinning(true);
     setWinAmount(0);
@@ -101,35 +154,47 @@ const FruityBonanzaGame: React.FC = () => {
       spinSound.current.play().catch(e => console.error("Error playing sound:", e));
     }
     
-    // Simulate spinning animation
+    // Simulate spinning animation for 2 seconds
     setTimeout(async () => {
       try {
-        // Use improved game spinner with proper toast notifications
+        // Generate new reel results
+        const newReels = Array(5).fill(0).map(() => 
+          Array(5).fill(0).map(() => Math.floor(Math.random() * symbols.length))
+        );
+        setReels(newReels);
+        
+        // Calculate potential win
+        const calculatedWin = calculateWin(newReels);
+        const shouldWin = calculatedWin > 0;
+        
+        // Use the game spinner with calculated multiplier
+        const multiplier = shouldWin ? calculatedWin / betAmount : 0;
+        
         const result = await handleGameSpin(
           user,
           'fruityBonanza',
           betAmount,
-          2,
+          multiplier,
           updateUserBalance,
           toast
         );
         
-        if (result) {
-          // Generate new symbols for each position
-          generateReels();
+        if (result && result.winAmount > 0) {
+          setWinAmount(result.winAmount);
           
-          if (result.winAmount > 0) {
-            setWinAmount(result.winAmount);
-            
-            // Play win sound
-            if (winSound.current) {
-              winSound.current.currentTime = 0;
-              winSound.current.play().catch(e => console.error("Error playing sound:", e));
-            }
+          // Play win sound
+          if (winSound.current) {
+            winSound.current.currentTime = 0;
+            winSound.current.play().catch(e => console.error("Error playing sound:", e));
           }
         }
       } catch (error) {
         console.error("Error processing bet:", error);
+        toast({
+          title: "Bet Processing Error",
+          description: "Failed to process bet. Please try again.",
+          variant: "destructive"
+        });
       }
       
       setIsSpinning(false);
@@ -137,11 +202,11 @@ const FruityBonanzaGame: React.FC = () => {
   };
   
   const changeBetAmount = (amount: number) => {
-    const newBetAmount = Math.max(10, Math.min(1000, betAmount + amount));
+    const newBetAmount = Math.max(gameLimits.minBet, Math.min(gameLimits.maxBet, betAmount + amount));
     setBetAmount(newBetAmount);
   };
   
-  const renderSymbol = (symbolIndex: number, isSpinning: boolean) => {
+  const renderSymbol = (symbolIndex: number, isSpinning: boolean, delay: number = 0) => {
     const symbol = symbols[symbolIndex];
     const IconComponent = symbol.icon;
     
@@ -149,17 +214,19 @@ const FruityBonanzaGame: React.FC = () => {
       <motion.div
         className={`w-full h-full flex items-center justify-center ${symbol.color}`}
         animate={isSpinning ? {
-          y: [0, 10, 0],
-          opacity: [1, 0.5, 1]
+          rotateY: [0, 360],
+          scale: [1, 0.8, 1],
+          y: [0, -20, 0]
         } : {
-          scale: [1, 1.05, 1],
-          rotate: [0, 3, 0],
+          scale: [1, 1.02, 1],
         }}
         transition={isSpinning ? {
-          duration: 0.3,
-          repeat: Infinity
+          duration: 0.6,
+          repeat: Infinity,
+          delay: delay * 0.1,
+          ease: "easeInOut"
         } : {
-          duration: 1.5,
+          duration: 2,
           repeat: Infinity,
           repeatType: "reverse"
         }}
@@ -174,21 +241,12 @@ const FruityBonanzaGame: React.FC = () => {
       <Header />
       
       <main className="flex-1 p-1 md:p-2 max-w-sm mx-auto w-full flex flex-col" ref={symbolsContainerRef}>
-        {/* Game Title - Smaller */}
-        <div className="relative w-full h-12 mb-1">
-          <img
-            src="/lovable-uploads/fe393b9b-3777-4f24-ac1f-d680e17dc51e.png"
-            alt="Fruity Bonanza"
-            className="w-full h-full object-contain"
-          />
-        </div>
-        
-        {/* Jackpots Row - Smaller */}
-        <div className="flex justify-between items-center mb-1">
+        {/* Jackpots Row */}
+        <div className="flex justify-between items-center mb-2">
           {jackpots.map((jackpot) => (
             <div 
               key={jackpot.type} 
-              className={`${jackpot.color} px-1 py-0.5 rounded text-center min-w-12`}
+              className={`${jackpot.color} px-2 py-1 rounded text-center min-w-16`}
             >
               <div className="text-white text-xs">{jackpot.type}</div>
               <div className="text-yellow-300 font-bold text-xs">
@@ -198,93 +256,106 @@ const FruityBonanzaGame: React.FC = () => {
           ))}
         </div>
         
-        {/* Game Board - Smaller */}
-        <div className="bg-blue-800 border border-yellow-600 rounded-lg overflow-hidden shadow-lg mb-1">
-          {/* Main grid - Smaller symbols */}
-          <div className="grid grid-cols-5 gap-0.5 p-1">
-            {Array(5).fill(0).map((_, row) => (
-              Array(3).fill(0).map((_, col) => (
-                <div key={`symbol-${row}-${col}`} className="aspect-square w-12 h-12">
-                  {reels.length > 0 && renderSymbol(reels[row][col + 1], isSpinning)}
+        {/* Game Board */}
+        <div className="bg-blue-800 border border-yellow-600 rounded-lg overflow-hidden shadow-lg mb-2">
+          {/* Main grid with individual spinning animations */}
+          <div className="grid grid-cols-5 gap-1 p-2">
+            {Array(5).fill(0).map((_, col) => (
+              Array(3).fill(0).map((_, row) => (
+                <div key={`symbol-${col}-${row}`} className="aspect-square w-14 h-14 bg-blue-700 rounded border border-blue-500">
+                  {reels.length > 0 && renderSymbol(
+                    reels[col] && reels[col][row + 1] !== undefined ? reels[col][row + 1] : 0, 
+                    isSpinning, 
+                    col * 3 + row
+                  )}
                 </div>
               ))
             ))}
           </div>
           
           {/* Win display */}
-          <div className="bg-blue-700 p-1 text-center border-t border-blue-500">
+          <div className="bg-blue-700 p-2 text-center border-t border-blue-500">
             <div className="text-white font-bold text-sm">
               WIN <span className="text-yellow-300">{formatCurrency(winAmount)}</span>
             </div>
           </div>
         </div>
         
-        {/* Controls - Smaller */}
-        <div className="grid grid-cols-3 gap-1 mb-1">
-          <div className="bg-blue-900 rounded p-1 text-center">
-            <div className="text-white text-xs">BALANCE</div>
-            <div className="text-yellow-300 font-bold text-xs">{formatCurrency(user?.balance || 0)}</div>
+        {/* Balance and Bet Info */}
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="bg-blue-900 rounded p-2 text-center">
+            <div className="text-blue-300 text-xs">BALANCE</div>
+            <div className="text-white font-bold text-sm">{formatCurrency(user?.balance || 0)}</div>
           </div>
           
-          <div className="bg-blue-900 rounded p-1 text-center flex items-center justify-center">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-5 w-5 rounded-full mr-1"
-              onClick={() => changeBetAmount(-10)}
-              disabled={betAmount <= 10 || isSpinning}
-            >
-              <Minus className="h-2 w-2" />
-            </Button>
-            
-            <div>
-              <div className="text-white text-xs">BET</div>
-              <div className="text-yellow-300 font-bold text-xs">{formatCurrency(betAmount)}</div>
-            </div>
-            
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-5 w-5 rounded-full ml-1"
-              onClick={() => changeBetAmount(10)}
-              disabled={betAmount >= 1000 || isSpinning}
-            >
-              <Plus className="h-2 w-2" />
-            </Button>
-          </div>
-          
-          <div className="bg-blue-900 rounded p-1 text-center">
-            <div className="text-white text-xs">TOTAL BET</div>
-            <div className="text-yellow-300 font-bold text-xs">{formatCurrency(betAmount * 15)}</div>
+          <div className="bg-blue-900 rounded p-2 text-center">
+            <div className="text-blue-300 text-xs">BET</div>
+            <div className="text-white font-bold text-sm">{formatCurrency(betAmount)}</div>
           </div>
         </div>
         
-        {/* Spin Button - Smaller */}
-        <div className="flex justify-center mb-2">
+        {/* Bet Controls */}
+        <div className="flex items-center justify-center mb-2 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => changeBetAmount(-10)}
+            disabled={betAmount <= gameLimits.minBet || isSpinning}
+            className="bg-blue-700 hover:bg-blue-600 text-white border-blue-500"
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          
+          <div className="bg-blue-900 px-4 py-2 rounded text-center min-w-24">
+            <div className="text-blue-300 text-xs">BET AMOUNT</div>
+            <div className="text-white font-bold">{formatCurrency(betAmount)}</div>
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => changeBetAmount(10)}
+            disabled={betAmount >= gameLimits.maxBet || isSpinning}
+            className="bg-blue-700 hover:bg-blue-600 text-white border-blue-500"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Game Limits */}
+        <div className="text-center text-blue-300 text-xs mb-4">
+          Min: {formatCurrency(gameLimits.minBet)} | Max: {formatCurrency(gameLimits.maxBet)}
+        </div>
+        
+        {/* Spin Button */}
+        <div className="flex justify-center">
           <motion.button
             className={`bg-gradient-to-r ${isSpinning ? 'from-blue-700 to-blue-800' : 'from-green-500 to-green-700'} 
-              h-12 w-12 rounded-full flex items-center justify-center border-2 border-blue-300 shadow-lg`}
+              h-16 w-16 rounded-full flex items-center justify-center border-2 border-blue-300 shadow-lg`}
             whileHover={!isSpinning ? { scale: 1.1 } : {}}
             whileTap={!isSpinning ? { scale: 0.95 } : {}}
             onClick={handleSpin}
-            disabled={isSpinning}
+            disabled={isSpinning || !gameLimits.isEnabled || (user && user.balance < betAmount)}
           >
             <motion.div
               animate={isSpinning ? { rotate: 360 } : {}}
               transition={isSpinning ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
             >
-              <RefreshCw className="h-5 w-5 text-white" />
+              <RefreshCw className="h-6 w-6 text-white" />
             </motion.div>
           </motion.button>
         </div>
-      </main>
-      
-      {/* Don't show bonus page on mobile */}
-      {!isMobile && (
-        <div className="text-center p-4 text-white">
-          Bonus features available on desktop
+        
+        {/* Game Rules */}
+        <div className="mt-4 bg-blue-900 rounded p-3">
+          <div className="text-blue-300 text-xs font-bold mb-2">GAME RULES:</div>
+          <div className="text-white text-xs space-y-1">
+            <div>• 3+ matching symbols in a line = Win</div>
+            <div>• Higher value symbols = Bigger wins</div>
+            <div>• Multiple lines can win simultaneously</div>
+          </div>
         </div>
-      )}
+      </main>
       
       <Footer />
     </div>
