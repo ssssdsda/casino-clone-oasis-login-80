@@ -1,407 +1,358 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { placeBet, completeBet } from '@/utils/bettingSystem';
+import { useNavigate } from 'react-router-dom';
+import { RefreshCw, Plus, Minus, Scroll, Crown, Ankh } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Volume2, VolumeX, ArrowLeft } from 'lucide-react';
-import BetControls from '@/components/BetControls';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { handleGameSpin } from '@/utils/gameUpdater';
+import { formatCurrency } from '@/utils/currency';
+import { getGameLimits, validateGameBet } from '@/utils/gameConnections';
 
-const BookOfDeadGame = () => {
-  const navigate = useNavigate();
+// Book of Dead symbols
+const symbols = [
+  { id: 'book', symbol: 'book', icon: () => (
+    <div className="text-yellow-500">
+      <Scroll size="100%" />
+    </div>
+  ), multiplier: 10 },
+  { id: 'pharaoh', symbol: 'pharaoh', icon: () => (
+    <div className="text-blue-500">
+      <Crown size="100%" />
+    </div>
+  ), multiplier: 8 },
+  { id: 'ankh', symbol: 'ankh', icon: () => (
+    <div className="text-green-500">
+      <Ankh size="100%" />
+    </div>
+  ), multiplier: 6 },
+  { id: 'ace', symbol: 'A', icon: () => (
+    <div className="bg-red-600 w-full h-full rounded flex items-center justify-center">
+      <span className="text-white font-bold text-lg">A</span>
+    </div>
+  ), multiplier: 4 },
+  { id: 'king', symbol: 'K', icon: () => (
+    <div className="bg-purple-600 w-full h-full rounded flex items-center justify-center">
+      <span className="text-white font-bold text-lg">K</span>
+    </div>
+  ), multiplier: 3 },
+  { id: 'queen', symbol: 'Q', icon: () => (
+    <div className="bg-pink-600 w-full h-full rounded flex items-center justify-center">
+      <span className="text-white font-bold text-lg">Q</span>
+    </div>
+  ), multiplier: 2 }
+];
+
+const BookOfDeadGame: React.FC = () => {
+  const [betAmount, setBetAmount] = useState<number>(10);
+  const [isSpinning, setIsSpinning] = useState<boolean>(false);
+  const [winAmount, setWinAmount] = useState<number>(0);
+  const [reels, setReels] = useState<number[]>([0, 0, 0]);
+  const [gameLimits, setGameLimits] = useState({ minBet: 10, maxBet: 1000, isEnabled: true });
+  
   const { user, updateUserBalance } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const spinSound = useRef<HTMLAudioElement | null>(null);
+  const winSound = useRef<HTMLAudioElement | null>(null);
   
-  const [betAmount, setBetAmount] = useState(10);
-  const [balance, setBalance] = useState(user?.balance || 1000);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [reels, setReels] = useState([
-    ['📜', '👑', '🐍', '⚱️', '🔯'],
-    ['👑', '🐍', '📜', '🔯', '⚱️'],
-    ['🐍', '⚱️', '👑', '📜', '🔯'],
-    ['⚱️', '🔯', '🐍', '👑', '📜'],
-    ['🔯', '📜', '⚱️', '🐍', '👑']
-  ]);
-  const [displayReels, setDisplayReels] = useState([
-    ['📜', '👑', '🐍'],
-    ['👑', '🐍', '📜'],
-    ['🐍', '⚱️', '👑']
-  ]);
-  const [isMuted, setIsMuted] = useState(false);
-  const [lastWin, setLastWin] = useState(0);
-  const [spinningReels, setSpinningReels] = useState([false, false, false]);
-
-  const symbols = ['📜', '👑', '🐍', '⚱️', '🔯', 'A', 'K', 'Q', 'J'];
-  const symbolValues = {
-    '📜': 100, // Book of Dead (Scatter/Wild)
-    '👑': 50,  // Pharaoh
-    '🐍': 30,  // Anubis
-    '⚱️': 20,  // Urn
-    '🔯': 15,  // Ankh
-    'A': 10,
-    'K': 8,
-    'Q': 6,
-    'J': 4
-  };
-
   useEffect(() => {
-    if (user?.balance !== undefined) {
-      setBalance(user.balance);
-    }
-  }, [user?.balance]);
-
-  const getRandomSymbol = () => {
-    return symbols[Math.floor(Math.random() * symbols.length)];
-  };
-
-  const spinReels = () => {
-    const newReels = [];
-    for (let i = 0; i < 5; i++) {
-      const reel = [];
-      for (let j = 0; j < 5; j++) {
-        reel.push(getRandomSymbol());
+    spinSound.current = new Audio('/sounds/spin.mp3');
+    winSound.current = new Audio('/sounds/win.mp3');
+    
+    // Load game limits from Supabase
+    const loadGameLimits = async () => {
+      try {
+        const limits = await getGameLimits('bookOfDead');
+        setGameLimits(limits);
+        console.log('Loaded Book of Dead limits:', limits);
+      } catch (error) {
+        console.error('Error loading game limits:', error);
       }
-      newReels.push(reel);
-    }
-    return newReels;
-  };
-
-  const getDisplayFromReels = (fullReels) => {
-    return [
-      [fullReels[0][1], fullReels[1][1], fullReels[2][1]],
-      [fullReels[0][2], fullReels[1][2], fullReels[2][2]],
-      [fullReels[0][3], fullReels[1][3], fullReels[2][3]]
-    ];
-  };
-
-  const checkWinningLines = (display) => {
-    const lines = [
-      // Horizontal lines
-      [display[0][0], display[0][1], display[0][2]], // Top row
-      [display[1][0], display[1][1], display[1][2]], // Middle row
-      [display[2][0], display[2][1], display[2][2]], // Bottom row
-      // Diagonal lines
-      [display[0][0], display[1][1], display[2][2]], // Top-left to bottom-right
-      [display[2][0], display[1][1], display[0][2]], // Bottom-left to top-right
-    ];
-
-    let totalWin = 0;
-    let winningLines = [];
-
-    lines.forEach((line, index) => {
-      const symbol = line[0];
-      if (line.every(s => s === symbol)) {
-        const multiplier = symbolValues[symbol] || 1;
-        const lineWin = betAmount * (multiplier / 10);
-        totalWin += lineWin;
-        winningLines.push({ line: index, symbol, win: lineWin });
+    };
+    
+    loadGameLimits();
+    generateReels();
+    
+    return () => {
+      if (spinSound.current) {
+        spinSound.current.pause();
+        spinSound.current = null;
       }
-    });
-
-    // Special Book of Dead scatter wins
-    const bookCount = display.flat().filter(symbol => symbol === '📜').length;
-    if (bookCount >= 3) {
-      const scatterWin = betAmount * bookCount * 2;
-      totalWin += scatterWin;
-      winningLines.push({ type: 'scatter', symbol: '📜', count: bookCount, win: scatterWin });
+      if (winSound.current) {
+        winSound.current.pause();
+        winSound.current = null;
+      }
+    };
+  }, []);
+  
+  const generateReels = () => {
+    const newReels: number[] = Array(3).fill(0).map(() => 
+      Math.floor(Math.random() * symbols.length)
+    );
+    setReels(newReels);
+  };
+  
+  const calculateWin = (reelResults: number[]) => {
+    const symbolCounts = reelResults.reduce((acc, symbolIndex) => {
+      acc[symbolIndex] = (acc[symbolIndex] || 0) + 1;
+      return acc;
+    }, {} as Record<number, number>);
+    
+    const maxCount = Math.max(...Object.values(symbolCounts));
+    
+    if (maxCount === 3) {
+      // 3 matching symbols = full win
+      const winningSymbolIndex = Object.keys(symbolCounts).find(
+        key => symbolCounts[parseInt(key)] === 3
+      );
+      if (winningSymbolIndex) {
+        const symbol = symbols[parseInt(winningSymbolIndex)];
+        return betAmount * symbol.multiplier;
+      }
+    } else if (maxCount === 2) {
+      // 2 matching symbols = 50% win
+      const winningSymbolIndex = Object.keys(symbolCounts).find(
+        key => symbolCounts[parseInt(key)] === 2
+      );
+      if (winningSymbolIndex) {
+        const symbol = symbols[parseInt(winningSymbolIndex)];
+        return Math.floor(betAmount * symbol.multiplier * 0.5);
+      }
     }
-
-    return { totalWin, winningLines };
+    
+    return 0; // No matching symbols = lose
   };
-
-  const animateReelSpin = (reelIndex, duration) => {
-    return new Promise<void>((resolve) => {
-      setSpinningReels(prev => {
-        const newState = [...prev];
-        newState[reelIndex] = true;
-        return newState;
-      });
-
-      const interval = setInterval(() => {
-        setDisplayReels(prev => {
-          const newDisplay = [...prev];
-          newDisplay[reelIndex] = [
-            getRandomSymbol(),
-            getRandomSymbol(),
-            getRandomSymbol()
-          ];
-          return newDisplay;
-        });
-      }, 80); // Increased interval for smoother animation
-
-      setTimeout(() => {
-        clearInterval(interval);
-        setSpinningReels(prev => {
-          const newState = [...prev];
-          newState[reelIndex] = false;
-          return newState;
-        });
-        resolve();
-      }, duration);
-    });
-  };
-
+  
   const handleSpin = async () => {
-    if (!user) {
+    if (isSpinning || !user) return;
+    
+    // Validate bet before processing
+    const validation = await validateGameBet('bookOfDead', betAmount, user.balance);
+    if (!validation.valid) {
       toast({
-        title: "Login Required",
-        description: "Please login to play",
+        title: "Invalid Bet",
+        description: validation.message,
         variant: "destructive"
       });
       return;
     }
-
-    if (balance < betAmount) {
-      toast({
-        title: "Insufficient Balance",
-        description: "Not enough coins to place this bet",
-        variant: "destructive"
-      });
-      return;
+    
+    setIsSpinning(true);
+    setWinAmount(0);
+    
+    // Play spin sound
+    if (spinSound.current) {
+      spinSound.current.currentTime = 0;
+      spinSound.current.play().catch(e => console.error("Error playing sound:", e));
     }
-
-    try {
-      setIsSpinning(true);
-      setLastWin(0);
-
-      // Place the bet
-      const betResult = await placeBet(user.id, 'bookOfDead', betAmount, balance);
-      setBalance(betResult.newBalance);
-      updateUserBalance(betResult.newBalance);
-
-      // Animate each reel with reduced timing for better performance
-      const reelPromises = [];
-      for (let i = 0; i < 3; i++) {
-        setTimeout(() => {
-          reelPromises.push(animateReelSpin(i, 800 + (i * 150))); // Reduced duration
-        }, i * 100); // Reduced delay
+    
+    // Simulate spinning animation for 2 seconds
+    setTimeout(async () => {
+      try {
+        // Generate new reel results
+        const newReels = Array(3).fill(0).map(() => 
+          Math.floor(Math.random() * symbols.length)
+        );
+        setReels(newReels);
+        
+        // Calculate potential win
+        const calculatedWin = calculateWin(newReels);
+        const shouldWin = calculatedWin > 0;
+        
+        // Use the game spinner with calculated multiplier
+        const multiplier = shouldWin ? calculatedWin / betAmount : 0;
+        
+        const result = await handleGameSpin(
+          user,
+          'bookOfDead',
+          betAmount,
+          multiplier,
+          updateUserBalance,
+          toast
+        );
+        
+        if (result && result.winAmount > 0) {
+          setWinAmount(result.winAmount);
+          
+          // Play win sound
+          if (winSound.current) {
+            winSound.current.currentTime = 0;
+            winSound.current.play().catch(e => console.error("Error playing sound:", e));
+          }
+        }
+      } catch (error) {
+        console.error("Error processing bet:", error);
       }
-
-      // Wait for all reels to finish spinning with reduced timing
-      await Promise.all([
-        new Promise<void>(resolve => setTimeout(resolve, 800)),
-        new Promise<void>(resolve => setTimeout(resolve, 950)),
-        new Promise<void>(resolve => setTimeout(resolve, 1100))
-      ]);
       
-      // Determine final result
-      const finalReels = spinReels();
-      const finalDisplay = getDisplayFromReels(finalReels);
-      setReels(finalReels);
-      setDisplayReels(finalDisplay);
-
-      // Check for wins
-      const { totalWin, winningLines } = checkWinningLines(finalDisplay);
-
-      if (betResult.shouldWin && totalWin === 0) {
-        // Force a win by creating a winning combination
-        const forcedDisplay = [
-          ['👑', '👑', '👑'],
-          [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()],
-          [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()]
-        ];
-        setDisplayReels(forcedDisplay);
-        const forcedWin = betAmount * 2;
-        setLastWin(forcedWin);
-        
-        setTimeout(async () => {
-          const newBalance = await completeBet(user.id, 'bookOfDead', betAmount, forcedWin, betResult.newBalance);
-          setBalance(newBalance);
-          updateUserBalance(newBalance);
-          setIsSpinning(false);
-        }, 500); // Reduced timeout
-
-        toast({
-          title: "🎉 Winner!",
-          description: `You won ৳${forcedWin.toFixed(2)}!`,
-          variant: "default"
-        });
-      } else if (totalWin > 0) {
-        setLastWin(totalWin);
-        
-        setTimeout(async () => {
-          const newBalance = await completeBet(user.id, 'bookOfDead', betAmount, totalWin, betResult.newBalance);
-          setBalance(newBalance);
-          updateUserBalance(newBalance);
-          setIsSpinning(false);
-        }, 500); // Reduced timeout
-
-        toast({
-          title: "🎉 Winner!",
-          description: `You won ৳${totalWin.toFixed(2)}!`,
-          variant: "default"
-        });
-      } else {
-        setTimeout(async () => {
-          await completeBet(user.id, 'bookOfDead', betAmount, 0, betResult.newBalance);
-          setIsSpinning(false);
-        }, 500); // Reduced timeout
-      }
-
-    } catch (error) {
-      console.error('Error spinning:', error);
       setIsSpinning(false);
-      toast({
-        title: "Error",
-        description: "Failed to place bet",
-        variant: "destructive"
-      });
-    }
+    }, 2000);
   };
-
-  const handleBetChange = (amount) => setBetAmount(amount);
-  const handleBetMax = () => setBetAmount(Math.min(1000, balance));
-  const handleBetMin = () => setBetAmount(10);
-  const handleBetHalf = () => setBetAmount(Math.max(10, Math.floor(betAmount / 2)));
-  const handleBetDouble = () => setBetAmount(Math.min(1000, betAmount * 2));
-
+  
+  const changeBetAmount = (amount: number) => {
+    const newBetAmount = Math.max(gameLimits.minBet, Math.min(gameLimits.maxBet, betAmount + amount));
+    setBetAmount(newBetAmount);
+  };
+  
+  const renderSymbol = (symbolIndex: number, isSpinning: boolean) => {
+    const symbol = symbols[symbolIndex];
+    const IconComponent = symbol.icon;
+    
+    return (
+      <motion.div
+        className="w-full h-full flex items-center justify-center p-2"
+        animate={isSpinning ? {
+          rotateY: [0, 180, 360],
+          scale: [1, 0.8, 1]
+        } : {
+          scale: [1, 1.05, 1]
+        }}
+        transition={isSpinning ? {
+          duration: 0.5,
+          repeat: Infinity
+        } : {
+          duration: 2,
+          repeat: Infinity,
+          repeatType: "reverse"
+        }}
+      >
+        <IconComponent />
+      </motion.div>
+    );
+  };
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-900 via-yellow-800 to-amber-900">
+    <div className="min-h-screen bg-gradient-to-b from-yellow-900 to-black flex flex-col">
       <Header />
       
-      <main className="container mx-auto py-4 px-4">
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            onClick={() => navigate('/')}
-            variant="outline"
-            className="bg-amber-800 border-yellow-600 text-yellow-100 hover:bg-amber-700"
+      <main className="flex-1 p-2 max-w-sm mx-auto w-full flex flex-col">
+        {/* Game Title */}
+        <div className="relative w-full h-16 mb-2">
+          <img
+            src="/lovable-uploads/43827a0e-ee9e-4d09-bbe4-cca5b3d5ce4e.png"
+            alt="Book of Dead"
+            className="w-full h-full object-contain"
+          />
+        </div>
+        
+        {/* Top spinning icon */}
+        <div className="flex justify-center mb-4">
+          <motion.div
+            className="w-16 h-16 bg-yellow-700 border-2 border-yellow-500 rounded-lg flex items-center justify-center"
+            animate={isSpinning ? {
+              rotate: [0, 360]
+            } : {}}
+            transition={isSpinning ? {
+              duration: 0.5,
+              repeat: Infinity,
+              ease: "linear"
+            } : {}}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Games
-          </Button>
+            <Scroll className="text-yellow-300" size={32} />
+          </motion.div>
+        </div>
+        
+        {/* Game Board */}
+        <div className="bg-yellow-800 border-2 border-yellow-600 rounded-lg overflow-hidden shadow-lg mb-4">
+          {/* Reel display */}
+          <div className="grid grid-cols-3 gap-1 p-2 bg-black">
+            {reels.map((symbolIndex, index) => (
+              <div key={`reel-${index}`} className="aspect-square bg-yellow-700 border border-yellow-500 rounded">
+                {renderSymbol(symbolIndex, isSpinning)}
+              </div>
+            ))}
+          </div>
           
-          <div className="flex items-center gap-2 ml-auto">
-            <Button
-              onClick={() => setIsMuted(!isMuted)}
-              variant="outline"
-              size="sm"
-              className="bg-amber-800 border-yellow-600 text-yellow-100"
-            >
-              {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            </Button>
+          {/* Win display */}
+          <div className="bg-yellow-700 p-2 text-center border-t border-yellow-500">
+            <div className="text-black font-bold text-sm">
+              WIN <span className="text-green-600">{formatCurrency(winAmount)}</span>
+            </div>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Game Area */}
-          <div className="lg:col-span-3">
-            <Card className="bg-gradient-to-b from-yellow-600 to-amber-700 border-4 border-yellow-500 shadow-2xl">
-              <CardContent className="p-6">
-                {/* Game Title */}
-                <div className="text-center mb-6">
-                  <h1 className="text-4xl font-bold text-yellow-100 mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-                    BOOK OF DEAD
-                  </h1>
-                  <div className="flex justify-between items-center text-yellow-200">
-                    <div>COINS: {Math.floor(balance)}</div>
-                    <div>BET: {betAmount}</div>
-                    <div>LAST WIN: {lastWin.toFixed(0)}</div>
-                  </div>
-                </div>
-
-                {/* Slot Machine */}
-                <div className="bg-gradient-to-b from-amber-800 to-amber-900 p-4 rounded-lg border-4 border-yellow-600 mb-6">
-                  <div className="grid grid-cols-3 gap-2 bg-black p-4 rounded overflow-hidden">
-                    {displayReels.map((column, colIndex) => (
-                      <div key={colIndex} className="flex flex-col gap-2">
-                        {column.map((symbol, rowIndex) => (
-                          <div
-                            key={`${colIndex}-${rowIndex}`}
-                            className={`
-                              bg-gradient-to-b from-amber-700 to-amber-800 
-                              border-2 border-yellow-500 rounded-lg 
-                              flex items-center justify-center 
-                              h-20 text-4xl
-                              transform transition-transform duration-100
-                              ${spinningReels[colIndex] ? 'scale-105' : 'scale-100'}
-                              hover:scale-105
-                            `}
-                            style={{
-                              animation: spinningReels[colIndex] 
-                                ? `fastReelSpin 0.08s linear infinite` 
-                                : 'none'
-                            }}
-                          >
-                            <span className="drop-shadow-lg">
-                              {typeof symbol === 'string' && ['📜', '👑', '🐍', '⚱️', '🔯'].includes(symbol) 
-                                ? symbol 
-                                : <span className="text-yellow-100 font-bold text-2xl">{symbol}</span>
-                              }
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Game Controls */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-amber-800 p-3 rounded border-2 border-yellow-600">
-                    <div className="text-yellow-100 text-sm mb-1">COIN VALUE</div>
-                    <div className="text-yellow-200 font-bold">0.20</div>
-                  </div>
-                  
-                  <div className="bg-amber-800 p-3 rounded border-2 border-yellow-600">
-                    <div className="text-yellow-100 text-sm mb-1">LINES</div>
-                    <div className="text-yellow-200 font-bold">10</div>
-                  </div>
-                  
-                  <Button
-                    onClick={handleSpin}
-                    disabled={isSpinning || balance < betAmount}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl py-6 rounded-lg border-2 border-blue-400 disabled:opacity-50 transition-colors duration-200"
-                  >
-                    {isSpinning ? "SPINNING..." : "SPIN"}
-                  </Button>
-                </div>
-
-                {/* Paytable Info */}
-                <div className="mt-4 p-3 bg-amber-800 rounded border-2 border-yellow-600">
-                  <div className="text-yellow-100 text-sm text-center">
-                    📜 = Book of Dead (Wild/Scatter) | 👑 = Pharaoh | 🐍 = Anubis | ⚱️ = Urn | 🔯 = Ankh
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        
+        {/* Balance and Bet Info */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="bg-yellow-900 rounded p-2 text-center">
+            <div className="text-yellow-300 text-xs">BALANCE</div>
+            <div className="text-white font-bold text-sm">{formatCurrency(user?.balance || 0)}</div>
           </div>
-
-          {/* Betting Controls */}
-          <div className="lg:col-span-1">
-            <Card className="bg-casino border-casino-accent sticky top-4">
-              <CardContent className="p-4">
-                <BetControls
-                  betAmount={betAmount}
-                  onBetChange={handleBetChange}
-                  onBetMax={handleBetMax}
-                  onBetMin={handleBetMin}
-                  onBetHalf={handleBetHalf}
-                  onBetDouble={handleBetDouble}
-                  balance={balance}
-                  onBet={handleSpin}
-                  isSpinning={isSpinning}
-                />
-              </CardContent>
-            </Card>
+          
+          <div className="bg-yellow-900 rounded p-2 text-center">
+            <div className="text-yellow-300 text-xs">BET</div>
+            <div className="text-white font-bold text-sm">{formatCurrency(betAmount)}</div>
+          </div>
+        </div>
+        
+        {/* Bet Controls */}
+        <div className="flex items-center justify-center mb-4 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => changeBetAmount(-10)}
+            disabled={betAmount <= gameLimits.minBet || isSpinning}
+            className="bg-yellow-700 hover:bg-yellow-600 text-white border-yellow-500"
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          
+          <div className="bg-yellow-900 px-4 py-2 rounded text-center min-w-24">
+            <div className="text-yellow-300 text-xs">BET AMOUNT</div>
+            <div className="text-white font-bold">{formatCurrency(betAmount)}</div>
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => changeBetAmount(10)}
+            disabled={betAmount >= gameLimits.maxBet || isSpinning}
+            className="bg-yellow-700 hover:bg-yellow-600 text-white border-yellow-500"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Game Limits */}
+        <div className="text-center text-yellow-300 text-xs mb-4">
+          Min: {formatCurrency(gameLimits.minBet)} | Max: {formatCurrency(gameLimits.maxBet)}
+        </div>
+        
+        {/* Spin Button */}
+        <div className="flex justify-center">
+          <motion.button
+            className={`bg-gradient-to-r ${isSpinning ? 'from-yellow-700 to-yellow-800' : 'from-green-500 to-green-700'} 
+              h-16 w-16 rounded-full flex items-center justify-center border-2 border-yellow-300 shadow-lg`}
+            whileHover={!isSpinning ? { scale: 1.1 } : {}}
+            whileTap={!isSpinning ? { scale: 0.95 } : {}}
+            onClick={handleSpin}
+            disabled={isSpinning || !gameLimits.isEnabled || (user && user.balance < betAmount)}
+          >
+            <motion.div
+              animate={isSpinning ? { rotate: 360 } : {}}
+              transition={isSpinning ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
+            >
+              <RefreshCw className="h-6 w-6 text-white" />
+            </motion.div>
+          </motion.button>
+        </div>
+        
+        {/* Game Rules */}
+        <div className="mt-4 bg-yellow-900 rounded p-3">
+          <div className="text-yellow-300 text-xs font-bold mb-2">GAME RULES:</div>
+          <div className="text-white text-xs space-y-1">
+            <div>• 3 matching symbols = Full Win</div>
+            <div>• 2 matching symbols = 50% Win</div>
+            <div>• No match = Lose</div>
           </div>
         </div>
       </main>
       
       <Footer />
-      
-      <style>
-        {`
-          @keyframes fastReelSpin {
-            0% { transform: translateY(0) scale(1.02); }
-            50% { transform: translateY(-5px) scale(1.05); }
-            100% { transform: translateY(0) scale(1.02); }
-          }
-        `}
-      </style>
     </div>
   );
 };
