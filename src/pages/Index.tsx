@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
-import PromoBanner from '@/components/PromoBanner';
 import Footer from '@/components/Footer';
 import GameCategories from '@/components/GameCategories';
 import { WelcomePopup } from '@/components/WelcomePopup';
@@ -179,8 +178,6 @@ const Index = () => {
       <Header />
       
       <main className={`flex-1 p-1 md:p-4 overflow-y-auto ${isMobile ? 'pb-16' : ''}`}>
-        <PromoBanner />
-        
         <GameCategories onCategorySelect={handleCategorySelect} selectedCategory={selectedCategory} />
         
         <GameSection title="Featured Games" games={featuredGames} />

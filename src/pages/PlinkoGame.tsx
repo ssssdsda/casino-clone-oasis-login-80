@@ -186,7 +186,7 @@ const PlinkoGame = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <motion.h1 
-              className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-purple-500 to-pink-500 mb-4"
+              className="text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-purple-500 to-pink-500 mb-4"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -194,13 +194,13 @@ const PlinkoGame = () => {
               PLINKO
             </motion.h1>
             <motion.div 
-              className="w-16 h-16 border-4 border-t-purple-500 border-r-pink-500 border-b-purple-500 border-l-pink-500 border-t-transparent rounded-full mx-auto animate-spin"
+              className="w-12 h-12 md:w-16 md:h-16 border-4 border-t-purple-500 border-r-pink-500 border-b-purple-500 border-l-pink-500 border-t-transparent rounded-full mx-auto animate-spin"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             />
             <motion.p 
-              className="text-gray-400 mt-4"
+              className="text-gray-400 mt-4 text-sm md:text-base"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
@@ -217,15 +217,15 @@ const PlinkoGame = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-violet-900 via-purple-900 to-black flex flex-col">
       <Header />
-      <main className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-2 py-4">
-        <div className="flex justify-between items-center py-2 mb-4">
+      <main className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-1 md:px-2 py-2 md:py-4">
+        <div className="flex justify-between items-center py-2 mb-2 md:mb-4">
           <button onClick={() => navigate('/')} className="text-gray-300 hover:text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
           <motion.h1 
-            className="text-3xl md:text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-purple-500 to-pink-500"
+            className="text-2xl md:text-3xl lg:text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-purple-500 to-pink-500"
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -233,23 +233,23 @@ const PlinkoGame = () => {
             PLINKO
           </motion.h1>
           <button className="text-gray-300 hover:text-white transition-colors">
-            <Settings className="h-6 w-6" />
+            <Settings className="h-5 w-5 md:h-6 md:w-6" />
           </button>
         </div>
         
-        <div className="relative flex-grow flex flex-col items-center pb-4">
+        <div className="relative flex-grow flex flex-col items-center pb-2 md:pb-4">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="w-full mb-4"
+            className="w-full mb-2 md:mb-4"
           >
             <RiskSelector selectedRisk={risk} onSelectRisk={handleRiskChange} />
           </motion.div>
           
-          <div className="w-full flex-grow flex items-center justify-center p-2">
+          <div className="w-full flex-grow flex items-center justify-center p-1 md:p-2">
             <motion.div 
-              className="w-full max-w-md bg-gradient-to-b from-violet-900 to-purple-950 rounded-lg overflow-hidden shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+              className="w-full max-w-sm md:max-w-md bg-gradient-to-b from-violet-900 to-purple-950 rounded-lg overflow-hidden shadow-[0_0_15px_rgba(168,85,247,0.5)]"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -265,40 +265,40 @@ const PlinkoGame = () => {
           </div>
           
           <motion.div 
-            className="w-full max-w-md"
+            className="w-full max-w-sm md:max-w-md"
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <div className="mb-4 bg-purple-900 bg-opacity-50 p-4 rounded-lg shadow-[0_4px_10px_rgba(168,85,247,0.3)]">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <div className="text-xs text-gray-400">Bet Amount</div>
+            <div className="mb-3 md:mb-4 bg-purple-900 bg-opacity-50 p-3 md:p-4 rounded-lg shadow-[0_4px_10px_rgba(168,85,247,0.3)]">
+              <div className="flex justify-between items-center mb-3 md:mb-4 gap-2">
+                <div className="flex-1">
+                  <div className="text-xs text-gray-400 mb-1">Bet Amount</div>
                   <div className="flex items-center">
                     <Button 
                       variant="outline" 
                       size="icon" 
-                      className="h-8 w-8 rounded-full bg-purple-800 border-purple-600 text-purple-300 hover:bg-purple-700"
+                      className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-purple-800 border-purple-600 text-purple-300 hover:bg-purple-700"
                       onClick={() => changeBetAmount(-10)}
                       disabled={betAmount <= 10 || isDropping}
                     >
-                      <Minus className="h-4 w-4" />
+                      <Minus className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
                     <Input
                       type="number"
                       value={betAmount}
                       onChange={(e) => setBetAmount(Number(e.target.value))}
-                      className="h-8 w-20 mx-2 text-center bg-purple-800 border-purple-600 text-white"
+                      className="h-7 w-16 md:h-8 md:w-20 mx-2 text-center bg-purple-800 border-purple-600 text-white text-sm"
                       disabled={isDropping}
                     />
                     <Button 
                       variant="outline" 
                       size="icon" 
-                      className="h-8 w-8 rounded-full bg-purple-800 border-purple-600 text-purple-300 hover:bg-purple-700"
+                      className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-purple-800 border-purple-600 text-purple-300 hover:bg-purple-700"
                       onClick={() => changeBetAmount(10)}
                       disabled={betAmount >= 1000 || isDropping}
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
                   </div>
                 </div>
@@ -306,13 +306,14 @@ const PlinkoGame = () => {
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  className="flex-1"
                 >
                   <Button
-                    className={`bg-gradient-to-r ${
+                    className={`w-full text-sm md:text-base bg-gradient-to-r ${
                       isDropping 
                         ? 'from-gray-600 to-gray-700' 
                         : 'from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600'
-                    } text-white font-bold rounded-md px-6 py-3 shadow-[0_0_10px_rgba(139,92,246,0.5)]`}
+                    } text-white font-bold rounded-md px-3 py-2 md:px-6 md:py-3 shadow-[0_0_10px_rgba(139,92,246,0.5)]`}
                     disabled={isDropping || !user || (user && user.balance < betAmount)}
                     onClick={handleDrop}
                   >
@@ -320,9 +321,9 @@ const PlinkoGame = () => {
                   </Button>
                 </motion.div>
                 
-                <div>
-                  <div className="text-xs text-gray-400">Balance</div>
-                  <div className="text-yellow-400 font-bold">
+                <div className="flex-1 text-right">
+                  <div className="text-xs text-gray-400 mb-1">Balance</div>
+                  <div className="text-yellow-400 font-bold text-sm">
                     {user ? balance.toFixed(2) : '0.00'}
                   </div>
                 </div>
@@ -335,8 +336,8 @@ const PlinkoGame = () => {
               transition={{ delay: 0.6, duration: 0.5 }}
             >
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-white flex items-center">
-                  <History className="h-4 w-4 mr-2" /> Bet History
+                <h3 className="text-base md:text-lg font-semibold text-white flex items-center">
+                  <History className="h-3 w-3 md:h-4 md:w-4 mr-2" /> Bet History
                 </h3>
               </div>
               <BetHistory history={betHistory.map(item => ({

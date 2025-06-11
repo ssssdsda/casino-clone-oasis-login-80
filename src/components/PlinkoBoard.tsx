@@ -292,7 +292,7 @@ const PlinkoBoard = ({
   const pegElements = pegs.map((peg, index) => (
     <div
       key={`peg-${index}`}
-      className={`absolute w-3 h-3 rounded-full transform -translate-x-1/2 -translate-y-1/2 shadow-glow 
+      className={`absolute w-2 h-2 md:w-3 md:h-3 rounded-full transform -translate-x-1/2 -translate-y-1/2 shadow-glow 
         ${hitPegs.includes(index) ? 'bg-amber-500' : 'bg-amber-300'}`}
       style={{
         left: `${peg.x}%`,
@@ -304,7 +304,7 @@ const PlinkoBoard = ({
   const slotElements = slots.map((slot, index) => (
     <div
       key={`slot-${index}`}
-      className={`absolute bottom-0 w-[8%] h-[15%] flex flex-col items-center justify-end pb-2
+      className={`absolute bottom-0 w-[8%] h-[12%] md:h-[15%] flex flex-col items-center justify-end pb-1 md:pb-2
         ${selectedSlot === index ? 'bg-amber-500' : 'bg-amber-700'}
         ${slot.multiplier > 0 ? 'text-green-400' : 'text-red-400'}`}
       style={{
@@ -314,13 +314,13 @@ const PlinkoBoard = ({
         borderTopRightRadius: '8px'
       }}
     >
-      <span className="text-xs font-bold">{slot.multiplier}x</span>
+      <span className="text-[8px] md:text-xs font-bold">{slot.multiplier}x</span>
     </div>
   ));
 
   const ballElement = ballPosition && (
     <motion.div
-      className="absolute w-5 h-5 bg-white rounded-full shadow-lg z-10"
+      className="absolute w-3 h-3 md:w-5 md:h-5 bg-white rounded-full shadow-lg z-10"
       style={{
         left: `${ballPosition.x}%`,
         top: `${ballPosition.y}%`,
@@ -332,14 +332,14 @@ const PlinkoBoard = ({
   return (
     <div 
       ref={boardRef}
-      className="w-full h-[400px] bg-gradient-to-b from-amber-900 to-amber-800 rounded-lg relative overflow-hidden"
+      className="w-full h-[300px] md:h-[400px] bg-gradient-to-b from-amber-900 to-amber-800 rounded-lg relative overflow-hidden"
     >
       {pegElements}
       {slotElements}
       {ballElement}
       
       {showResult && multiplier !== null && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-bold z-20 bg-black/50 p-4 rounded-lg">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-lg md:text-2xl font-bold z-20 bg-black/50 p-2 md:p-4 rounded-lg">
           {multiplier > 0 ? 
             <span className="text-green-500">{multiplier}x Win!</span> : 
             <span className="text-red-500">Try again!</span>
