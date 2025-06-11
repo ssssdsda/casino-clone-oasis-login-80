@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Plus, Minus, Scroll, Crown, Ankh } from 'lucide-react';
+import { RefreshCw, Plus, Minus, Scroll, Crown, Cross } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -27,7 +26,7 @@ const symbols = [
   ), multiplier: 8 },
   { id: 'ankh', symbol: 'ankh', icon: () => (
     <div className="text-green-500">
-      <Ankh size="100%" />
+      <Cross size="100%" />
     </div>
   ), multiplier: 6 },
   { id: 'ace', symbol: 'A', icon: () => (
