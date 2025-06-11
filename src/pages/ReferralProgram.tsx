@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,7 +146,7 @@ const ReferralProgram = () => {
                 <span>Refer & Earn</span>
               </CardTitle>
               <CardDescription className="text-white">
-                Share your link and earn PKR 90 for each friend who registers and deposits!
+                Share your link and earn PKR 90 for each friend who registers!
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -244,7 +243,7 @@ const ReferralProgram = () => {
             </CardContent>
             <CardFooter className="bg-gray-900 border-t border-gray-800 flex justify-center">
               <p className="text-sm text-gray-300 text-center">
-                Rewards are credited automatically when your friend makes a deposit
+                Rewards are credited automatically when your friend registers
               </p>
             </CardFooter>
           </Card>
@@ -270,7 +269,7 @@ const ReferralProgram = () => {
                 <div className="bg-green-700 rounded-full h-8 w-8 flex items-center justify-center shrink-0">
                   <span className="text-white font-bold">3</span>
                 </div>
-                <p className="text-gray-300">When they make their first deposit, you earn PKR 90!</p>
+                <p className="text-gray-300">You immediately earn PKR 90 when they register!</p>
               </div>
             </CardContent>
           </Card>

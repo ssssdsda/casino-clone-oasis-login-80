@@ -5,7 +5,7 @@ import { Minus, Plus, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { shouldGameBetWin } from '@/lib/firebase'; // Changed to use shouldGameBetWin from firebase
+import { shouldGameBetWin } from '@/lib/firebase';
 
 const AviatorGame = () => {
   const { user, updateUserBalance } = useAuth();
@@ -19,7 +19,7 @@ const AviatorGame = () => {
   const [autoCashoutMultiplier, setAutoCashoutMultiplier] = useState(2.0);
   const [currentWin, setCurrentWin] = useState(0);
   const [hasPlacedBet, setHasPlacedBet] = useState(false);
-  const [betCount, setBetCount] = useState(0); // Track bets for betting system
+  const [betCount, setBetCount] = useState(0);
   const [userBalance, setUserBalance] = useState(user?.balance || 0);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   const planeRef = useRef<HTMLDivElement>(null);
@@ -96,14 +96,12 @@ const AviatorGame = () => {
 
       // Use Firebase betting system to determine outcome
       const checkWin = async () => {
-        // Use shouldGameBetWin with the game type parameter
         return await shouldGameBetWin(user?.id || 'anonymous', 'aviator', betAmount);
       };
       
       checkWin().then(shouldWinThisBet => {
         console.log(`Aviator bet: ${shouldWinThisBet ? 'Win' : 'Lose'}, Bet amount: ${betAmount}`);
         
-        // Set max multiplier based on whether it should win and bet amount
         const maxMultiplier = shouldWinThisBet 
           ? (betAmount > 50 ? 1.5 : 2 + Math.random() * 3)
           : 1 + Math.random();
@@ -208,6 +206,18 @@ const AviatorGame = () => {
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
+      {/* Balance Display */}
+      <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-3 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Balance:</span>
+          <span className="text-lg font-bold">৳{userBalance.toFixed(2)}</span>
+        </div>
+        <div className="text-right">
+          <div className="text-xs opacity-80">Current Game</div>
+          <div className="font-bold">AVIATOR</div>
+        </div>
+      </div>
+
       <div className="bg-black text-green-500 p-2 flex overflow-x-auto gap-2">
         {multiplierHistoryRef.current.map((m, i) => {
           let textColor = "text-blue-400";
@@ -243,7 +253,7 @@ const AviatorGame = () => {
       </div>
 
       <div className="flex-1 bg-gradient-radial from-gray-800 to-black relative overflow-hidden">
-        <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-7xl font-bold z-10">
+        <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-4xl md:text-7xl font-bold z-10">
           {multiplier.toFixed(2)}x
         </div>
 
@@ -259,29 +269,31 @@ const AviatorGame = () => {
         <div className="absolute bottom-0 left-0 h-full w-full">
           <motion.div 
             ref={planeRef}
-            className="absolute bottom-0 left-0"
+            className="absolute bottom-4 left-4"
             animate={{
-              x: isFlying ? '60vw' : '0vw',
-              y: isFlying ? '-40vh' : '0vh',
-              rotate: isFlying ? 30 : 0
+              x: isFlying ? ['0vw', '80vw'] : '0vw',
+              y: isFlying ? ['0vh', '-50vh'] : '0vh',
+              rotate: isFlying ? [0, 45] : 0
             }}
             initial={{ x: '0vw', y: '0vh', rotate: 0 }}
-            transition={{ duration: 20, ease: "easeInOut" }}
+            transition={{ 
+              duration: isFlying ? 15 : 0.5, 
+              ease: "easeInOut"
+            }}
           >
             <div className="relative">
               {isFlying && (
                 <motion.div
-                  className="absolute left-0 bottom-0 h-1.5 bg-red-600"
+                  className="absolute left-0 bottom-0 h-1 bg-red-600 origin-left"
                   style={{ 
-                    width: `${Math.min(60 * (multiplier / 2), 60)}vw`,
-                    transformOrigin: "left bottom",
+                    width: `${Math.min(80 * (multiplier / 2), 80)}vw`,
                     zIndex: 1
                   }}
                 />
               )}
               
-              <div className="text-red-600">
-                <svg width="64" height="40" viewBox="0 0 64 40">
+              <div className="text-red-600 w-16 h-10 md:w-20 md:h-12">
+                <svg width="100%" height="100%" viewBox="0 0 64 40">
                   <path 
                     d="M55,20 L40,13 L10,13 L0,20 L10,27 L40,27 L55,20 Z" 
                     fill="currentColor" 
@@ -307,7 +319,7 @@ const AviatorGame = () => {
         </div>
       </div>
 
-      <div className="bg-gray-900 text-white p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-gray-900 text-white p-4">
         <div className="border border-gray-700 rounded-lg p-4">
           <div className="flex justify-between mb-4">
             <div className="text-lg font-bold">Place your bet</div>
@@ -327,7 +339,7 @@ const AviatorGame = () => {
             >
               <Minus size={18} />
             </button>
-            <div className="mx-4 text-center">
+            <div className="mx-4 text-center flex-1">
               <div className="text-2xl">{betAmount.toFixed(2)}</div>
               
               <div className="grid grid-cols-4 gap-1 mt-2">
@@ -400,48 +412,13 @@ const AviatorGame = () => {
               'Bet'
             )}
           </button>
-        </div>
-        
-        <div className="border border-gray-700 rounded-lg p-4">
-          <div className="flex justify-between items-center mb-4">
-            <div className="text-lg font-bold">Stats</div>
-            <div className="text-gray-400 text-sm">
-              Balance: {userBalance.toFixed(2)}
-            </div>
-          </div>
           
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Bet Amount:</span>
-              <span>{betAmount.toFixed(2)}</span>
+          {hasPlacedBet && (
+            <div className="mt-4 text-center">
+              <div className="text-sm text-gray-400 mb-1">Potential Win</div>
+              <div className="text-2xl font-bold text-yellow-400">৳{currentWin.toFixed(2)}</div>
             </div>
-            <div className="flex justify-between">
-              <span>Current Multiplier:</span>
-              <span className="font-bold text-green-400">{multiplier.toFixed(2)}x</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Potential Win:</span>
-              <span className="font-bold text-yellow-400">{currentWin.toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <div className="mt-6">
-            <div className="text-center mb-2 text-gray-400 text-sm">Multiplier History</div>
-            <div className="flex flex-wrap gap-2">
-              {multiplierHistoryRef.current.slice(0, 10).map((m, i) => {
-                let bgColor = "bg-blue-600";
-                if (m >= 5) bgColor = "bg-green-600";
-                if (m >= 10) bgColor = "bg-purple-600";
-                if (m >= 15) bgColor = "bg-red-600";
-                
-                return (
-                  <div key={i} className={`${bgColor} rounded px-2 py-1 text-xs`}>
-                    {m.toFixed(2)}x
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
