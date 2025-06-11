@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { getGameLimits } from '@/utils/gameConnections';
+import { getGameLimits, GameType } from '@/utils/gameConnections';
 
 interface BetControlsProps {
   betAmount: number;
@@ -15,7 +15,7 @@ interface BetControlsProps {
   balance: number;
   onBet: () => void;
   isSpinning: boolean;
-  gameType?: string; // Add gameType to get specific limits
+  gameType?: GameType; // Changed from string to GameType
 }
 
 const BetControls: React.FC<BetControlsProps> = ({
