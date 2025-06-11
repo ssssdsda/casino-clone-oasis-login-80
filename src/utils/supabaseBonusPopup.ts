@@ -1,6 +1,4 @@
 
-import { supabase } from '@/integrations/supabase/client';
-
 export interface BonusPopupSettings {
   id?: string;
   enabled: boolean;
@@ -35,7 +33,7 @@ export const getBonusPopupSettings = async (): Promise<BonusPopupSettings | null
   }
 };
 
-// Save bonus popup settings with improved error handling
+// Save bonus popup settings to localStorage only
 export const saveBonusPopupSettings = async (settings: Omit<BonusPopupSettings, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
   try {
     console.log('Saving bonus popup settings:', settings);
@@ -57,20 +55,6 @@ export const saveBonusPopupSettings = async (settings: Omit<BonusPopupSettings, 
     }
     
     console.log('Bonus popup settings saved successfully to localStorage');
-    
-    // Also try to save to Supabase as backup (if table exists)
-    try {
-      const { error } = await supabase
-        .from('bonus_popup_settings')
-        .upsert(settingsWithTimestamp);
-      
-      if (!error) {
-        console.log('Bonus popup settings also saved to Supabase');
-      }
-    } catch (supabaseError) {
-      console.log('Supabase save failed (table may not exist), but localStorage save succeeded');
-    }
-    
     return true;
   } catch (error) {
     console.error('Error saving bonus popup settings:', error);
