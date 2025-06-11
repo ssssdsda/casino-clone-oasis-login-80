@@ -10,6 +10,7 @@ import {
   CarouselPrevious
 } from "@/components/ui/carousel";
 import { supabase } from '@/integrations/supabase/client';
+import { addCacheBusterToUrl } from '@/utils/cacheUtils';
 
 const defaultBanners = [
   {
@@ -40,7 +41,7 @@ const PromoBanner = () => {
   const [banners, setBanners] = useState(defaultBanners);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load dynamic images from database
+  // Load dynamic images from database with aggressive cache busting
   useEffect(() => {
     const loadDynamicImages = async () => {
       try {
@@ -50,20 +51,43 @@ const PromoBanner = () => {
           .eq('image_type', 'banner');
 
         if (error) {
-          console.log('No custom banner images found, using defaults');
+          console.log('No custom banner images found, using defaults with cache busting');
+          // Apply cache busting to default images
+          const cacheBustedDefaults = defaultBanners.map(banner => ({
+            ...banner,
+            image: addCacheBusterToUrl(banner.image)
+          }));
+          setBanners(cacheBustedDefaults);
           return;
         }
 
         if (imageConfigs && imageConfigs.length > 0) {
           const updatedBanners = defaultBanners.map(banner => {
             const config = imageConfigs.find(config => config.item_id === banner.id.toString());
-            return config ? { ...banner, image: config.image_url } : banner;
+            const imageUrl = config ? config.image_url : banner.image;
+            return { 
+              ...banner, 
+              image: addCacheBusterToUrl(imageUrl)
+            };
           });
           setBanners(updatedBanners);
-          console.log('Updated banners with custom images:', updatedBanners);
+          console.log('Updated banners with custom images and cache busting:', updatedBanners);
+        } else {
+          // Apply cache busting to default images
+          const cacheBustedDefaults = defaultBanners.map(banner => ({
+            ...banner,
+            image: addCacheBusterToUrl(banner.image)
+          }));
+          setBanners(cacheBustedDefaults);
         }
       } catch (error) {
         console.error('Error loading dynamic images:', error);
+        // Fallback with cache busting
+        const cacheBustedDefaults = defaultBanners.map(banner => ({
+          ...banner,
+          image: addCacheBusterToUrl(banner.image)
+        }));
+        setBanners(cacheBustedDefaults);
       }
     };
 
@@ -111,10 +135,10 @@ const PromoBanner = () => {
                   alt={banner.alt} 
                   className="w-full h-full object-cover object-center transition-all hover:scale-105 duration-500"
                   onError={(e) => {
-                    console.log('Banner image failed to load, using default');
+                    console.log('Banner image failed to load, using default with cache busting');
                     const defaultBanner = defaultBanners.find(b => b.id === banner.id);
                     if (defaultBanner) {
-                      e.currentTarget.src = defaultBanner.image;
+                      e.currentTarget.src = addCacheBusterToUrl(defaultBanner.image);
                     }
                   }}
                 />

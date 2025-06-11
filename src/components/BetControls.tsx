@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { getGameLimits } from '@/utils/gameConnections';
 
 interface BetControlsProps {
   betAmount: number;
@@ -14,6 +15,7 @@ interface BetControlsProps {
   balance: number;
   onBet: () => void;
   isSpinning: boolean;
+  gameType?: string; // Add gameType to get specific limits
 }
 
 const BetControls: React.FC<BetControlsProps> = ({
@@ -25,12 +27,27 @@ const BetControls: React.FC<BetControlsProps> = ({
   onBetDouble,
   balance,
   onBet,
-  isSpinning
+  isSpinning,
+  gameType = 'plinko'
 }) => {
-  const MIN_BET = 10;
-  const MAX_BET = 1000;
+  const [gameLimits, setGameLimits] = useState({ minBet: 10, maxBet: 1000, isEnabled: true });
   const { user } = useAuth();
   const [localBalance, setLocalBalance] = useState(user?.balance || balance);
+  
+  // Load game limits from Supabase
+  useEffect(() => {
+    const loadGameLimits = async () => {
+      try {
+        const limits = await getGameLimits(gameType);
+        setGameLimits(limits);
+        console.log(`Loaded limits for ${gameType}:`, limits);
+      } catch (error) {
+        console.error('Error loading game limits:', error);
+      }
+    };
+    
+    loadGameLimits();
+  }, [gameType]);
   
   // First priority: real-time Firebase updates from user context
   useEffect(() => {
@@ -59,15 +76,15 @@ const BetControls: React.FC<BetControlsProps> = ({
   
   const updateBetAmount = (amount: number) => {
     const newAmount = betAmount + amount;
-    // Ensure bet stays within limits (10-1000)
-    if (newAmount >= MIN_BET && newAmount <= MAX_BET) {
+    // Use Supabase game limits instead of hardcoded values
+    if (newAmount >= gameLimits.minBet && newAmount <= gameLimits.maxBet) {
       onBetChange(newAmount);
     }
   };
   
   // Use the local balance for UI rendering and validation
   const displayBalance = localBalance !== undefined ? localBalance : balance;
-  const isDisabled = isSpinning || displayBalance < betAmount;
+  const isDisabled = isSpinning || displayBalance < betAmount || !gameLimits.isEnabled;
   
   return (
     <div className="space-y-4">
@@ -76,7 +93,7 @@ const BetControls: React.FC<BetControlsProps> = ({
         <div className="flex items-center bg-gray-800 rounded-md">
           <button
             onClick={() => updateBetAmount(-10)}
-            disabled={isSpinning || betAmount <= MIN_BET}
+            disabled={isSpinning || betAmount <= gameLimits.minBet}
             className="px-4 py-2 text-gray-400 hover:text-white disabled:opacity-50"
           >
             <ChevronDown size={20} />
@@ -86,7 +103,7 @@ const BetControls: React.FC<BetControlsProps> = ({
           </div>
           <button
             onClick={() => updateBetAmount(10)}
-            disabled={isSpinning || betAmount >= MAX_BET}
+            disabled={isSpinning || betAmount >= gameLimits.maxBet}
             className="px-4 py-2 text-gray-400 hover:text-white disabled:opacity-50"
           >
             <ChevronUp size={20} />
@@ -130,6 +147,10 @@ const BetControls: React.FC<BetControlsProps> = ({
           >
             Max
           </Button>
+        </div>
+        
+        <div className="text-xs mt-2 text-gray-400">
+          Min: ৳{gameLimits.minBet} | Max: ৳{gameLimits.maxBet}
         </div>
       </div>
       

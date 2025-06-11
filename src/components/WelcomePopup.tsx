@@ -20,7 +20,6 @@ export function WelcomePopup() {
     enabled: true,
     title: 'Big Offer!',
     description: "Deposit now and get 100% bonus!",
-    imageUrl: '/lovable-uploads/5035849b-d0e0-4890-af49-cc92532ea221.png',
     messageText: 'Deposit now and get 100% bonus. Low turnover requirements and you can withdraw amounts as low as PKR 200!',
     buttonText: 'Get Bonus Now',
     showOnLogin: true,
@@ -71,22 +70,14 @@ export function WelcomePopup() {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="relative w-full h-64 mb-4 overflow-hidden rounded-lg">
-          <img 
-            src={popupSettings.imageUrl}
-            alt="Bonus Offer" 
-            className="w-full h-full object-contain"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-red-800 to-transparent flex items-end p-4">
-            <p className="text-white text-xl font-bold">
-              Hello, {user?.username}!
-            </p>
-          </div>
+        <div className="text-center py-6">
+          <p className="text-white text-xl font-bold mb-4">
+            Hello, {user?.username}!
+          </p>
+          <p className="text-red-100 mb-4">
+            {popupSettings.messageText} <span className="text-yellow-300 font-bold">PKR {user?.balance?.toFixed(0)}</span>.
+          </p>
         </div>
-        
-        <p className="text-red-100 mb-4">
-          {popupSettings.messageText} <span className="text-yellow-300 font-bold">PKR {user?.balance?.toFixed(0)}</span>.
-        </p>
         
         <DialogFooter>
           <Button 

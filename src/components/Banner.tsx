@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { addCacheBusterToUrl } from '@/utils/cacheUtils';
 
-const bannerImages = [
+const baseBannerImages = [
   '/lovable-uploads/e269552a-2099-4f35-951c-73f811cc496a.png', // Fruity Bonanza image
   '/lovable-uploads/9116085e-489a-4b8b-add0-f3e1930eb5ec.png', // Plinko game image
   '/lovable-uploads/d63bf1f6-ac8d-40d6-a419-67c3915f5333.png',
@@ -13,7 +14,15 @@ const bannerImages = [
 
 const Banner: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [bannerImages, setBannerImages] = useState<string[]>([]);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Apply cache busting to all banner images on component mount
+  useEffect(() => {
+    const cacheBustedImages = baseBannerImages.map(img => addCacheBusterToUrl(img));
+    setBannerImages(cacheBustedImages);
+    console.log('Banner images loaded with cache busting:', cacheBustedImages);
+  }, []);
 
   const resetTimeout = () => {
     if (timeoutRef.current) {
@@ -22,6 +31,8 @@ const Banner: React.FC = () => {
   };
 
   useEffect(() => {
+    if (bannerImages.length === 0) return;
+    
     resetTimeout();
     timeoutRef.current = setTimeout(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % bannerImages.length);
@@ -30,7 +41,11 @@ const Banner: React.FC = () => {
     return () => {
       resetTimeout();
     };
-  }, [currentIndex]);
+  }, [currentIndex, bannerImages.length]);
+
+  if (bannerImages.length === 0) {
+    return <div className="w-full h-64 sm:h-80 md:h-96 bg-gray-800 rounded-lg animate-pulse"></div>;
+  }
 
   return (
     <div className="w-full relative h-64 sm:h-80 md:h-96 overflow-hidden rounded-lg shadow-lg">
@@ -65,6 +80,10 @@ const Banner: React.FC = () => {
             src={bannerImages[currentIndex]}
             alt={`Banner ${currentIndex + 1}`}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              console.log('Banner image failed to load, retrying with new cache buster');
+              e.currentTarget.src = addCacheBusterToUrl(baseBannerImages[currentIndex]);
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </motion.div>

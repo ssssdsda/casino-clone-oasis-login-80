@@ -1,76 +1,65 @@
 
-// Utility functions to handle cache clearing and image refreshing
+// Enhanced cache clearing utilities with aggressive image refresh
 
-export const clearImageCache = async (): Promise<void> => {
+export const clearAllCaches = async (): Promise<void> => {
   try {
-    // Clear service worker caches
+    console.log('Starting aggressive cache clearing...');
+    
+    // Clear all browser caches
     if ('caches' in window) {
       const cacheNames = await caches.keys();
       await Promise.all(cacheNames.map(name => caches.delete(name)));
       console.log('Cleared all browser caches');
     }
     
-    // Force reload all images on the page
+    // Clear localStorage image cache
+    Object.keys(localStorage).forEach(key => {
+      if (key.includes('image') || key.includes('banner') || key.includes('cache')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Force refresh all images with aggressive cache busting
     const images = document.querySelectorAll('img');
     images.forEach(img => {
       if (img.src) {
         const url = new URL(img.src, window.location.origin);
-        url.searchParams.set('cache_bust', Date.now().toString());
+        url.searchParams.set('nocache', Date.now().toString());
+        url.searchParams.set('refresh', Math.random().toString());
         img.src = url.toString();
       }
     });
     
-    console.log('Force refreshed all images');
+    // Force refresh background images
+    const elementsWithBg = document.querySelectorAll('[style*="background-image"]');
+    elementsWithBg.forEach(element => {
+      const style = (element as HTMLElement).style;
+      const bgImage = style.backgroundImage;
+      if (bgImage && bgImage.includes('url(')) {
+        const urlMatch = bgImage.match(/url\(['"]?([^'")]+)['"]?\)/);
+        if (urlMatch && urlMatch[1]) {
+          const url = new URL(urlMatch[1], window.location.origin);
+          url.searchParams.set('nocache', Date.now().toString());
+          url.searchParams.set('refresh', Math.random().toString());
+          style.backgroundImage = `url("${url.toString()}")`;
+        }
+      }
+    });
+    
+    console.log('Aggressive cache clearing completed');
   } catch (error) {
-    console.error('Error clearing image cache:', error);
+    console.error('Error in aggressive cache clearing:', error);
   }
 };
 
 export const addCacheBusterToUrl = (url: string): string => {
   try {
     const urlObj = new URL(url, window.location.origin);
-    urlObj.searchParams.set('v', Date.now().toString());
+    urlObj.searchParams.set('nocache', Date.now().toString());
+    urlObj.searchParams.set('refresh', Math.random().toString());
     return urlObj.toString();
   } catch (error) {
     console.error('Error adding cache buster to URL:', error);
-    return url + '?v=' + Date.now();
-  }
-};
-
-export const refreshPageImages = (): void => {
-  // Force refresh all background images
-  const elementsWithBg = document.querySelectorAll('[style*="background-image"]');
-  elementsWithBg.forEach(element => {
-    const style = (element as HTMLElement).style;
-    const bgImage = style.backgroundImage;
-    if (bgImage && bgImage.includes('url(')) {
-      const urlMatch = bgImage.match(/url\(['"]?([^'")]+)['"]?\)/);
-      if (urlMatch && urlMatch[1]) {
-        const newUrl = addCacheBusterToUrl(urlMatch[1]);
-        style.backgroundImage = `url("${newUrl}")`;
-      }
-    }
-  });
-  
-  console.log('Refreshed background images');
-};
-
-export const clearLocalStorageCache = (prefix?: string): void => {
-  try {
-    if (prefix) {
-      // Clear specific cache entries
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith(prefix)) {
-          localStorage.removeItem(key);
-        }
-      });
-      console.log(`Cleared localStorage entries with prefix: ${prefix}`);
-    } else {
-      // Clear all localStorage (use with caution)
-      localStorage.clear();
-      console.log('Cleared all localStorage');
-    }
-  } catch (error) {
-    console.error('Error clearing localStorage:', error);
+    return url + '?nocache=' + Date.now() + '&refresh=' + Math.random();
   }
 };
