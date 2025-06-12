@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Settings, ArrowBigLeft, ArrowBigRight } from 'lucide-react';
@@ -6,6 +7,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { shouldMegaSpinWin } from '@/utils/megaSpinBetting';
 import { MEGA_SPIN_SEGMENTS } from '@/utils/gameLogic';
+import { formatCurrency } from '@/utils/currency';
+import { getGameLimits, validateGameBet } from '@/utils/gameConnections';
+import { handleGameSpin } from '@/utils/gameUpdater';
 
 const totalSegments = MEGA_SPIN_SEGMENTS.length;
 const segmentAngle = 360 / totalSegments;
@@ -22,6 +26,7 @@ const MegaSpin = () => {
   const [balance, setBalance] = useState(0);
   const [betCount, setBetCount] = useState(0);
   const [animationKey, setAnimationKey] = useState(0);
+  const [gameLimits, setGameLimits] = useState({ minBet: 5, maxBet: 100, isEnabled: true });
 
   const wheelRef = useRef<HTMLDivElement>(null);
   const spinSound = useRef<HTMLAudioElement | null>(null);
@@ -30,6 +35,19 @@ const MegaSpin = () => {
   useEffect(() => {
     spinSound.current = new Audio('/sounds/spin.mp3');
     winSound.current = new Audio('/sounds/win.mp3');
+    
+    // Load game limits from Supabase
+    const loadGameLimits = async () => {
+      try {
+        const limits = await getGameLimits('megaSpin');
+        setGameLimits(limits);
+        console.log('Loaded MegaSpin limits:', limits);
+      } catch (error) {
+        console.error('Error loading game limits:', error);
+      }
+    };
+    
+    loadGameLimits();
     
     if (user) {
       setBalance(user.balance);
@@ -44,11 +62,11 @@ const MegaSpin = () => {
 
   const handleBetChange = (amount: number) => {
     if (isSpinning) return;
-    const newBetAmount = Math.max(1, Math.min(100, betAmount + amount));
+    const newBetAmount = Math.max(gameLimits.minBet, Math.min(gameLimits.maxBet, betAmount + amount));
     setBetAmount(newBetAmount);
   };
 
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (isSpinning) return;
     
     if (!user) {
@@ -60,22 +78,18 @@ const MegaSpin = () => {
       return;
     }
     
-    if (balance < betAmount) {
+    // Validate bet before processing using Supabase
+    const validation = await validateGameBet('megaSpin', betAmount, user.balance);
+    if (!validation.valid) {
       toast({
-        title: "Insufficient Funds",
-        description: "Please deposit more to play",
+        title: "Invalid Bet",
+        description: validation.message,
         variant: "destructive"
       });
       return;
     }
 
     setBetCount(prev => prev + 1);
-    
-    const newBalance = balance - betAmount;
-    setBalance(newBalance);
-    if (user) {
-      updateUserBalance(newBalance);
-    }
     
     if (spinSound.current) {
       spinSound.current.currentTime = 0;
@@ -118,41 +132,53 @@ const MegaSpin = () => {
     }, 5000);
   };
 
-  const handleResult = (segment: typeof MEGA_SPIN_SEGMENTS[0]) => {
-    setIsSpinning(false);
-    
-    const rawWinAmount = betAmount * segment.value;
-    const cappedWinAmount = Math.min(100, rawWinAmount);
-    
-    if (segment.value > 0) {
-      if (winSound.current) {
-        winSound.current.currentTime = 0;
-        winSound.current.play().catch(err => console.error("Error playing sound:", err));
+  const handleResult = async (segment: typeof MEGA_SPIN_SEGMENTS[0]) => {
+    try {
+      // Use the centralized game spinner with proper Supabase integration
+      const multiplier = segment.value;
+      
+      const result = await handleGameSpin(
+        user!,
+        'megaSpin',
+        betAmount,
+        multiplier,
+        updateUserBalance,
+        toast
+      );
+      
+      if (result && result.winAmount > 0) {
+        setWinAmount(result.winAmount);
+        
+        if (winSound.current) {
+          winSound.current.currentTime = 0;
+          winSound.current.play().catch(err => console.error("Error playing sound:", err));
+        }
+        
+        toast({
+          title: "You Won!",
+          description: `${formatCurrency(result.winAmount)} (${segment.text})`,
+          variant: "default",
+          className: "bg-green-500 text-white"
+        });
+      } else {
+        setWinAmount(0);
+        toast({
+          title: "Better luck next time!",
+          description: `You landed on ${segment.text}`,
+          variant: "destructive",
+          className: "bg-red-500 text-white"
+        });
       }
-      
-      const newBalance = balance + cappedWinAmount;
-      setBalance(newBalance);
-      if (user) {
-        updateUserBalance(newBalance);
-      }
-      
-      setWinAmount(cappedWinAmount);
-      
+    } catch (error) {
+      console.error("Error processing bet:", error);
       toast({
-        title: "You Won!",
-        description: `৳${cappedWinAmount.toFixed(2)} (${segment.text})`,
-        variant: "default",
-        className: "bg-green-500 text-white"
-      });
-    } else {
-      setWinAmount(0);
-      toast({
-        title: "Better luck next time!",
-        description: `You landed on ${segment.text}`,
-        variant: "destructive",
-        className: "bg-red-500 text-white"
+        title: "Bet Processing Error",
+        description: "Failed to process bet. Please try again.",
+        variant: "destructive"
       });
     }
+    
+    setIsSpinning(false);
   };
 
   return (
@@ -171,15 +197,15 @@ const MegaSpin = () => {
         <div className="bg-purple-800 rounded-lg p-3 mb-6 flex justify-between">
           <div>
             <div className="text-xs text-purple-300">BALANCE</div>
-            <div className="text-xl font-bold">৳{balance.toFixed(2)}</div>
+            <div className="text-xl font-bold">{formatCurrency(balance)}</div>
           </div>
           <div>
             <div className="text-xs text-purple-300">BET</div>
-            <div className="text-xl font-bold">৳{betAmount.toFixed(2)}</div>
+            <div className="text-xl font-bold">{formatCurrency(betAmount)}</div>
           </div>
           <div>
             <div className="text-xs text-purple-300">WIN</div>
-            <div className="text-xl font-bold">৳{winAmount.toFixed(2)}</div>
+            <div className="text-xl font-bold">{formatCurrency(winAmount)}</div>
           </div>
         </div>
         
@@ -215,19 +241,33 @@ const MegaSpin = () => {
                     }}
                   >
                     <div 
-                      className="absolute whitespace-nowrap font-bold"
+                      className="absolute whitespace-nowrap font-bold flex flex-col items-center"
                       style={{
-                        top: '35%',
+                        top: '30%',
                         left: '50%',
-                        transform: `translate(-50%, -50%) rotate(${startAngle + segmentAngle / 2}deg) translateY(-70px)`,
+                        transform: `translate(-50%, -50%) rotate(${startAngle + segmentAngle / 2}deg) translateY(-60px)`,
                       }}
                     >
+                      {/* Prize Multiplier - Large and Clear */}
                       <div 
-                        className="bg-black/30 px-3 py-1 rounded-full border border-white/30"
+                        className="bg-black/60 px-3 py-2 rounded-full border-2 border-white mb-1"
+                        style={{
+                          color: '#FFD700',
+                          textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                          fontSize: '1.6rem',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {segment.value === 0 ? '0x' : `${segment.value}x`}
+                      </div>
+                      
+                      {/* Segment Text - Smaller */}
+                      <div 
+                        className="bg-black/40 px-2 py-1 rounded-full border border-white/50"
                         style={{
                           color: segment.textColor,
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-                          fontSize: '1.4rem',
+                          textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                          fontSize: '0.9rem',
                           fontWeight: 'bold',
                         }}
                       >
@@ -246,7 +286,7 @@ const MegaSpin = () => {
             <button 
               className="bg-purple-700 text-white p-2 rounded-lg"
               onClick={() => handleBetChange(-5)}
-              disabled={isSpinning || betAmount <= 5}
+              disabled={isSpinning || betAmount <= gameLimits.minBet}
             >
               <ArrowBigLeft size={24} />
             </button>
@@ -286,10 +326,15 @@ const MegaSpin = () => {
             <button 
               className="bg-purple-700 text-white p-2 rounded-lg"
               onClick={() => handleBetChange(5)}
-              disabled={isSpinning || betAmount >= 100}
+              disabled={isSpinning || betAmount >= gameLimits.maxBet}
             >
               <ArrowBigRight size={24} />
             </button>
+          </div>
+          
+          {/* Game Limits Display */}
+          <div className="text-center text-purple-300 text-xs mb-4">
+            Min: {formatCurrency(gameLimits.minBet)} | Max: {formatCurrency(gameLimits.maxBet)}
           </div>
           
           <button
@@ -300,7 +345,7 @@ const MegaSpin = () => {
                 : 'bg-gradient-to-r from-yellow-400 to-amber-600 hover:from-yellow-300 hover:to-amber-500 text-purple-900'}
             `}
             onClick={handleSpin}
-            disabled={isSpinning || !user || (user && user.balance < betAmount)}
+            disabled={isSpinning || !gameLimits.isEnabled || !user || (user && user.balance < betAmount)}
           >
             {isSpinning ? 'SPINNING...' : 'SPIN'}
           </button>
